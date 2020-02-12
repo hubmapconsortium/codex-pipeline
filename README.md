@@ -15,7 +15,7 @@ collect_dataset_info.py \
   HBM123.ABDC.456 \ 
   /path/to/image/data \ 
   /path/to/experiment.json \
-  --segm-json /path/to/segmentation.json \
+  --segm-json /path/to/segmentation.json
 ```
 ...or
 ```
