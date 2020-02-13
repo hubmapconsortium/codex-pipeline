@@ -27,7 +27,8 @@ collect_dataset_info.py \
   --channel-names /path/to/channelNames.txt
 ```
 
-* The first three arguments are required. 
+* The first three arguments are required.
+* `/path/to/image/data` should contain directories named according to `'^cyc0*(\d+)_reg0*(\d+).*'` (case insensitive), in turn containing TIFF files named according to `'^\d_\d{5}_Z\d{3}_CH\d\.tif$'` (case sensitive).
 * One of `--segm-json` or `--segm-text` must be provided. 
 * `--channel-names` is not needed if the channel names are included in `experiment.json`.
 
