@@ -313,7 +313,9 @@ if __name__ == "__main__" :
     )
 
     datasetInfo[ "nuclei_channel" ] = nucleiChannelName
-    datasetInfo[ "membrane_channel" ] = membraneChannelName
+    
+    if membraneChannelName is not None :
+        datasetInfo[ "membrane_channel" ] = membraneChannelName
 
 
     # The target_shape needs to be worked out based on the metadata. See
