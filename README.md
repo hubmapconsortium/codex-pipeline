@@ -42,7 +42,7 @@ HBM234.EFGH.567    pipeline_configs_dir/HBM234.EFGH.567_pipelineConfig.json
 ```
 2. Start the pipeline, either by running the command below at the commandline, or via Slurm.
 ```
-nextflow ~/git/hubmap-image-tools/codex_pipeline/main.nf -profile standard,slurm,singularity_gpu,singularity_cpu --datasetsFile tab_separated_datasets_list.txt
+nextflow $CODEX_PIPELINE_CODEBASE/main.nf -profile standard,slurm,singularity_gpu,singularity_cpu --datasetsFile tab_separated_datasets_list.txt
 ```
 
 ## Monitoring
