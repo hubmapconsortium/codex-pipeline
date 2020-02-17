@@ -97,18 +97,18 @@ process generate_ome_tiffs {
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
-            bfconvert $f ome-tiff/${fname}.ome.tiff
+            /opt/bftools/bfconvert $f ome-tiff/${fname}.ome.tiff
         done
         
         cd !{cytokit_output_dir}/cytometry/tile
 
-        echo "Generating OME_TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
+        echo "Generating OME-TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
 
         mkdir ome-tiff
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
-            bfconvert $f ome-tiff/${fname}.ome.tiff
+            /opt/bfconvert/bfconvert $f ome-tiff/${fname}.ome.tiff
         done
         '''
 }
