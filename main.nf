@@ -93,7 +93,11 @@ process generate_ome_tiffs {
         
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/processor/tile/ome-tiff"
         
-        mkdir -p ome-tiff
+        if [[ -d "ome-tiff" ]] : then
+            rm -r ome-tiff
+        fi
+
+        mkdir ome-tiff
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
@@ -106,7 +110,11 @@ process generate_ome_tiffs {
 
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
 
-        mkdir -p ome-tiff
+        if [[ -d "ome-tiff" ]] : then
+            rm -r ome-tiff
+        fi
+        
+        mkdir ome-tiff
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
