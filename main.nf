@@ -91,7 +91,7 @@ process generate_ome_tiffs {
         '''
         cd !{cytokit_output_dir}/processor/tile
         
-        echo "Generating OME-TIFFs in !{cytokit_output_dir/processor/tile/ome-tiff}"
+        echo "Generating OME-TIFFs in !{cytokit_output_dir}/processor/tile/ome-tiff"
         
         mkdir ome-tiff
 
@@ -102,7 +102,7 @@ process generate_ome_tiffs {
         
         cd !{cytokit_output_dir}/cytometry/tile
 
-        echo "Generating OME_TIFFs in !{cytokit_output_dir/cytometry/tile/ome-tiff}"
+        echo "Generating OME_TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
 
         mkdir ome-tiff
 
