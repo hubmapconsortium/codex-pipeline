@@ -103,7 +103,7 @@ if __name__ == "__main__":
         )
     )
     # If there were no matching directories found, exit.
-    if len( sourceDataDirs ) is 0 :
+    if len( sourceDataDirs ) == 0 :
 
         logger.error( 
             "No directories matching expected raw data directory naming pattern found in " +
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         )
 
         # Die if we didn't get any matching files.
-        if len( fileList ) is 0 :
+        if len( fileList ) == 0 :
             logger.error(
                 "No files found matching expected raw file naming pattern in " +
                 sdir
@@ -154,6 +154,22 @@ if __name__ == "__main__":
             sourceDataFiles[ sdir ] = fileList
 
     
+    # Check that expected source data files are all present. We know, from the
+    # pipeline config, the number of regions, cycles, z-planes, and channels, so we
+    # should be able to verify that we have one file per channel, per z-plane,
+    # per cycle, per region.
+
+    # Since the files will have had to match the required naming pattern, we
+    # know that they'll be named basically as expected. A simple check would be
+    # to just count the number of files present and see if we have the expected
+    # number for each region, cycle, and z-plane.
+
+    # For each region, we should have num_cycles * (region_height * region_width ) * num_z_planes * len( per_cycle_channel_names ) files.
+    # If we do, we could stop there? It's not a super rigorous check but we already know we have files named correctly...
+
+    # If we don't, we can inspect each cycle. For each cycle, we should have ...
+
+
 
     ######################################
     # Start creating directories and links
