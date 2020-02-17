@@ -93,7 +93,7 @@ process generate_ome_tiffs {
         
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/processor/tile/ome-tiff"
         
-        if [[ -d "ome-tiff" ]] : then
+        if [[ -d "ome-tiff" ]] ; then
             rm -r ome-tiff
         fi
 
@@ -110,7 +110,7 @@ process generate_ome_tiffs {
 
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
 
-        if [[ -d "ome-tiff" ]] : then
+        if [[ -d "ome-tiff" ]] ; then
             rm -r ome-tiff
         fi
         
