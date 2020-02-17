@@ -89,22 +89,24 @@ process generate_ome_tiffs {
 
     shell:
         '''
-        cd !{cytokit_output_dir}/processor/tile
+        pushd !{cytokit_output_dir}/processor/tile
         
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/processor/tile/ome-tiff"
         
-        mkdir ome-tiff
+        mkdir -p ome-tiff
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
             /opt/bftools/bfconvert $f ome-tiff/${fname}.ome.tiff
         done
         
-        cd !{cytokit_output_dir}/cytometry/tile
+        popd
+
+        pushd !{cytokit_output_dir}/cytometry/tile
 
         echo "Generating OME-TIFFs in !{cytokit_output_dir}/cytometry/tile/ome-tiff"
 
-        mkdir ome-tiff
+        mkdir -p ome-tiff
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
