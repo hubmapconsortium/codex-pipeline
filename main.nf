@@ -118,7 +118,7 @@ process generate_ome_tiffs {
 
         for f in $( ls *.tif ); do 
             fname=$( echo $f | awk -F'.' '{print $1}' )
-            /opt/bfconvert/bfconvert $f ome-tiff/${fname}.ome.tiff
+            /opt/bftools/bfconvert $f ome-tiff/${fname}.ome.tiff
         done
         '''
 }
