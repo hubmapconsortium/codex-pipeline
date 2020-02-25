@@ -11,8 +11,8 @@ import datetime
 import json
 import logging
 import math
+from pathlib import Path
 import re
-import sys
 from typing import Dict, List
 
 logging.basicConfig(
@@ -47,8 +47,7 @@ def collect_attribute( fieldNames, configDict: Dict ) :
     # If we're still here, it means we tried all the possible field names and
     # didn't find a match in the config, so we have to fail.
     fieldNameString = ", ".join( fieldNames )
-    logger.error( "No match found for field name(s) in config: %s" % fieldNameString )
-    sys.exit(1)
+    raise ValueError( f"No match found for field name(s) in config: {fieldNameString}")
 
 
 def infer_channel_name_from_index(
@@ -142,12 +141,9 @@ if __name__ == "__main__" :
         description = "Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
     )
     parser.add_argument(
-        "hubmapDatasetID",
-        help = "HuBMAP dataset ID, e.g. HBM123.ABCD.456."
-    )
-    parser.add_argument(
         "rawDataLocation",
-        help = "Path to directory containing raw data subdirectories (named with cycle and region numbers)."
+        help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
+        type=Path,
     )
     parser.add_argument(
         "exptJsonFileName",
@@ -176,8 +172,7 @@ if __name__ == "__main__" :
 
 
     if not args.segm_json and not args.segm_text :
-        logger.error( "Segmentation parameters file name not provided. Cannot continue." )
-        sys.exit(1)
+        raise ValueError( "Segmentation parameters file name not provided. Cannot continue." )
 
     if args.segm_json and args.segm_text :
         logger.warning(
@@ -190,7 +185,7 @@ if __name__ == "__main__" :
         )
 
     if not args.outfile :
-        args.outfile = args.hubmapDatasetID + "_pipelineConfig.json"
+        args.outfile = "pipelineConfig.json"
 
     if not args.channel_names :
         logger.info( "No channel names file passed. Will look for channel names in experiment JSON config." )
@@ -265,8 +260,7 @@ if __name__ == "__main__" :
     elif "channelNames" in exptConfigDict :
         channelNames = collect_attribute( [ "channelNamesArray" ], exptConfigDict[ "channelNames" ] )
     else :
-        logger.error( "Cannot find data for channel_names field." )
-        sys.exit(1)
+        raise ValueError( "Cannot find data for channel_names field." )
 
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
@@ -284,7 +278,7 @@ if __name__ == "__main__" :
         int( bestFocusCycle ),
         int( bestFocusChannel ),
         datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] )
+        len( datasetInfo[ "per_cycle_channel_names" ] ),
     )
 
     driftCompChannel = collect_attribute( [ "driftCompReferenceChannel", "drift_comp_channel" ], exptConfigDict )
@@ -293,7 +287,7 @@ if __name__ == "__main__" :
         int( driftCompCycle ),
         int( driftCompChannel ),
         datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] )
+        len( datasetInfo[ "per_cycle_channel_names" ] ),
     )
 
     datasetInfo[ "best_focus" ] = bestFocusChannelName
@@ -305,13 +299,12 @@ if __name__ == "__main__" :
         int( nucleiCycle ),
         int( nucleiChannel ),
         datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] )
+        len( datasetInfo[ "per_cycle_channel_names" ] ),
     )
 
     # If we don't have a nuclei channel, we can't continue.
     if nucleiChannelName is None :
-        logger.error( "No nuclei stain channel found. Cannot continue." )
-        sys.exit( 1 )
+        raise ValueError( "No nuclei stain channel found. Cannot continue." )
 
     membraneChannel = collect_attribute( [ "membraneStainChannel" ], segmParams )
     membraneCycle = collect_attribute( [ "membraneStainCycle" ], segmParams )
@@ -319,7 +312,7 @@ if __name__ == "__main__" :
         int( membraneCycle ),
         int( membraneChannel ),
         datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] )
+        len( datasetInfo[ "per_cycle_channel_names" ] ),
     )
 
     datasetInfo[ "nuclei_channel" ] = nucleiChannelName
