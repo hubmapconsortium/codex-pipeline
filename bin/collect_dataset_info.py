@@ -237,10 +237,6 @@ def standardize_metadata(directory: Path):
         exptConfigDict = json.load(exptJsonFile)
     logger.info(f"Finished reading file {experiment_json_file}")
 
-    warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
-    warn_if_multiple_files(segmentation_text_files, "segmentation text")
-    warn_if_multiple_files(channel_names_files, "channel names")
-
     # Read in the segmentation parameters. If we have a JSON file, use that.
     if segmentation_json_files:
         segmentation_json_file = segmentation_json_files[0]
@@ -253,7 +249,7 @@ def standardize_metadata(directory: Path):
             key=highest_file_sort_key,
         )
         logger.info(f"Reading segmentation parameters from {segmentation_text_file}...")
-        with open(args.segm_text, 'r') as segmTextFile:
+        with open(segmentation_text_file, 'r') as segmTextFile:
             segmParams = {}
             for line in segmTextFile:
                 # Haven't seen any whitespace around '=', but be safe
@@ -268,7 +264,7 @@ def standardize_metadata(directory: Path):
 
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    datasetInfo["raw_data_location"] = args.rawDataLocation
+    datasetInfo["raw_data_location"] = fspath(directory.absolute())
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
@@ -293,7 +289,11 @@ def standardize_metadata(directory: Path):
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
 
     if channel_names_files:
-        with open(args.channel_names, 'r') as channelNamesFile:
+        channel_names_file = min(
+            channel_names_files,
+            key=highest_file_sort_key,
+        )
+        with open(channel_names_file, 'r') as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
     elif "channelNames" in exptConfigDict:
         channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
@@ -382,13 +382,17 @@ if __name__ == "__main__" :
         help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
         type=Path,
     )
+    parser.add_argument(
+        '--outfile',
+        type=Path,
+    )
 
     args = parser.parse_args()
 
     data = standardize_metadata(args.rawDataLocation)
 
-    if not args.outfile :
-        args.outfile = "pipelineConfig.json"
+    if not args.outfile:
+        args.outfile = Path("pipelineConfig.json")
 
     ##############################
     # Write JSON pipeline config #
@@ -397,4 +401,4 @@ if __name__ == "__main__" :
     with open(args.outfile, 'w') as outfile:
         json.dump(data, outfile, indent=4)
 
-    logger.info("Written pipeline config to " + args.outfile)
+    logger.info(f"Written pipeline config to {args.outfile}")
