@@ -3,6 +3,7 @@
 # and our extension. No f-strings or PEP 519.
 
 from argparse import ArgumentParser
+from os import environ
 from os.path import join as ospj, split as osps
 from subprocess import check_call
 
@@ -48,7 +49,9 @@ def run_cytokit(yaml_config):
         for piece in CYTOKIT_COMMAND
     ]
     print('Running:', ' '.join(command))
-    check_call(command)
+    env = environ.copy()
+    env['PYTHONPATH'] = '/lab/repos/cytokit/python/pipeline'
+    check_call(command, env=env)
 
 
 def main(data_dir, pipeline_config, yaml_config):
