@@ -266,7 +266,7 @@ def standardize_metadata(directory: Path):
     # Read in the segmentation parameters. If we have a JSON file, use that.
     if segmentation_json_files:
         segmentation_json_file = segmentation_json_files[0]
-        logger.info(f"Reading segmentation parameters from {segmentation_json_file}...")
+        logger.info(f"Reading segmentation parameters from {segmentation_json_file}")
         with open(segmentation_json_file, 'r') as segmJsonFile:
             segmParams = json.load(segmJsonFile)
     else:
@@ -274,7 +274,7 @@ def standardize_metadata(directory: Path):
             segmentation_text_files,
             key=highest_file_sort_key,
         )
-        logger.info(f"Reading segmentation parameters from {segmentation_text_file}...")
+        logger.info(f"Reading segmentation parameters from {segmentation_text_file}")
         with open(segmentation_text_file, 'r') as segmTextFile:
             segmParams = {}
             for line in segmTextFile:
@@ -428,7 +428,7 @@ if __name__ == "__main__" :
     ##############################
     # Write JSON pipeline config #
     ##############################
-    logger.info("Writing pipeline config...")
+    logger.info("Writing pipeline config")
     with open(args.outfile, 'w') as outfile:
         json.dump(data, outfile, indent=4)
 
