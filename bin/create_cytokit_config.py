@@ -5,8 +5,8 @@ import json
 import logging
 import yaml
 
-logging.basicConfig( 
-    level=logging.INFO, 
+logging.basicConfig(
+    level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -23,12 +23,8 @@ memory_limit = "64G"
 ########
 if __name__ == "__main__" :
     # Set up argument parser and parse the command line arguments.
-    parser = argparse.ArgumentParser( 
+    parser = argparse.ArgumentParser(
         description = "Create a YAML config file for Cytokit, based on a JSON file from the CODEX Toolkit pipeline. YAML file will be created in current working directory unless otherwise specified."
-    )
-    parser.add_argument(
-        "hubmapDatasetID",
-        help = "HuBMAP dataset ID, e.g. HBM123.ABCD.456."
     )
     parser.add_argument(
         "pipelineConfigFilename",
@@ -43,16 +39,14 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     if not args.outfile :
-        args.outfile = args.hubmapDatasetID + "_experiment.yaml"
+        args.outfile = "experiment.yaml"
 
     logger.info( "Reading pipeline config file " + args.pipelineConfigFilename + "..." )
 
     with open( args.pipelineConfigFilename, 'r' ) as pipelineConfigFile :
-        pipelineConfigJsonData = pipelineConfigFile.read()
+        pipelineConfigInfo = json.load(pipelineConfigFile)
 
     logger.info( "Finished reading pipeline config file." )
-
-    pipelineConfigInfo = json.loads( pipelineConfigJsonData )
 
     cytokitConfig = {
             "name" : pipelineConfigInfo[ "name" ],
@@ -92,7 +86,7 @@ if __name__ == "__main__" :
                 }
             },
             "analysis" : [
-                { 
+                {
                     "aggregate_cytometry_statistics" : {
                         "mode" : "best_z_plane"
                     }
@@ -109,16 +103,16 @@ if __name__ == "__main__" :
     acquisitionFields = [
                 "per_cycle_channel_names",
                 "channel_names",
-                "axial_resolution",       
-                "lateral_resolution",     
-                "emission_wavelengths",   
+                "axial_resolution",
+                "lateral_resolution",
+                "emission_wavelengths",
                 "magnification",
-                "num_cycles",         
-                "num_z_planes",           
-                "numerical_aperture",     
-                "objective_type",    
-                "region_height",        
-                "region_names",         
+                "num_cycles",
+                "num_z_planes",
+                "numerical_aperture",
+                "objective_type",
+                "region_height",
+                "region_names",
                 "region_width",
                 "tile_height",
                 "tile_overlap_x",
@@ -130,16 +124,16 @@ if __name__ == "__main__" :
     for field in acquisitionFields :
         cytokitConfig[ "acquisition" ][ field ] = pipelineConfigInfo[ field ]
 
-    # Write config in YAML format. 
+    # Write config in YAML format.
     logger.info( "Writing Cytokit config to " + args.outfile )
 
     with open( args.outfile, 'w') as outFile:
-        yaml.safe_dump( 
-            cytokitConfig, 
+        yaml.safe_dump(
+            cytokitConfig,
             outFile,
             encoding = "utf-8",
             default_flow_style = None,
             indent = 2
         )
-    
+
     logger.info( "Finished writing Cytokit config." )

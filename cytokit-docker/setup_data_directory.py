@@ -14,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Patterns for detecting raw data files are below. 
+# Patterns for detecting raw data files are below.
 # We follow Cytokit's "keyence_multi_cycle_v01" naming convention defined in:
 # https://github.com/hammerlab/cytokit/blob/master/python/pipeline/cytokit/io.py
 # Pattern for the directories containing the raw data from each cycle-region
@@ -37,17 +37,13 @@ rawFileRegionPattern = re.compile( r'^\d' )
 # MAIN #
 ########
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(
         description = "Create a directory and populate directory with directories containing symlinks to the raw image data."
     )
     parser.add_argument(
-        "pipelineConfigFilename",
-        help = "Path to JSON pipeline config file containing path to raw CODEX data directory."
-    )
-    parser.add_argument(
-        "targetDirectory",
-        help = "Path to directory to be created."
+        "data_dir",
+        help="Data directory",
     )
 
     args = parser.parse_args()
@@ -55,49 +51,40 @@ if __name__ == "__main__":
     ###################################################################
     # Inspect source directories and collect paths to raw data files. #
     ###################################################################
-    
-    logger.info( "Reading pipeline config file " + args.pipelineConfigFilename + "..." )
 
-    with open( args.pipelineConfigFilename, 'r' ) as pipelineConfigFile :
-        pipelineConfigJsonData = pipelineConfigFile.read()
-
-    logger.info( "Finished reading pipeline config file." )
-
-    pipelineConfigInfo = json.loads( pipelineConfigJsonData )
-	
-    rawDataLocation = pipelineConfigInfo[ "raw_data_location" ]
+    data_dir = args.data_dir
 
     # Ensure that source directory exists and is readable.
-    st = os.stat( rawDataLocation )
+    st = os.stat( data_dir )
     readable = bool( st.st_mode & stat.S_IRUSR )
     if not readable :
         logger.error(
             "Source directory " +
-            rawDataLocation +
+            data_dir +
             " is not readable by the current user."
         )
         sys.exit(1)
 
-    
+
     # Get list of contents of source directory. This should contain a set of
     # subdirectories, one for each cycle-region pair.
     sourceDirList = None
     try :
-        sourceDirList = os.listdir( rawDataLocation )
+        sourceDirList = os.listdir( data_dir )
     except OSError as err :
         logger.error(
             "Could not acquire list of contents for " +
-            rawDataLocation +
+            data_dir +
             " : " +
             err.strerror
         )
         sys.exit(1)
-   
+
     # Filter the contents list of the source directory for directories matching
     # the expected raw data directory naming pattern (cycle-region pairs).
     # Different submitters follow different naming conventions currently.
-    sourceDataDirs = list( 
-        filter( 
+    sourceDataDirs = list(
+        filter(
             rawDirNamingPattern.search,
             sourceDirList
         )
@@ -105,24 +92,24 @@ if __name__ == "__main__":
     # If there were no matching directories found, exit.
     if len( sourceDataDirs ) == 0 :
 
-        logger.error( 
+        logger.error(
             "No directories matching expected raw data directory naming pattern found in " +
-            rawDataLocation 
+            data_dir
         )
         sys.exit(1)
-    
-    
+
+
     # Go through the cycle-region directories and get a list of the contents of
     # each one. Each cycle-region directory should contain TIFF files,
     # following the raw data file naming convention defined above.
     # Collect raw data file names in a dictionary, indexed by directory name.
     sourceDataFiles = {}
     for sdir in sourceDataDirs :
-       
+
         fileList = None
 
         try :
-            fileList = os.listdir( os.path.join( rawDataLocation, sdir ) )
+            fileList = os.listdir( os.path.join( data_dir, sdir ) )
         except OSError as err :
             logger.error(
                 "Could not acquire list of contents for " +
@@ -131,7 +118,7 @@ if __name__ == "__main__":
                 err.strerror
             )
             sys.exit(1)
-        
+
         # Validate naming pattern of raw data files according to pattern
         # defined above.
         fileList = list(
@@ -148,12 +135,12 @@ if __name__ == "__main__":
                 sdir
             )
             sys.exit(1)
-        
+
         # Otherwise, collect the list of matching file names in the dictionary.
         else :
             sourceDataFiles[ sdir ] = fileList
 
-    
+
     # Check that expected source data files are all present. We know, from the
     # pipeline config, the number of regions, cycles, z-planes, and channels, so we
     # should be able to verify that we have one file per channel, per z-plane,
@@ -175,29 +162,30 @@ if __name__ == "__main__":
     # Start creating directories and links
     ######################################
 
+    targetDirectory = "symlinks"
+
     # Create target directory.
-    # FIXME: what permissions should this have?
     try :
-        os.mkdir( args.targetDirectory )
+        os.mkdir("symlinks")
     except OSError as err :
-        logger.error( 
+        logger.error(
             "Could not create Cytokit data directory " +
-            args.targetDirectory +
+            targetDirectory +
             " : " +
             err.strerror
         )
         sys.exit(1)
     else :
-        logger.info( "Cytokit data directory created at %s" % args.targetDirectory )
+        logger.info( "Cytokit data directory created at %s" % targetDirectory )
 
     for sdir in sourceDataFiles :
-        
+
         dirMatch = rawDirNamingPattern.match( sdir )
 
         cycle, region = dirMatch.group( 1, 2 )
 
-        cycleRegionDir = os.path.join( args.targetDirectory, "Cyc" + cycle + "_reg" + region )
-        
+        cycleRegionDir = os.path.join( "symlinks", "Cyc" + cycle + "_reg" + region )
+
         try :
             os.mkdir( cycleRegionDir )
         except OSError as err :
@@ -211,19 +199,19 @@ if __name__ == "__main__":
 
         # Create symlinks for TIFF files.
         for tifFileName in sourceDataFiles[ sdir ] :
-            
+
             # Replace the region number at the start because sometimes it's wrong.
             linkTifFileName = rawFileRegionPattern.sub( region, tifFileName )
 
             # Set up full path to symlink.
             linkTifFilePath = os.path.join( cycleRegionDir, linkTifFileName )
-            
+
             # Full path to source raw data file.
-            sourceTifFilePath = os.path.join( rawDataLocation, sdir, tifFileName )
-            
+            sourceTifFilePath = os.path.join( data_dir, sdir, tifFileName )
+
             # Create the symlink.
             try :
-                os.symlink( 
+                os.symlink(
                     sourceTifFilePath,
                     linkTifFilePath
                 )
@@ -234,4 +222,4 @@ if __name__ == "__main__":
                 )
                 sys.exit(1)
 
-    logger.info( "Links created in directories under %s" % args.targetDirectory )
+    logger.info( "Links created in directories under %s" % targetDirectory )
