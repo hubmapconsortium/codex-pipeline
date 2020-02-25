@@ -45,7 +45,7 @@ def run_cytokit(yaml_config):
             data_dir='symlinks',
             yaml_config=yaml_config,
         )
-        for piece in SETUP_DATA_DIR_COMMAND
+        for piece in CYTOKIT_COMMAND
     ]
     print('Running:', ' '.join(command))
     check_call(command)
