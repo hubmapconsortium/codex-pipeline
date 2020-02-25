@@ -12,10 +12,14 @@ inputs:
     type: Directory
     inputBinding:
       position: 1
-  yaml_config:
+  pipeline_config:
     type: File
     inputBinding:
       position: 2
+  yaml_config:
+    type: File
+    inputBinding:
+      position: 3
 outputs:
   cytokit_output:
     type: Directory
