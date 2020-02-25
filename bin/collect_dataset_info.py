@@ -293,9 +293,11 @@ def standardize_metadata(directory: Path):
             channel_names_files,
             key=highest_file_sort_key,
         )
+        logger.info(f'Reading channel names from {channel_names_file}')
         with open(channel_names_file, 'r') as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
     elif "channelNames" in exptConfigDict:
+        logger.info('Obtaining channel names from configuration data')
         channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
     else:
         raise ValueError("Cannot find data for channel_names field.")
