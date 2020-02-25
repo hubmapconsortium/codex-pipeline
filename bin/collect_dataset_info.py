@@ -187,6 +187,21 @@ def highest_file_sort_key(seg_text_file: Path) -> Tuple[int, int]:
     return len(seg_text_file.parts), len(fspath(seg_text_file))
 
 
+def find_raw_data_dir(directory: Path) -> Path:
+    raw_data_dir_possibilities = []
+
+    for child in directory.iterdir():
+        if 'processed' not in child.name and 'drv' not in child.name:
+            raw_data_dir_possibilities.append(child)
+
+    if len(raw_data_dir_possibilities) > 1:
+        message_pieces = ['Found multiple raw data directory possibilities:']
+        message_pieces.extend(f"\t{path}" for path in raw_data_dir_possibilities)
+        raise ValueError("\n".join(message_pieces))
+
+    return raw_data_dir_possibilities[0]
+
+
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
