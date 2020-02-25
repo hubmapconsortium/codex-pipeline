@@ -22,10 +22,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+PROCESSED_DIRECTORY_NAME_PIECES = [
+    'processed',
+    'drv',
+]
+
+
 def find_files(
         base_directory: Path,
         filename: str,
-        ignore_processed_dir: bool = False,
+        ignore_processed_derived_dirs: bool = False,
 ) -> List[Path]:
     """
     This returns a full list instead of a generator function because we very
@@ -34,19 +40,22 @@ def find_files(
 
     :param base_directory:
     :param filename:
-    :param ignore_processed_dir:
+    :param ignore_processed_derived_dirs:
     :return:
     """
     file_paths = []
 
     for dirpath, dirnames, filenames in walk(base_directory):
-        if ignore_processed_dir:
+        if ignore_processed_derived_dirs:
             # Skip any directory that has 'processed' in the name.
             # Since deleting items from a Python list takes linear time, be a little
             # fancier: find directory names that we *should* recurse into, clear the
             # list, and then re-populate. Probably not necessary when top-level
             # directories only have 4-5 children, but quadratic runtime feels wrong
-            dirnames_to_recurse = [dirname for dirname in dirnames if 'processed' not in dirname]
+            dirnames_to_recurse = []
+            for dirname in dirnames:
+                if not any(piece in dirname for piece in PROCESSED_DIRECTORY_NAME_PIECES):
+                    dirnames_to_recurse.append(dirname)
             dirnames.clear()
             dirnames.extend(dirnames_to_recurse)
 
@@ -79,12 +88,12 @@ def collect_attribute( fieldNames, configDict: Dict ) :
 
     for fieldName in fieldNames:
         if fieldName in configDict:
-            return configDict[ fieldName ]
+            return configDict[fieldName]
 
     # If we're still here, it means we tried all the possible field names and
     # didn't find a match in the config, so we have to fail.
-    fieldNameString = ", ".join( fieldNames )
-    raise ValueError( f"No match found for field name(s) in config: {fieldNameString}")
+    fieldNameString = ", ".join(fieldNames)
+    raise ValueError(f"No match found for field name(s) in config: {fieldNameString}")
 
 
 def infer_channel_name_from_index(
@@ -206,12 +215,12 @@ def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
         'experiment.json',
-        ignore_processed_dir=True,
+        ignore_processed_derived_dirs=True,
     )
     segmentation_json_files = find_files(
         directory,
         'segmentation.json',
-        ignore_processed_dir=True,
+        ignore_processed_derived_dirs=True,
     )
     segmentation_text_files = find_files(
         directory,
@@ -220,7 +229,7 @@ def standardize_metadata(directory: Path):
     channel_names_files = find_files(
         directory,
         'channelNames.txt',
-        ignore_processed_dir=True,
+        ignore_processed_derived_dirs=True,
     )
 
     warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
