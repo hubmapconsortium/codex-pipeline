@@ -35,6 +35,8 @@ steps:
     in:
       - id: data_dir
         source: data_dir
+      - id: pipeline_config
+        source: collect_dataset_info/pipeline_config
       - id: yaml_config
         source: create_yaml_config/cytokit_config
     out:
