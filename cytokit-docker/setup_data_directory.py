@@ -211,6 +211,7 @@ if __name__ == "__main__":
 
             # Create the symlink.
             try :
+                print('Linking', sourceTifFilePath, 'to', linkTifFilePath)
                 os.symlink(
                     sourceTifFilePath,
                     linkTifFilePath
