@@ -1,6 +1,6 @@
 cwlVersion: v1.1
 class: CommandLineTool
-label: Colect dataset info for Cytokit
+label: Collect dataset info for Cytokit
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
