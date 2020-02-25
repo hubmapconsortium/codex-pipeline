@@ -11,15 +11,52 @@ import datetime
 import json
 import logging
 import math
+from os import fspath, walk
 from pathlib import Path
-import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def find_files(
+        base_directory: Path,
+        filename: str,
+        ignore_processed_dir: bool = False,
+) -> List[Path]:
+    """
+    This returns a full list instead of a generator function because we very
+    frequently care about the number of files returned, and it's a waste
+    to require most usages of this to be wrapped in `list()`.
+
+    :param base_directory:
+    :param filename:
+    :param ignore_processed_dir:
+    :return:
+    """
+    file_paths = []
+
+    for dirpath, dirnames, filenames in walk(base_directory):
+        if ignore_processed_dir:
+            # Skip any directory that has 'processed' in the name.
+            # Since deleting items from a Python list takes linear time, be a little
+            # fancier: find directory names that we *should* recurse into, clear the
+            # list, and then re-populate. Probably not necessary when top-level
+            # directories only have 4-5 children, but quadratic runtime feels wrong
+            dirnames_to_recurse = [dirname for dirname in dirnames if 'processed' not in dirname]
+            dirnames.clear()
+            dirnames.extend(dirnames_to_recurse)
+
+        # case-insensitive match
+        cf_filename_mapping = {fn.casefold(): fn for fn in filenames}
+        casefolded_filename = filename.casefold()
+        if filename.casefold() in cf_filename_mapping:
+            file_paths.append(base_directory / dirpath / cf_filename_mapping[casefolded_filename])
+
+    return file_paths
 
 
 def collect_attribute( fieldNames, configDict: Dict ) :
@@ -131,103 +168,107 @@ def make_channel_names_unique( channelNames ) :
     return newNames
 
 
+def warn_if_multiple_files(paths: List[Path], label: str):
+    if len(paths) > 1:
+        message_pieces = [f"Found multiple {label} files:"]
+        message_pieces.extend(f"\t{path}" for path in paths)
+        logger.warning("\n".join(message_pieces))
+        # TODO: throw an exception?
 
-########
-# MAIN #
-########
-if __name__ == "__main__" :
-    # Set up argument parser and parse the command line arguments.
-    parser = argparse.ArgumentParser(
-        description = "Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
+
+def highest_file_sort_key(seg_text_file: Path) -> Tuple[int, int]:
+    """
+    Get the highest-level file (shallowest in a directory tree) among multiple
+    files with the same name. If equal, fall back to length of the full file
+    path (since the presence of a "processed" directory will make the path longer).
+    :param seg_text_file:
+    :return:
+    """
+    return len(seg_text_file.parts), len(fspath(seg_text_file))
+
+
+def standardize_metadata(directory: Path):
+    experiment_json_files = find_files(
+        directory,
+        'experiment.json',
+        ignore_processed_dir=True,
     )
-    parser.add_argument(
-        "rawDataLocation",
-        help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
-        type=Path,
+    segmentation_json_files = find_files(
+        directory,
+        'segmentation.json',
+        ignore_processed_dir=True,
     )
-    parser.add_argument(
-        "exptJsonFileName",
-        help = "Path to experiment.json file from CODEX Toolkit pipeline."
+    segmentation_text_files = find_files(
+        directory,
+        'config.txt'
     )
-    parser.add_argument(
-        "--segm-json",
-        help = "Path to JSON file containing segmentation parameters (including nuclearStainChannel and nuclearStainCycle)."
-    )
-    parser.add_argument(
-        "--segm-text",
-        help = "Path to text file containing segmentation parameters (including nuclearStainChannel and nuclearStainCycle). This is usually found in the \"processed\" directory in the submitted data."
-    )
-    parser.add_argument(
-        "-c",
-        "--channel-names",
-        help = "Path to text file containing list of channel names, if necessary."
-    )
-    parser.add_argument(
-        "-o",
-        "--outfile",
-        help = "Path to output file pipeline config (JSON format). Default: ./<dataset ID>_pipelineConfig.json."
+    channel_names_files = find_files(
+        directory,
+        'channelNames.txt',
+        ignore_processed_dir=True,
     )
 
-    args = parser.parse_args()
+    warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
+    warn_if_multiple_files(segmentation_text_files, "segmentation text")
+    warn_if_multiple_files(channel_names_files, "channel names")
 
+    if not (segmentation_json_files or segmentation_text_files):
+        raise ValueError("Segmentation parameters files not found. Cannot continue.")
 
-    if not args.segm_json and not args.segm_text :
-        raise ValueError( "Segmentation parameters file name not provided. Cannot continue." )
+    if segmentation_json_files and segmentation_text_files:
+        message_pieces = [
+            "Found segmentation JSON and text files. Using JSON.",
+            "\tJSON:"
+        ]
+        message_pieces.extend(f"\t\t{json_file}" for json_file in segmentation_json_files)
+        message_pieces.append("\tText:")
+        message_pieces.extend(f"\t\t{text_file}" for text_file in segmentation_text_files)
 
-    if args.segm_json and args.segm_text :
-        logger.warning(
-            "Segmentation parameter files " +
-            args.segm_json +
-            " and " +
-            args.segm_text +
-            " provided. Will only use " +
-            args.segm_json
-        )
+        logger.warning("\n".join(message_pieces))
 
-    if not args.outfile :
-        args.outfile = "pipelineConfig.json"
-
-    if not args.channel_names :
-        logger.info( "No channel names file passed. Will look for channel names in experiment JSON config." )
-
-    logger.info( "Reading config from " + args.exptJsonFileName + "..." )
+    if len(experiment_json_files) > 1:
+        message_pieces = ["Found multiple experiment JSON files:"]
+        message_pieces.extend(f"\t{filename}" for filename in experiment_json_files)
+        raise ValueError("\n".join(message_pieces))
 
     # Read in the experiment JSON config.
-    with open( args.exptJsonFileName, 'r' ) as exptJsonFile :
-        exptJsonData = exptJsonFile.read()
-    logger.info( "Finished reading file " + args.exptJsonFileName )
+    experiment_json_file = experiment_json_files[0]
+    with open(experiment_json_file, 'r') as exptJsonFile:
+        exptConfigDict = json.load(exptJsonFile)
+    logger.info(f"Finished reading file {experiment_json_file}")
 
-    # Create dictionary from experiment JSON config.
-    exptConfigDict = json.loads( exptJsonData )
+    warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
+    warn_if_multiple_files(segmentation_text_files, "segmentation text")
+    warn_if_multiple_files(channel_names_files, "channel names")
 
     # Read in the segmentation parameters. If we have a JSON file, use that.
-    if args.segm_json :
-        logger.info( "Reading segmentation parameters from " + args.segm_json + "..." )
-        with open( args.segm_json, 'r' ) as segmJsonFile :
-            segmJsonData = segmJsonFile.read()
-        segmParams = json.loads( segmJsonData )
-    else :
-
-        logger.info( "Reading segmentation parameters from " + args.segm_text + "..." )
-        with open( args.segm_text, 'r' ) as segmTextFile :
-            fileLines = segmTextFile.read().splitlines()
+    if segmentation_json_files:
+        segmentation_json_file = segmentation_json_files[0]
+        logger.info(f"Reading segmentation parameters from {segmentation_json_file}...")
+        with open(segmentation_json_file, 'r') as segmJsonFile:
+            segmParams = json.load(segmJsonFile)
+    else:
+        segmentation_text_file = min(
+            segmentation_text_files,
+            key=highest_file_sort_key,
+        )
+        logger.info(f"Reading segmentation parameters from {segmentation_text_file}...")
+        with open(args.segm_text, 'r') as segmTextFile:
             segmParams = {}
-            for line in fileLines :
-                fieldName, fieldContents = line.split( "=" )
-                numPattern = re.compile( "^[0-9]+$" )
-                numMatch = numPattern.match( fieldContents )
-                if numMatch :
-                    fieldContents = int( fieldContents )
-                segmParams[ fieldName ] = fieldContents
+            for line in segmTextFile:
+                # Haven't seen any whitespace around '=', but be safe
+                fieldName, fieldContents = (piece.strip() for piece in line.split("="))
+                if fieldContents.isdigit():
+                    fieldContents = int(fieldContents)
+                segmParams[fieldName] = fieldContents
 
-    logger.info( "Finished reading segmentation parameters." )
-
+    logger.info("Finished reading segmentation parameters.")
 
     datasetInfo = {}
 
-    datasetInfo[ "name" ] = args.hubmapDatasetID
-    datasetInfo[ "date" ] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    datasetInfo[ "raw_data_location" ] = args.rawDataLocation
+    datasetInfo["name"] = directory.name
+    datasetInfo["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    datasetInfo["raw_data_location"] = args.rawDataLocation
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
@@ -251,90 +292,109 @@ if __name__ == "__main__" :
     for target_key, possibilities in info_key_mapping:
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
 
-    # Collect channel names.
-    channelNames = None
-
-    if args.channel_names :
-        with open( args.channel_names, 'r' ) as channelNamesFile :
+    if channel_names_files:
+        with open(args.channel_names, 'r') as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
-    elif "channelNames" in exptConfigDict :
-        channelNames = collect_attribute( [ "channelNamesArray" ], exptConfigDict[ "channelNames" ] )
-    else :
-        raise ValueError( "Cannot find data for channel_names field." )
+    elif "channelNames" in exptConfigDict:
+        channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
+    else:
+        raise ValueError("Cannot find data for channel_names field.")
 
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
-    channelNames = make_channel_names_unique( channelNames )
+    channelNames = make_channel_names_unique(channelNames)
 
-    datasetInfo[ "channel_names" ] = channelNames
+    datasetInfo["channel_names"] = channelNames
 
-    datasetInfo[ "num_cycles" ] = int(
-        len( channelNames ) / len( datasetInfo[ "per_cycle_channel_names" ] )
+    datasetInfo["num_cycles"] = int(
+        len(channelNames) / len(datasetInfo["per_cycle_channel_names"])
     )
 
-    bestFocusChannel = collect_attribute( [ "bestFocusReferenceChannel", "best_focus_channel" ], exptConfigDict )
-    bestFocusCycle = collect_attribute( [ "bestFocusReferenceCycle" ], exptConfigDict )
+    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel"], exptConfigDict)
+    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle"], exptConfigDict)
     bestFocusChannelName = infer_channel_name_from_index(
-        int( bestFocusCycle ),
-        int( bestFocusChannel ),
-        datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] ),
+        int(bestFocusCycle),
+        int(bestFocusChannel),
+        datasetInfo["channel_names"],
+        len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    driftCompChannel = collect_attribute( [ "driftCompReferenceChannel", "drift_comp_channel" ], exptConfigDict )
-    driftCompCycle = collect_attribute( [ "driftCompReferenceCycle" ], exptConfigDict )
+    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel"], exptConfigDict)
+    driftCompCycle = collect_attribute(["driftCompReferenceCycle"], exptConfigDict)
     driftCompChannelName = infer_channel_name_from_index(
-        int( driftCompCycle ),
-        int( driftCompChannel ),
-        datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] ),
+        int(driftCompCycle),
+        int(driftCompChannel),
+        datasetInfo["channel_names"],
+        len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    datasetInfo[ "best_focus" ] = bestFocusChannelName
-    datasetInfo[ "drift_compensation" ] = driftCompChannelName
+    datasetInfo["best_focus"] = bestFocusChannelName
+    datasetInfo["drift_compensation"] = driftCompChannelName
 
-    nucleiChannel = collect_attribute( [ "nuclearStainChannel" ], segmParams )
-    nucleiCycle = collect_attribute( [ "nuclearStainCycle" ], segmParams )
+    nucleiChannel = collect_attribute(["nuclearStainChannel"], segmParams)
+    nucleiCycle = collect_attribute(["nuclearStainCycle"], segmParams)
     nucleiChannelName = infer_channel_name_from_index(
-        int( nucleiCycle ),
-        int( nucleiChannel ),
-        datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] ),
+        int(nucleiCycle),
+        int(nucleiChannel),
+        datasetInfo["channel_names"],
+        len(datasetInfo["per_cycle_channel_names"]),
     )
 
     # If we don't have a nuclei channel, we can't continue.
-    if nucleiChannelName is None :
-        raise ValueError( "No nuclei stain channel found. Cannot continue." )
+    if nucleiChannelName is None:
+        raise ValueError("No nuclei stain channel found. Cannot continue.")
 
-    membraneChannel = collect_attribute( [ "membraneStainChannel" ], segmParams )
-    membraneCycle = collect_attribute( [ "membraneStainCycle" ], segmParams )
+    membraneChannel = collect_attribute(["membraneStainChannel"], segmParams)
+    membraneCycle = collect_attribute(["membraneStainCycle"], segmParams)
     membraneChannelName = infer_channel_name_from_index(
-        int( membraneCycle ),
-        int( membraneChannel ),
-        datasetInfo[ "channel_names" ],
-        len( datasetInfo[ "per_cycle_channel_names" ] ),
+        int(membraneCycle),
+        int(membraneChannel),
+        datasetInfo["channel_names"],
+        len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    datasetInfo[ "nuclei_channel" ] = nucleiChannelName
+    datasetInfo["nuclei_channel"] = nucleiChannelName
 
-    if membraneChannelName is not None :
-        datasetInfo[ "membrane_channel" ] = membraneChannelName
-
+    if membraneChannelName is not None:
+        datasetInfo["membrane_channel"] = membraneChannelName
 
     # The target_shape needs to be worked out based on the metadata. See
     # comments on calculate_target_shape() function definition.
-    datasetInfo[ "target_shape" ] = calculate_target_shape(
-        datasetInfo[ "magnification" ],
-        datasetInfo[ "tile_height" ],
-        datasetInfo[ "tile_width" ],
+    datasetInfo["target_shape"] = calculate_target_shape(
+        datasetInfo["magnification"],
+        datasetInfo["tile_height"],
+        datasetInfo["tile_width"],
     )
 
+    return datasetInfo
+
+
+########
+# MAIN #
+########
+if __name__ == "__main__" :
+    # Set up argument parser and parse the command line arguments.
+    parser = argparse.ArgumentParser(
+        description = "Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
+    )
+    parser.add_argument(
+        "rawDataLocation",
+        help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
+        type=Path,
+    )
+
+    args = parser.parse_args()
+
+    data = standardize_metadata(args.rawDataLocation)
+
+    if not args.outfile :
+        args.outfile = "pipelineConfig.json"
 
     ##############################
     # Write JSON pipeline config #
     ##############################
-    logger.info( "Writing pipeline config..." )
-    with open( args.outfile, 'w' ) as outfile:
-        json.dump( datasetInfo, outfile, indent = 4 )
+    logger.info("Writing pipeline config...")
+    with open(args.outfile, 'w') as outfile:
+        json.dump(data, outfile, indent=4)
 
-    logger.info( "Written pipeline config to " + args.outfile )
+    logger.info("Written pipeline config to " + args.outfile)
