@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__" :
 
     parser = argparse.ArgumentParser(
-            description = "Convert Cytokit's output TIFFs to OME-TIFF. For segmentation results, add the channel names only. For processed images, remove \"blank\" and \"empty\" channels, duplicated nuclei channels (retaining the one used for nuclei segmentation), and add channel names based on Cytokit YAML config."
+            description = "Convert Cytokit's output TIFFs containing segmentation results to OME-TIFF, and add the channel names."
     )
     parser.add_argument(
             "cytometry_tile_dir",
