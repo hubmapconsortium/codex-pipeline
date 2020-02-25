@@ -200,6 +200,8 @@ def find_raw_data_dir(directory: Path) -> Path:
     raw_data_dir_possibilities = []
 
     for child in directory.iterdir():
+        if not child.is_dir():
+            continue
         if 'processed' not in child.name and 'drv' not in child.name:
             raw_data_dir_possibilities.append(child)
 
