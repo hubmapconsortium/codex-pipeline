@@ -39,16 +39,10 @@ def symlink_images(data_dir, pipeline_config):
     check_call(command)
 
 
-def run_cytokit(data_dir, pipeline_config, yaml_config):
-    # Read directory name from pipeline config
-    with open(pipeline_config) as f:
-        config = yaml.safe_load(f)
-    dir_name = osps(config['raw_data_location'])[1]
-
-    data_subdir = ospj(data_dir, dir_name)
+def run_cytokit(yaml_config):
     command = [
         piece.format(
-            data_dir=data_subdir,
+            data_dir='symlinks',
             yaml_config=yaml_config,
         )
         for piece in SETUP_DATA_DIR_COMMAND
@@ -58,8 +52,8 @@ def run_cytokit(data_dir, pipeline_config, yaml_config):
 
 
 def main(data_dir, pipeline_config, yaml_config):
-    symlink_images(data_dir)
-    run_cytokit(data_dir, pipeline_config, yaml_config)
+    symlink_images(data_dir, pipeline_config)
+    run_cytokit(yaml_config)
 
 
 if __name__ == '__main__':
