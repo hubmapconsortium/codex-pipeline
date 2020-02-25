@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-
-# This script is not part of the automatic pipeline. It should be run manually
-# and is hopefully just a temporary necessity until we have standardised
-# submission formats.
+"""
+This script is not part of the automatic pipeline. It should be run manually
+and is hopefully just a temporary necessity until we have standardised
+submission formats.
+"""
 
 import argparse
 from collections import Counter
@@ -21,22 +22,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# collect_attribute()
-# Returns the contents of the field matching the name(s) passed in the
-# fieldNames argument.
-# Field names are passed in a list because sometimes there is more than one
-# possible name for the field. For example, in some files, the date field is
-# called "date" and in others it is called "dateProcessed".
-# The order the field names are passed in this list matters, because only the
-# first one to match is returned.
-# In some cases, the config file contains both versions of the field name, but
-# only one of them has valid content. For example, some files have:
-#   - "aperture": 0.75
-#   - "numerical_aperture": 0.0
-# So in this case we would only want the contents of the "aperture" field.
-# In other cases, the "aperture" field doesn't exist, and only the
-# "numerical_aperture" field is present, with valid content.
 def collect_attribute( fieldNames, configDict: Dict ) :
+    """
+    Returns the contents of the field matching the name(s) passed in the
+    fieldNames argument.
+    Field names are passed in a list because sometimes there is more than one
+    possible name for the field. For example, in some files, the date field is
+    called "date" and in others it is called "dateProcessed".
+    The order the field names are passed in this list matters, because only the
+    first one to match is returned.
+    In some cases, the config file contains both versions of the field name, but
+    only one of them has valid content. For example, some files have:
+      - "aperture": 0.75
+      - "numerical_aperture": 0.0
+    So in this case we would only want the contents of the "aperture" field.
+    In other cases, the "aperture" field doesn't exist, and only the
+    "numerical_aperture" field is present, with valid content.
+    """
 
     for fieldName in fieldNames:
         if fieldName in configDict:
@@ -53,7 +55,7 @@ def infer_channel_name_from_index(
         cycleIndex: int,
         channelIndex: int,
         channelNames,
-        channelsPerCycle
+        channelsPerCycle: int,
 ):
 
     # If there is no cycle+channel set for a particular measurement, then the
@@ -72,13 +74,14 @@ def infer_channel_name_from_index(
     return channelNames[ channelNameIdx ]
 
 
-# calculate_target_shape()
-# Cytokit's nuclei detection U-Net (from CellProfiler) works best at 20x magnification.
-# The CellProfiler U-Net requires the height and width of the images to be
-# evenly divisible by 2 raised to the number of layers in the network, in this case 2^3=8.
-# https://github.com/hammerlab/cytokit/issues/14
-# https://github.com/CellProfiler/CellProfiler-plugins/issues/65
 def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int ) :
+    """
+    Cytokit's nuclei detection U-Net (from CellProfiler) works best at 20x magnification.
+    The CellProfiler U-Net requires the height and width of the images to be
+    evenly divisible by 2 raised to the number of layers in the network, in this case 2^3=8.
+    https://github.com/hammerlab/cytokit/issues/14
+    https://github.com/CellProfiler/CellProfiler-plugins/issues/65
+    """
     scaleFactor = 1
     if magnification != 20 :
         scaleFactor = 20 / magnification
@@ -98,15 +101,16 @@ def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int 
     return [ dims[ "height" ], dims[ "width" ] ]
 
 
-# make_channel_names_unique( channelNames )
-# Sometimes channel names are not unique, e.g. if DAPI was used in every cycle,
-# sometimes each DAPI channel is just named "DAPI", other times they are named
-# "DAPI1", "DAPI2", "DAPI3", etc. The latter is better, because it enables us
-# to select the specific DAPI channel from the correct cycle to use for
-# segmentation and/or for best focus plane selection. So, if there are
-# duplicated channel names, we will append an index, starting at 1, to each
-# occurrence of the channel name.
 def make_channel_names_unique( channelNames ) :
+    """
+    Sometimes channel names are not unique, e.g. if DAPI was used in every cycle,
+    sometimes each DAPI channel is just named "DAPI", other times they are named
+    "DAPI1", "DAPI2", "DAPI3", etc. The latter is better, because it enables us
+    to select the specific DAPI channel from the correct cycle to use for
+    segmentation and/or for best focus plane selection. So, if there are
+    duplicated channel names, we will append an index, starting at 1, to each
+    occurrence of the channel name.
+    """
 
     uniqueNames = Counter(channelNames)
 
@@ -230,23 +234,28 @@ if __name__ == "__main__" :
     datasetInfo[ "date" ] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     datasetInfo[ "raw_data_location" ] = args.rawDataLocation
 
+    info_key_mapping = [
+        ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
+        ("axial_resolution", ["zPitch", "z_pitch"]),
+        ("lateral_resolution", ["xyResolution", "per_pixel_XY_resolution"]),
+        ("magnification", ["magnification"]),
+        ("num_z_planes", ["num_z_planes"]),
+        ("numerical_aperture", ["aperture", "numerical_aperture"]),
+        ("objective_type", ["objectiveType"]),
+        ("region_names", ["region_names"]),
+        ("region_height", ["region_height"]),
+        ("region_width", ["region_width"]),
+        ("tile_height", ["tile_height"]),
+        ("tile_width", ["tile_width"]),
+        ("tile_overlap_x", ["tile_overlap_X"]),
+        ("tile_overlap_y", ["tile_overlap_Y"]),
+        ("tiling_mode", ["tiling_mode"]),
+        ("per_cycle_channel_names", ["channel_names"]),
+    ]
 
-    datasetInfo[ "emission_wavelengths" ] = collect_attribute( [ "emission_wavelengths", "wavelengths" ], exptConfigDict )
-    datasetInfo[ "axial_resolution" ] = collect_attribute( [ "zPitch", "z_pitch" ], exptConfigDict )
-    datasetInfo[ "lateral_resolution" ] = collect_attribute( [ "xyResolution", "per_pixel_XY_resolution" ], exptConfigDict )
-    datasetInfo[ "magnification" ] = collect_attribute( [ "magnification" ], exptConfigDict )
-    datasetInfo[ "num_z_planes" ] = collect_attribute( [ "num_z_planes" ], exptConfigDict )
-    datasetInfo[ "numerical_aperture" ] = collect_attribute( [ "aperture", "numerical_aperture" ], exptConfigDict )
-    datasetInfo[ "objective_type" ] = collect_attribute( [ "objectiveType" ], exptConfigDict )
-    datasetInfo[ "region_names" ] = collect_attribute( [ "region_names" ], exptConfigDict )
-    datasetInfo[ "region_height" ] = collect_attribute( [ "region_height" ], exptConfigDict )
-    datasetInfo[ "region_width" ] = collect_attribute( [ "region_width" ], exptConfigDict )
-    datasetInfo[ "tile_height" ] = collect_attribute( [ "tile_height" ], exptConfigDict )
-    datasetInfo[ "tile_width" ] = collect_attribute( [ "tile_width" ], exptConfigDict )
-    datasetInfo[ "tile_overlap_x" ] = collect_attribute( [ "tile_overlap_X" ], exptConfigDict )
-    datasetInfo[ "tile_overlap_y" ] = collect_attribute( [ "tile_overlap_Y" ], exptConfigDict )
-    datasetInfo[ "tiling_mode" ] = collect_attribute( [ "tiling_mode" ], exptConfigDict )
-    datasetInfo[ "per_cycle_channel_names" ] = collect_attribute( [ "channel_names" ], exptConfigDict )
+    for target_key, possibilities in info_key_mapping:
+        datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
+
     # Collect channel names.
     channelNames = None
 
