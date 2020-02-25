@@ -275,11 +275,14 @@ def standardize_metadata(directory: Path):
 
     logger.info("Finished reading segmentation parameters.")
 
+    raw_data_location = find_raw_data_dir(directory)
+    logger.info(f'Raw data location: {raw_data_location}')
+
     datasetInfo = {}
 
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    datasetInfo["raw_data_location"] = fspath(directory.absolute())
+    datasetInfo["raw_data_location"] = fspath(raw_data_location.absolute())
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
