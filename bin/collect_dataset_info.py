@@ -5,15 +5,17 @@
 # submission formats.
 
 import argparse
+from collections import Counter
 import datetime
 import json
 import logging
 import math
 import re
 import sys
+from typing import Dict, List
 
-logging.basicConfig( 
-    level=logging.INFO, 
+logging.basicConfig(
+    level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -34,12 +36,12 @@ logger = logging.getLogger(__name__)
 # So in this case we would only want the contents of the "aperture" field.
 # In other cases, the "aperture" field doesn't exist, and only the
 # "numerical_aperture" field is present, with valid content.
-def collect_attribute( fieldNames, configDict ) :
-    
+def collect_attribute( fieldNames, configDict: Dict ) :
+
     for fieldName in fieldNames:
         if fieldName in configDict:
             return configDict[ fieldName ]
-    
+
     # If we're still here, it means we tried all the possible field names and
     # didn't find a match in the config, so we have to fail.
     fieldNameString = ", ".join( fieldNames )
@@ -47,15 +49,20 @@ def collect_attribute( fieldNames, configDict ) :
     sys.exit(1)
 
 
-def infer_channel_name_from_index( cycleIndex, channelIndex, channelNames, channelsPerCycle ) :
-    
+def infer_channel_name_from_index(
+        cycleIndex: int,
+        channelIndex: int,
+        channelNames,
+        channelsPerCycle
+):
+
     # If there is no cycle+channel set for a particular measurement, then the
     # cycle (or channel?) index is set to "-1". E.g. if no membrane stain
     # channel exists, the membraneStainCycle can be set to "-1". Just return
     # None in this case.
-    if any( x is -1 for x in [ cycleIndex, channelIndex ] ) :
+    if any( x == -1 for x in [ cycleIndex, channelIndex ] ) :
         return None
-    
+
     cycleLastChannelIdx = cycleIndex * channelsPerCycle
 
     cycleChannelIndices = range( cycleLastChannelIdx - channelsPerCycle, cycleLastChannelIdx )
@@ -71,23 +78,23 @@ def infer_channel_name_from_index( cycleIndex, channelIndex, channelNames, chann
 # evenly divisible by 2 raised to the number of layers in the network, in this case 2^3=8.
 # https://github.com/hammerlab/cytokit/issues/14
 # https://github.com/CellProfiler/CellProfiler-plugins/issues/65
-def calculate_target_shape( magnification, tileHeight, tileWidth ) :
+def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int ) :
     scaleFactor = 1
-    if magnification is not 20 :
+    if magnification != 20 :
         scaleFactor = 20 / magnification
 
-    dims = { 
-        "height" : tileHeight, 
-        "width" : tileWidth
+    dims = {
+        "height" : tileHeight,
+        "width" : tileWidth,
     }
-    
+
     # Width and height must be evenly divisible by 8, so we round them up to them
     # closest factor of 8 if they aren't.
     for dimension in dims:
         if dims[ dimension ] % 8 :
             newDim = int( 8 * math.ceil( float( dims[ dimension ] )/8 ) )
             dims[ dimension ] = newDim
-    
+
     return [ dims[ "height" ], dims[ "width" ] ]
 
 
@@ -100,17 +107,11 @@ def calculate_target_shape( magnification, tileHeight, tileWidth ) :
 # duplicated channel names, we will append an index, starting at 1, to each
 # occurrence of the channel name.
 def make_channel_names_unique( channelNames ) :
-    
-    uniqueNames = {}
 
-    for channel in channelNames :
-        if channel in uniqueNames :
-            uniqueNames[ channel ] += 1
-        else :
-            uniqueNames[ channel ] = 1
-    
+    uniqueNames = Counter(channelNames)
+
     newNames = []
-    
+
     seenCounts = {}
 
     for channel in channelNames :
@@ -133,7 +134,7 @@ def make_channel_names_unique( channelNames ) :
 ########
 if __name__ == "__main__" :
     # Set up argument parser and parse the command line arguments.
-    parser = argparse.ArgumentParser( 
+    parser = argparse.ArgumentParser(
         description = "Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
     )
     parser.add_argument(
@@ -173,9 +174,9 @@ if __name__ == "__main__" :
     if not args.segm_json and not args.segm_text :
         logger.error( "Segmentation parameters file name not provided. Cannot continue." )
         sys.exit(1)
-    
+
     if args.segm_json and args.segm_text :
-        logger.warning( 
+        logger.warning(
             "Segmentation parameter files " +
             args.segm_json +
             " and " +
@@ -191,7 +192,7 @@ if __name__ == "__main__" :
         logger.info( "No channel names file passed. Will look for channel names in experiment JSON config." )
 
     logger.info( "Reading config from " + args.exptJsonFileName + "..." )
-    
+
     # Read in the experiment JSON config.
     with open( args.exptJsonFileName, 'r' ) as exptJsonFile :
         exptJsonData = exptJsonFile.read()
@@ -199,7 +200,7 @@ if __name__ == "__main__" :
 
     # Create dictionary from experiment JSON config.
     exptConfigDict = json.loads( exptJsonData )
-    
+
     # Read in the segmentation parameters. If we have a JSON file, use that.
     if args.segm_json :
         logger.info( "Reading segmentation parameters from " + args.segm_json + "..." )
@@ -219,17 +220,17 @@ if __name__ == "__main__" :
                 if numMatch :
                     fieldContents = int( fieldContents )
                 segmParams[ fieldName ] = fieldContents
-    
+
     logger.info( "Finished reading segmentation parameters." )
 
-    
+
     datasetInfo = {}
-    
+
     datasetInfo[ "name" ] = args.hubmapDatasetID
     datasetInfo[ "date" ] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     datasetInfo[ "raw_data_location" ] = args.rawDataLocation
 
-    
+
     datasetInfo[ "emission_wavelengths" ] = collect_attribute( [ "emission_wavelengths", "wavelengths" ], exptConfigDict )
     datasetInfo[ "axial_resolution" ] = collect_attribute( [ "zPitch", "z_pitch" ], exptConfigDict )
     datasetInfo[ "lateral_resolution" ] = collect_attribute( [ "xyResolution", "per_pixel_XY_resolution" ], exptConfigDict )
@@ -257,11 +258,11 @@ if __name__ == "__main__" :
     else :
         logger.error( "Cannot find data for channel_names field." )
         sys.exit(1)
-    
+
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
     channelNames = make_channel_names_unique( channelNames )
-    
+
     datasetInfo[ "channel_names" ] = channelNames
 
     datasetInfo[ "num_cycles" ] = int(
@@ -270,30 +271,30 @@ if __name__ == "__main__" :
 
     bestFocusChannel = collect_attribute( [ "bestFocusReferenceChannel", "best_focus_channel" ], exptConfigDict )
     bestFocusCycle = collect_attribute( [ "bestFocusReferenceCycle" ], exptConfigDict )
-    bestFocusChannelName = infer_channel_name_from_index( 
-        int( bestFocusCycle ), 
-        int( bestFocusChannel ), 
+    bestFocusChannelName = infer_channel_name_from_index(
+        int( bestFocusCycle ),
+        int( bestFocusChannel ),
         datasetInfo[ "channel_names" ],
         len( datasetInfo[ "per_cycle_channel_names" ] )
     )
 
     driftCompChannel = collect_attribute( [ "driftCompReferenceChannel", "drift_comp_channel" ], exptConfigDict )
     driftCompCycle = collect_attribute( [ "driftCompReferenceCycle" ], exptConfigDict )
-    driftCompChannelName = infer_channel_name_from_index( 
-        int( driftCompCycle ), 
-        int( driftCompChannel ), 
+    driftCompChannelName = infer_channel_name_from_index(
+        int( driftCompCycle ),
+        int( driftCompChannel ),
         datasetInfo[ "channel_names" ],
         len( datasetInfo[ "per_cycle_channel_names" ] )
     )
 
     datasetInfo[ "best_focus" ] = bestFocusChannelName
     datasetInfo[ "drift_compensation" ] = driftCompChannelName
-    
+
     nucleiChannel = collect_attribute( [ "nuclearStainChannel" ], segmParams )
     nucleiCycle = collect_attribute( [ "nuclearStainCycle" ], segmParams )
-    nucleiChannelName = infer_channel_name_from_index( 
-        int( nucleiCycle ), 
-        int( nucleiChannel ), 
+    nucleiChannelName = infer_channel_name_from_index(
+        int( nucleiCycle ),
+        int( nucleiChannel ),
         datasetInfo[ "channel_names" ],
         len( datasetInfo[ "per_cycle_channel_names" ] )
     )
@@ -305,24 +306,24 @@ if __name__ == "__main__" :
 
     membraneChannel = collect_attribute( [ "membraneStainChannel" ], segmParams )
     membraneCycle = collect_attribute( [ "membraneStainCycle" ], segmParams )
-    membraneChannelName = infer_channel_name_from_index( 
-        int( membraneCycle ), 
-        int( membraneChannel ), 
+    membraneChannelName = infer_channel_name_from_index(
+        int( membraneCycle ),
+        int( membraneChannel ),
         datasetInfo[ "channel_names" ],
         len( datasetInfo[ "per_cycle_channel_names" ] )
     )
 
     datasetInfo[ "nuclei_channel" ] = nucleiChannelName
-    
+
     if membraneChannelName is not None :
         datasetInfo[ "membrane_channel" ] = membraneChannelName
 
 
     # The target_shape needs to be worked out based on the metadata. See
     # comments on calculate_target_shape() function definition.
-    datasetInfo[ "target_shape" ] = calculate_target_shape( 
-        datasetInfo[ "magnification" ], 
-        datasetInfo[ "tile_height" ], 
+    datasetInfo[ "target_shape" ] = calculate_target_shape(
+        datasetInfo[ "magnification" ],
+        datasetInfo[ "tile_height" ],
         datasetInfo[ "tile_width" ],
     )
 
