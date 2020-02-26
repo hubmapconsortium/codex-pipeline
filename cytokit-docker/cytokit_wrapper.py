@@ -55,7 +55,7 @@ def find_or_prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_c
         return Path('symlinks')
     elif cytokit_command == 'operator':
         # This is the output from `cytokit processor`
-        return data_dir
+        return data_dir / 'output'
     else:
         raise ValueError('Unsupported Cytokit command: "{}"'.format(cytokit_command))
 
