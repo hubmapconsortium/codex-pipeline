@@ -62,7 +62,7 @@ def find_files(
         # case-insensitive match
         cf_filename_mapping = {fn.casefold(): fn for fn in filenames}
         casefolded_filename = filename.casefold()
-        if filename.casefold() in cf_filename_mapping:
+        if casefolded_filename in cf_filename_mapping:
             file_paths.append(base_directory / dirpath / cf_filename_mapping[casefolded_filename])
 
     return file_paths
@@ -202,7 +202,7 @@ def find_raw_data_dir(directory: Path) -> Path:
     for child in directory.iterdir():
         if not child.is_dir():
             continue
-        if 'processed' not in child.name and 'drv' not in child.name:
+        if not any(piece in child.name for piece in PROCESSED_DIRECTORY_NAME_PIECES):
             raw_data_dir_possibilities.append(child)
 
     if len(raw_data_dir_possibilities) > 1:
