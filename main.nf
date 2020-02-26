@@ -95,3 +95,18 @@ process run_cytokit_operator {
         cytokit operator run_all --config-path=!{yaml_config} --data-dir=!{cytokit_output_dir}
         '''
 }
+
+process create_ome_tiffs {
+
+    label "cpu"
+
+    input:
+        file cytokit_output_dir from output_with_extract_ch
+
+    output:
+        file cytokit_output_dir into output_with_ome_tiffs_ch
+
+    shell:
+        '''
+        $CODEX_PIPELINE_CODEBASE/bin/convert_to_ometiff.py !{cytokit_output_dir}
+        '''
