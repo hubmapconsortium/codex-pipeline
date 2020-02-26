@@ -3,15 +3,30 @@
 class: Workflow
 cwlVersion: v1.1
 label: CODEX analysis pipeline using Cytokit
+
 inputs:
   data_dir:
     label: "Directory containing CODEX data"
     type: Directory
+
 outputs:
-  cytokit_output:
-    outputSource: cytokit/cytokit_output
+  pipeline_config:
+    outputSource: collect_dataset_info/pipeline_config
+    type: File
+    label: "Pipeline config"
+  experiment_config:
+    outputSource: collect_dataset_info/pipeline_config
+    type: File
+    label: "Cytokit configuration format"
+  cytokit_processor_output:
+    outputSource: cytokit_processor/cytokit_output
     type: Directory
-    label: "Cytokit output"
+    label: "Cytokit processor output"
+  cytokit_operator_output:
+    outputSource: cytokit_operator/cytokit_output
+    type: Directory
+    label: "Cytokit operator output"
+
 steps:
   - id: collect_dataset_info
     in:
@@ -31,7 +46,7 @@ steps:
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
 
-  - id: cytokit
+  - id: cytokit_processor
     in:
       - id: cytokit_command
         valueFrom: "processor"
@@ -44,4 +59,19 @@ steps:
     out:
       - cytokit_output
     run: steps/cytokit.cwl
-    label: "CODEX analysis via Cytokit"
+    label: "CODEX analysis via Cytokit 'processor'"
+
+  - id: cytokit_operator
+    in:
+      - id: cytokit_command
+        valueFrom: "operator"
+      - id: data_dir
+        source: cytokit_processor/cytokit_output
+      - id: pipeline_config
+        source: collect_dataset_info/pipeline_config
+      - id: yaml_config
+        source: create_yaml_config/cytokit_config
+    out:
+      - cytokit_output
+    run: steps/cytokit.cwl
+    label: "CODEX analysis via Cytokit 'operator'"
