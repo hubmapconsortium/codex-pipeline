@@ -110,3 +110,4 @@ process create_ome_tiffs {
         '''
         $CODEX_PIPELINE_CODEBASE/bin/convert_to_ometiff.py !{cytokit_output_dir}
         '''
+}
