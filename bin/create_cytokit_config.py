@@ -167,7 +167,8 @@ if __name__ == "__main__" :
         {
             "extract" : {
                 "name" : "expressions",
-                "channels" : operatorExtractChannels
+                "channels" : operatorExtractChannels,
+                "z" : "all"
             }
         }
     ]
