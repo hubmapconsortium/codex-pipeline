@@ -26,7 +26,21 @@ CYTOKIT_COMMAND = [
 ]
 
 
-def symlink_images(data_dir: Path, pipeline_config: Path):
+def symlink_images(data_dir: Path):
+    # TODO: unify, don't call another command-line script
+    command = [
+        piece.format(data_dir=data_dir)
+        for piece in SETUP_DATA_DIR_COMMAND
+    ]
+    print('Running:', ' '.join(command))
+    check_call(command)
+
+
+def find_or_prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_config: Path):
+    """
+    :return: 2-tuple: pathlib.Path to data directory, either original or
+     newly-created with symlinks
+    """
     # Read directory name from pipeline config
     # Python 3.6 would be much nicer ,but the Cytokit image is built from
     # Ubuntu 16.04, which comes with 3.5
@@ -35,25 +49,12 @@ def symlink_images(data_dir: Path, pipeline_config: Path):
     dir_name = osps(config['raw_data_location'])[1]
 
     data_subdir = data_dir / dir_name
-    # TODO: unify, don't call another command-line script
-    command = [
-        piece.format(data_dir=data_subdir)
-        for piece in SETUP_DATA_DIR_COMMAND
-    ]
-    print('Running:', ' '.join(command))
-    check_call(command)
 
-
-def prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_config: Path):
-    """
-    :return: 2-tuple: pathlib.Path to data directory, either original or
-     newly-created with symlinks
-    """
     if cytokit_command == 'processor':
-        symlink_images(data_dir, pipeline_config)
+        symlink_images(data_subdir)
         return Path('symlinks')
     elif cytokit_command == 'operator':
-        return data_dir
+        return data_subdir
     else:
         raise ValueError('Unsupported Cytokit command: "{}"'.format(cytokit_command))
 
@@ -74,7 +75,7 @@ def run_cytokit(cytokit_command: str, data_directory: Path, yaml_config: Path):
 
 
 def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_config: Path):
-    data_dir = prep_data_directory(cytokit_command, data_dir, pipeline_config)
+    data_dir = find_or_prep_data_directory(cytokit_command, data_dir, pipeline_config)
     run_cytokit(cytokit_command, data_dir, yaml_config)
 
 
