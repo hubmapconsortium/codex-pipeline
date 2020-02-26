@@ -36,6 +36,34 @@ def symlink_images(data_dir: Path):
     check_call(command)
 
 
+def find_cytokit_processor_output_r(directory: Path):
+    """
+    BIG HACK for step-by-step CWL usage -- walk parent directories until
+    we find one containing 'cytometry' and 'processor'
+    """
+    required_dir_names = {'cytometry', 'processor'}
+    child_names = {c.name for c in directory.iterdir()}
+    if required_dir_names <= child_names:
+        return directory
+    else:
+        abs_dir = directory.absolute()
+        parent = abs_dir.parent
+        if parent == abs_dir:
+            # At the root. No data found.
+            return
+        else:
+            return find_cytokit_processor_output_r(parent)
+
+
+def find_cytokit_processor_output(directory: Path) -> Path:
+    data_dir = find_cytokit_processor_output_r(directory)
+    if data_dir is None:
+        message = "No `cytokit processor` output found in {} or any parent directories"
+        raise ValueError(message.format(directory))
+    else:
+        return data_dir
+
+
 def find_or_prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_config: Path):
     """
     :return: 2-tuple: pathlib.Path to data directory, either original or
@@ -54,8 +82,8 @@ def find_or_prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_c
         symlink_images(data_subdir)
         return Path('symlinks')
     elif cytokit_command == 'operator':
-        # This is the output from `cytokit processor`
-        return data_dir / 'output'
+        # Need to find the output from 'cytokit processor'
+        return find_cytokit_processor_output(data_dir)
     else:
         raise ValueError('Unsupported Cytokit command: "{}"'.format(cytokit_command))
 
