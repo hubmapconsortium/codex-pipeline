@@ -3,6 +3,8 @@
 import argparse
 import json
 import logging
+import re
+import sys
 import yaml
 
 logging.basicConfig( 
@@ -129,7 +131,63 @@ if __name__ == "__main__" :
 
     for field in acquisitionFields :
         cytokitConfig[ "acquisition" ][ field ] = pipelineConfigInfo[ field ]
+    
+    
+    # Create operator section to extract channels collapsed in one time point,
+    # leaving out blank/empty channels and only including the nuclear stain
+    # channel used for segmentation.
+    blankPattern = re.compile( r'^blank', re.IGNORECASE )
+    emptyPattern = re.compile( r'^empty', re.IGNORECASE )
+    dapiChannelPattern = re.compile( r'^DAPI', re.IGNORECASE )
+    hoechstChannelPattern = re.compile( r'^HOECHST', re.IGNORECASE )
+    
+    operatorExtractChannels = []
+    uniqueChannels = {}
 
+    for channelName in pipelineConfigInfo[ "channel_names" ] :
+        
+        # Skip unwanted channels.
+        if blankPattern.match( channelName ) :
+            continue
+        elif emptyPattern.match( channelName ) :
+            continue
+        elif dapiChannelPattern.match( channelName ) :
+            if channelName != pipelineConfigInfo[ "nuclei_channel" ] :
+                continue
+        elif hoechstChannelPattern.match( channelName ) :
+            if channelName != pipelineConfigInfo[ "nuclei_channel" ] :
+                continue
+            
+        # Append to operator extract channels with "proc_" prepended -- this
+        # tells Cytokit to extract the channels from the processed tiles.
+        operatorExtractChannels.append( "proc_" + channelName )
+            
+        if channelName in uniqueChannels :
+            uniqueChannels[ channelName ] += 1
+        else :
+            uniqueChannels[ channelName ] = 1
+
+    
+    # Check for duplicated channels and complain if there are any.
+    duplicatedChannels = 0
+    for channelName in uniqueChannels :
+        if uniqueChannels[ channelName ] > 1 :
+            logger.error( "Channel " + channelName + " is duplicated." )
+            duplicatedChannels += 1
+
+    if duplicatedChannels > 0 :
+        sys.exit( 1 )
+    
+    # Add operator section to config.
+    cytokitConfig[ "operator" ] = [
+        {
+            "extract" : {
+                "name" : "expressions",
+                "channels" : operatorExtractChannels
+            }
+        }
+    ]
+    
     # Write config in YAML format. 
     logger.info( "Writing Cytokit config to " + args.outfile )
 
