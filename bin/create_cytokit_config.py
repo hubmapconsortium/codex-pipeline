@@ -142,7 +142,6 @@ if __name__ == "__main__" :
     hoechstChannelPattern = re.compile( r'^HOECHST', re.IGNORECASE )
     
     operatorExtractChannels = []
-    uniqueChannels = {}
 
     for channelName in pipelineConfigInfo[ "channel_names" ] :
         
@@ -161,22 +160,7 @@ if __name__ == "__main__" :
         # Append to operator extract channels with "proc_" prepended -- this
         # tells Cytokit to extract the channels from the processed tiles.
         operatorExtractChannels.append( "proc_" + channelName )
-            
-        if channelName in uniqueChannels :
-            uniqueChannels[ channelName ] += 1
-        else :
-            uniqueChannels[ channelName ] = 1
 
-    
-    # Check for duplicated channels and complain if there are any.
-    duplicatedChannels = 0
-    for channelName in uniqueChannels :
-        if uniqueChannels[ channelName ] > 1 :
-            logger.error( "Channel " + channelName + " is duplicated." )
-            duplicatedChannels += 1
-
-    if duplicatedChannels > 0 :
-        sys.exit( 1 )
     
     # Add operator section to config.
     cytokitConfig[ "operator" ] = [
