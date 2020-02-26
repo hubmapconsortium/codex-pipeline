@@ -196,10 +196,9 @@ def main(data_dir: str):
 
             # Create the symlink.
             try :
-                print('Linking', sourceTifFilePath, 'to', linkTifFilePath)
                 os.symlink(
                     sourceTifFilePath,
-                    linkTifFilePath
+                    linkTifFilePath,
                 )
             except OSError as err :
                 logger.error(
