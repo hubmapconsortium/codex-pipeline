@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import stat
 import sys
@@ -33,26 +34,10 @@ rawFileNamingPattern = re.compile( r'^\d_\d{5}_Z\d{3}_CH\d\.tif$' )
 rawFileRegionPattern = re.compile( r'^\d' )
 
 
-########
-# MAIN #
-########
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(
-        description = "Create a directory and populate directory with directories containing symlinks to the raw image data."
-    )
-    parser.add_argument(
-        "data_dir",
-        help="Data directory",
-    )
-
-    args = parser.parse_args()
-
+def main(data_dir: str):
     ###################################################################
     # Inspect source directories and collect paths to raw data files. #
     ###################################################################
-
-    data_dir = args.data_dir
 
     # Ensure that source directory exists and is readable.
     st = os.stat( data_dir )
@@ -224,3 +209,21 @@ if __name__ == "__main__":
                 sys.exit(1)
 
     logger.info( "Links created in directories under %s" % targetDirectory )
+
+
+########
+# MAIN #
+########
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description = "Create a directory and populate directory with directories containing symlinks to the raw image data."
+    )
+    parser.add_argument(
+        "data_dir",
+        help="Data directory",
+    )
+
+    args = parser.parse_args()
+
+    main(args.data_dir)
