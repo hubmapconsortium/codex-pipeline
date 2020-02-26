@@ -25,6 +25,8 @@ CYTOKIT_COMMAND = [
     '--output-dir=output',
 ]
 
+CYTOKIT_PROCESSOR_OUTPUT_DIRS = frozenset({'cytometry', 'processor'})
+
 
 def symlink_images(data_dir: Path):
     # TODO: unify, don't call another command-line script
@@ -41,9 +43,8 @@ def find_cytokit_processor_output_r(directory: Path):
     BIG HACK for step-by-step CWL usage -- walk parent directories until
     we find one containing 'cytometry' and 'processor'
     """
-    required_dir_names = {'cytometry', 'processor'}
     child_names = {c.name for c in directory.iterdir()}
-    if required_dir_names <= child_names:
+    if CYTOKIT_PROCESSOR_OUTPUT_DIRS <= child_names:
         return directory
     else:
         abs_dir = directory.absolute()
@@ -108,6 +109,15 @@ def run_cytokit(cytokit_command: str, data_directory: Path, yaml_config: Path):
     env = environ.copy()
     env['PYTHONPATH'] = '/lab/repos/cytokit/python/pipeline'
     check_call(command, env=env)
+
+    print('Cytokit completed successfully')
+    # I feel really bad about this, but not bad enough not to do it
+    if cytokit_command == 'operator':
+        output_dir = Path('output')
+        for dirname in CYTOKIT_PROCESSOR_OUTPUT_DIRS:
+            dir_to_delete = (output_dir / dirname)
+            print('Deleting', dir_to_delete)
+            dir_to_delete.unlink()
 
 
 def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_config: Path):
