@@ -7,23 +7,21 @@ hints:
   DockerGpuRequirement: {}
 baseCommand: /opt/cytokit_wrapper.py
 
+arguments:
+  - "processor"
 inputs:
-  cytokit_command:
-    type: string
-    inputBinding:
-      position: 1
   data_dir:
     type: Directory
     inputBinding:
-      position: 2
+      position: 1
   pipeline_config:
     type: File
     inputBinding:
-      position: 3
+      position: 2
   yaml_config:
     type: File
     inputBinding:
-      position: 4
+      position: 3
 outputs:
   cytokit_output:
     type: Directory

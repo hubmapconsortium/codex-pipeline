@@ -3,8 +3,6 @@
 class: Workflow
 cwlVersion: v1.1
 label: CODEX analysis pipeline using Cytokit
-requirements:
-  StepInputExpressionRequirement: {}
 
 inputs:
   data_dir:
@@ -50,8 +48,6 @@ steps:
 
   - id: cytokit_processor
     in:
-      - id: cytokit_command
-        valueFrom: "processor"
       - id: data_dir
         source: data_dir
       - id: pipeline_config
@@ -60,13 +56,11 @@ steps:
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
-    run: steps/cytokit.cwl
+    run: steps/cytokit_processor.cwl
     label: "CODEX analysis via Cytokit 'processor'"
 
   - id: cytokit_operator
     in:
-      - id: cytokit_command
-        valueFrom: "operator"
       - id: data_dir
         source: cytokit_processor/cytokit_output
       - id: pipeline_config
@@ -75,5 +69,5 @@ steps:
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
-    run: steps/cytokit.cwl
+    run: steps/cytokit_operator.cwl
     label: "CODEX analysis via Cytokit 'operator'"
