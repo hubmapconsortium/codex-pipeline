@@ -44,7 +44,21 @@ def symlink_images(data_dir: Path, pipeline_config: Path):
     check_call(command)
 
 
-def run_cytokit(cytokit_command: str, yaml_config: Path):
+def prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_config: Path):
+    """
+    :return: 2-tuple: pathlib.Path to data directory, either original or
+     newly-created with symlinks
+    """
+    if cytokit_command == 'processor':
+        symlink_images(data_dir, pipeline_config)
+        return Path('symlinks')
+    elif cytokit_command == 'operator':
+        return data_dir
+    else:
+        raise ValueError('Unsupported Cytokit command: "{}"'.format(cytokit_command))
+
+
+def run_cytokit(cytokit_command: str, data_directory: Path, yaml_config: Path):
     command = [
         piece.format(
             command=cytokit_command,
@@ -60,8 +74,8 @@ def run_cytokit(cytokit_command: str, yaml_config: Path):
 
 
 def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_config: Path):
-    symlink_images(data_dir, pipeline_config)
-    run_cytokit(cytokit_command, yaml_config)
+    data_dir = prep_data_directory(cytokit_command, data_dir, pipeline_config)
+    run_cytokit(cytokit_command, data_dir, yaml_config)
 
 
 if __name__ == '__main__':
