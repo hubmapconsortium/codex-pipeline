@@ -94,3 +94,4 @@ process run_cytokit_operator {
 
         cytokit operator run_all --config-path=!{yaml_config} --data-dir=!{cytokit_output_dir}
         '''
+}
