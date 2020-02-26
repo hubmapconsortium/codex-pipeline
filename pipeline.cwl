@@ -1,7 +1,7 @@
 #!/usr/bin/env cwl-runner
 
 class: Workflow
-cwlVersion: v1.0
+cwlVersion: v1.1
 label: CODEX analysis pipeline using Cytokit
 inputs:
   data_dir:
