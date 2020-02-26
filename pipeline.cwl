@@ -33,6 +33,8 @@ steps:
 
   - id: cytokit
     in:
+      - id: cytokit_command
+        valueFrom: "processor"
       - id: data_dir
         source: data_dir
       - id: pipeline_config

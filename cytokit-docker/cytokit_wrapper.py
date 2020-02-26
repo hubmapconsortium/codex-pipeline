@@ -4,19 +4,21 @@
 
 from argparse import ArgumentParser
 from os import environ
-from os.path import join as ospj, split as osps
+from os.path import split as osps
+from pathlib import Path
 from subprocess import check_call
 
 import yaml
 
+# TODO ↓↓↓ unify this script with setting up the data directory
+#  instead of calling this script as a separate executable
 SETUP_DATA_DIR_COMMAND = [
     '/opt/setup_data_directory.py',
     '{data_dir}',
 ]
-
 CYTOKIT_COMMAND = [
     'cytokit',
-    'processor',
+    '{command}',
     'run_all',
     '--config-path={yaml_config}',
     '--data-dir={data_dir}',
@@ -24,13 +26,15 @@ CYTOKIT_COMMAND = [
 ]
 
 
-def symlink_images(data_dir, pipeline_config):
+def symlink_images(data_dir: Path, pipeline_config: Path):
     # Read directory name from pipeline config
-    with open(pipeline_config) as f:
+    # Python 3.6 would be much nicer ,but the Cytokit image is built from
+    # Ubuntu 16.04, which comes with 3.5
+    with pipeline_config.open() as f:
         config = yaml.safe_load(f)
     dir_name = osps(config['raw_data_location'])[1]
 
-    data_subdir = ospj(data_dir, dir_name)
+    data_subdir = data_dir / dir_name
     # TODO: unify, don't call another command-line script
     command = [
         piece.format(data_dir=data_subdir)
@@ -40,9 +44,10 @@ def symlink_images(data_dir, pipeline_config):
     check_call(command)
 
 
-def run_cytokit(yaml_config):
+def run_cytokit(cytokit_command: str, yaml_config: Path):
     command = [
         piece.format(
+            command=cytokit_command,
             data_dir='symlinks',
             yaml_config=yaml_config,
         )
@@ -54,16 +59,17 @@ def run_cytokit(yaml_config):
     check_call(command, env=env)
 
 
-def main(data_dir, pipeline_config, yaml_config):
+def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_config: Path):
     symlink_images(data_dir, pipeline_config)
-    run_cytokit(yaml_config)
+    run_cytokit(cytokit_command, yaml_config)
 
 
 if __name__ == '__main__':
     p = ArgumentParser()
-    p.add_argument('data_dir')
-    p.add_argument('pipeline_config')
-    p.add_argument('yaml_config')
+    p.add_argument('cytokit_command')
+    p.add_argument('data_dir', type=Path)
+    p.add_argument('pipeline_config', type=Path)
+    p.add_argument('yaml_config', type=Path)
     args = p.parse_args()
 
-    main(args.data_dir, args.pipeline_config, args.yaml_config)
+    main(args.cytokit_command, args.data_dir, args.pipeline_config, args.yaml_config)

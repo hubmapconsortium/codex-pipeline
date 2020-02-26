@@ -8,18 +8,22 @@ hints:
 baseCommand: /opt/cytokit_wrapper.py
 
 inputs:
+  cytokit_command:
+    type: string
+    inputBinding:
+      position: 1
   data_dir:
     type: Directory
     inputBinding:
-      position: 1
+      position: 2
   pipeline_config:
     type: File
     inputBinding:
-      position: 2
+      position: 3
   yaml_config:
     type: File
     inputBinding:
-      position: 3
+      position: 4
 outputs:
   cytokit_output:
     type: Directory
