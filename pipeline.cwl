@@ -3,6 +3,8 @@
 class: Workflow
 cwlVersion: v1.1
 label: CODEX analysis pipeline using Cytokit
+requirements:
+  StepInputExpressionRequirement: {}
 
 inputs:
   data_dir:
