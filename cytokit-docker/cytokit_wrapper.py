@@ -62,7 +62,7 @@ def run_cytokit(cytokit_command: str, data_directory: Path, yaml_config: Path):
     command = [
         piece.format(
             command=cytokit_command,
-            data_dir='symlinks',
+            data_dir=data_directory,
             yaml_config=yaml_config,
         )
         for piece in CYTOKIT_COMMAND
