@@ -63,6 +63,7 @@ process run_cytokit_processor {
 
     output:
         file "output" into cytokit_output_dir_ch
+        file yaml_config into yaml_files_post_processor_ch
 
     shell:
         '''
@@ -75,3 +76,22 @@ process run_cytokit_processor {
         '''
 }
 
+process run_cytokit_operator {
+
+    label "gpu"
+
+    input:
+        file cytokit_output_dir from cytokit_output_dir_ch
+        file yaml_config from yaml_files_post_processor_ch
+
+    output:
+        file cytokit_output_dir into output_with_extract_ch
+
+    shell:
+        '''
+        source $CODEX_PIPELINE_CODEBASE/conf/cytokit_env
+        conda activate cytokit
+
+        cytokit operator run_all --config-path=!{yaml_config} --data-dir=!{cytokit_output_dir}
+        '''
+}
