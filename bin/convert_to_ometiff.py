@@ -4,6 +4,7 @@ from aicsimageio import AICSImage, imread
 from aicsimageio.writers import ome_tiff_writer
 import argparse
 import logging
+from multiprocessing import Pool
 from os import walk
 from pathlib import Path
 import re
@@ -24,7 +25,7 @@ SEGMENTATION_CHANNEL_NAMES = [
         "nucleus_boundaries" 
 ]
 
-TIFF_FILE_NAMING_PATTERN = re.compile( r'(^R\d{3}_X\d{3}_Y\d{3})\.tif' )
+TIFF_FILE_NAMING_PATTERN = re.compile( r'^R\d{3}_X\d{3}_Y\d{3}\.tif' )
 
 
 def collect_tiff_file_list( 
@@ -83,8 +84,6 @@ def create_ome_tiffs(
     for sourceFile in fileList :
         
         logger.info( "Converting file: " + str( sourceFile ) )
-
-        #fnameMatch = TIFF_FILE_NAMING_PATTERN.match( sourceFile.name )
 
         ometiffFilename = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
 
