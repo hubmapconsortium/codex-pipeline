@@ -4,12 +4,11 @@ from aicsimageio import AICSImage, imread
 from aicsimageio.writers import ome_tiff_writer
 import argparse
 import logging
-import os
+from os import walk
+from pathlib import Path
 import re
-import stat
-import sys
 from tifffile import TiffFile
-import yaml
+from typing import List
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,37 +17,37 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def collect_tiff_file_list( directory, tiffFileNamingPattern ) :
+SEGMENTATION_CHANNEL_NAMES = [ 
+        "cells", 
+        "nuclei", 
+        "cell_boundaries", 
+        "nucleus_boundaries" 
+]
 
-    fileList = None
+TIFF_FILE_NAMING_PATTERN = re.compile( r'(^R\d{3}_X\d{3}_Y\d{3})\.tif' )
+
+
+def collect_tiff_file_list( 
+        directory: Path, 
+        TIFF_FILE_NAMING_PATTERN: re.Pattern
+) -> List[ Path ] :
+
+    fileList = []
+
+    for dirpath, dirnames, filenames in walk( directory ) :
+        for filename in filenames :
+            if TIFF_FILE_NAMING_PATTERN.match( filename ) :
+                fileList.append( directory / filename )
     
-    # Get the list of files in the cytometry tile directory.
-    try :
-        fileList = os.listdir( directory )
-    except OSError as err :
-        logger.error(
-            "Could not acquire list of contents for " +
-            args.directory +
-            " : " +
-            err.strerror
-        )
-        sys.exit(1)
-
-    # Just take the TIFF files matching the expected naming pattern, in case
-    # there are other things in the directory.
-    fileList = list(
-        filter(
-            tiffFileNamingPattern.search,
-            fileList
-        )
-    )
-
-    fileList = [ os.path.join( directory, item ) for item in fileList ]
+    if len( fileList ) == 0 :
+        logger.warning( "No files found in " + str( directory ) )
 
     return fileList
     
 
-def collect_expressions_extract_channels( extractFile ) :
+def collect_expressions_extract_channels( 
+        extractFile: Path 
+) -> List[ str ] :
     
     """
     Read file with TiffFile to get Labels attribute from ImageJ metadata. We
@@ -70,21 +69,27 @@ def collect_expressions_extract_channels( extractFile ) :
     return channelList
 
 
-def create_ome_tiffs( fileList, tiffFileNamingPattern, outputDir, channelNames ) :
+def create_ome_tiffs( 
+        fileList: List[ Path ], 
+        TIFF_FILE_NAMING_PATTERN: re.Pattern, 
+        outputDir: Path, 
+        channelNames: List[ str ] 
+) :
     
-    os.mkdir( outputDir )
+    Path.mkdir( outputDir )
+    
+    # TODO: parallelise this part
 
     for sourceFile in fileList :
         
-        logger.info( "Converting file: " + sourceFile )
+        logger.info( "Converting file: " + str( sourceFile ) )
 
-        fnameMatch = tiffFileNamingPattern.match( os.path.basename( sourceFile ) )
+        #fnameMatch = TIFF_FILE_NAMING_PATTERN.match( sourceFile.name )
 
-        fname = fnameMatch.group( 1 )
-        
-        ometiffFilename = os.path.join( outputDir, fname + ".ome.tiff" )
-        
+        ometiffFilename = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
+
         image = AICSImage( sourceFile )
+
         imageDataForOmeTiff = image.get_image_data( "TCZYX" )
 
         with ome_tiff_writer.OmeTiffWriter( ometiffFilename ) as ome_writer :
@@ -94,7 +99,7 @@ def create_ome_tiffs( fileList, tiffFileNamingPattern, outputDir, channelNames )
                 dimension_order="TCZYX"
             )
         
-        logger.info( "OME-TIFF file created: " + ometiffFilename )
+        logger.info( "OME-TIFF file created: " + str( ometiffFilename ) )
 
 
 ########
@@ -107,7 +112,8 @@ if __name__ == "__main__" :
     )
     parser.add_argument(
             "cytokit_output_dir",
-            help = "Path to Cytokit's output directory."
+            help = "Path to Cytokit's output directory.",
+            type = Path
     )
     """
     # Commented out until this file is available
@@ -119,39 +125,30 @@ if __name__ == "__main__" :
     
     args = parser.parse_args()
     
-    tiffFileNamingPattern = re.compile( r'(^R\d{3}_X\d{3}_Y\d{3})\.tif' )
+    cytometryTileDir = args.cytokit_output_dir / "cytometry" / "tile"
+    extractDir = args.cytokit_output_dir / "extract" / "expressions"
     
-    segmentationChannelNames = [ "cells", "nuclei", "cell_boundaries", "nucleus_boundaries" ]
-    
-    cytometryTileDir = os.path.join( 
-        args.cytokit_output_dir,
-        "cytometry",
-        "tile"
-    )
-    
-    extractDir = os.path.join(
-        args.cytokit_output_dir,
-        "extract",
-        "expressions"
-    )
+    segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
+    extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
 
-    segmentationFileList = collect_tiff_file_list( cytometryTileDir, tiffFileNamingPattern )
-    
-    extractFileList = collect_tiff_file_list( extractDir, tiffFileNamingPattern )
-
+    # For the extract, pull the correctly ordered list of channel names from
+    # one of the files, as they aren't guaranteed to be in the same order as
+    # the YAML config.
     extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-
-    create_ome_tiffs(
-        segmentationFileList,
-        tiffFileNamingPattern,
-        os.path.join( cytometryTileDir, "ome-tiff" ),
-        segmentationChannelNames
-    )
-
-    create_ome_tiffs(
-        extractFileList,
-        tiffFileNamingPattern,
-        os.path.join( extractDir, "ome-tiff" ),
-        extractChannelNames
-    )
+    
+    if len( segmentationFileList ) > 0 :
+        create_ome_tiffs(
+            segmentationFileList,
+            TIFF_FILE_NAMING_PATTERN,
+            cytometryTileDir / "ome-tiff",
+            SEGMENTATION_CHANNEL_NAMES
+        )
+    
+    if len( extractFileList ) > 0 :
+        create_ome_tiffs(
+            extractFileList,
+            TIFF_FILE_NAMING_PATTERN,
+            extractDir / "ome-tiff",
+            extractChannelNames
+        )
 
