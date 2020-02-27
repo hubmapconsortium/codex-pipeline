@@ -9,14 +9,13 @@ from os import walk
 from pathlib import Path
 import re
 from tifffile import TiffFile
-from typing import List
+from typing import List, Tuple
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 
 SEGMENTATION_CHANNEL_NAMES = [ 
         "cells", 
@@ -70,35 +69,49 @@ def collect_expressions_extract_channels(
     return channelList
 
 
+def convert_tiff_file(
+        filesAndChannels: Tuple[ Path, Path, List ]
+) :
+    
+    sourceFile, ometiffFile, channelNames = filesAndChannels
+    
+    logger.info( "Converting file: " + str( sourceFile ) )
+    
+    image = AICSImage( sourceFile )
+    
+    imageDataForOmeTiff = image.get_image_data( "TCZYX" )
+    
+    ome_writer = ome_tiff_writer.OmeTiffWriter( ometiffFile )
+    
+    with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
+        ome_writer.save(
+            imageDataForOmeTiff,
+            channel_names = channelNames,
+            dimension_order="TCZYX"
+        )
+
+    logger.info( "OME-TIFF file created: " + str( ometiffFile ) )
+
+
 def create_ome_tiffs( 
         fileList: List[ Path ], 
-        TIFF_FILE_NAMING_PATTERN: re.Pattern, 
         outputDir: Path, 
         channelNames: List[ str ] 
 ) :
     
     Path.mkdir( outputDir )
     
-    # TODO: parallelise this part
+    allFilesAndChannels = []
 
     for sourceFile in fileList :
-        
-        logger.info( "Converting file: " + str( sourceFile ) )
+        ometiffFile = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
+        allFilesAndChannels.append( ( sourceFile, ometiffFile, channelNames ) )
+    
+    with Pool( processes = 8 ) as pool :
+        pool.imap_unordered( convert_tiff_file, allFilesAndChannels )
+        pool.close()
+        pool.join()
 
-        ometiffFilename = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
-
-        image = AICSImage( sourceFile )
-
-        imageDataForOmeTiff = image.get_image_data( "TCZYX" )
-
-        with ome_tiff_writer.OmeTiffWriter( ometiffFilename ) as ome_writer :
-            ome_writer.save(
-                imageDataForOmeTiff,
-                channel_names = channelNames,
-                dimension_order="TCZYX"
-            )
-        
-        logger.info( "OME-TIFF file created: " + str( ometiffFilename ) )
 
 
 ########
@@ -138,7 +151,6 @@ if __name__ == "__main__" :
     if len( segmentationFileList ) > 0 :
         create_ome_tiffs(
             segmentationFileList,
-            TIFF_FILE_NAMING_PATTERN,
             cytometryTileDir / "ome-tiff",
             SEGMENTATION_CHANNEL_NAMES
         )
@@ -146,7 +158,6 @@ if __name__ == "__main__" :
     if len( extractFileList ) > 0 :
         create_ome_tiffs(
             extractFileList,
-            TIFF_FILE_NAMING_PATTERN,
             extractDir / "ome-tiff",
             extractChannelNames
         )
