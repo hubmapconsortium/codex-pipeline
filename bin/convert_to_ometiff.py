@@ -17,18 +17,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-SEGMENTATION_CHANNEL_NAMES = [ 
-        "cells", 
-        "nuclei", 
-        "cell_boundaries", 
-        "nucleus_boundaries" 
+SEGMENTATION_CHANNEL_NAMES = [
+    "cells",
+    "nuclei",
+    "cell_boundaries",
+    "nucleus_boundaries",
 ]
 
 TIFF_FILE_NAMING_PATTERN = re.compile( r'^R\d{3}_X\d{3}_Y\d{3}\.tif' )
 
 
-def collect_tiff_file_list( 
-        directory: Path, 
+def collect_tiff_file_list(
+        directory: Path,
         TIFF_FILE_NAMING_PATTERN: re.Pattern
 ) -> List[ Path ] :
 
@@ -38,17 +38,17 @@ def collect_tiff_file_list(
         for filename in filenames :
             if TIFF_FILE_NAMING_PATTERN.match( filename ) :
                 fileList.append( directory / filename )
-    
+
     if len( fileList ) == 0 :
         logger.warning( "No files found in " + str( directory ) )
 
     return fileList
-    
 
-def collect_expressions_extract_channels( 
-        extractFile: Path 
+
+def collect_expressions_extract_channels(
+        extractFile: Path
 ) -> List[ str ] :
-    
+
     """
     Read file with TiffFile to get Labels attribute from ImageJ metadata. We
     need this to get the channel names in the correct order. Cytokit re-orders
@@ -58,12 +58,12 @@ def collect_expressions_extract_channels(
     img = TiffFile( extractFile )
 
     numChannels = int( img.imagej_metadata[ "channels" ] )
-    
+
     channelList = img.imagej_metadata[ "Labels" ][ 0:numChannels ]
 
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile( r'^proc_(.*)' )
-    
+
     channelList = [ procPattern.match( channel ).group( 1 ) for channel in channelList ]
 
     return channelList
@@ -72,17 +72,15 @@ def collect_expressions_extract_channels(
 def convert_tiff_file(
         filesAndChannels: Tuple[ Path, Path, List ]
 ) :
-    
+
     sourceFile, ometiffFile, channelNames = filesAndChannels
-    
+
     logger.info( "Converting file: " + str( sourceFile ) )
-    
+
     image = AICSImage( sourceFile )
-    
+
     imageDataForOmeTiff = image.get_image_data( "TCZYX" )
-    
-    ome_writer = ome_tiff_writer.OmeTiffWriter( ometiffFile )
-    
+
     with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
         ome_writer.save(
             imageDataForOmeTiff,
@@ -93,21 +91,23 @@ def convert_tiff_file(
     logger.info( "OME-TIFF file created: " + str( ometiffFile ) )
 
 
-def create_ome_tiffs( 
-        fileList: List[ Path ], 
-        outputDir: Path, 
-        channelNames: List[ str ] 
-) :
-    
-    Path.mkdir( outputDir )
-    
+def create_ome_tiffs(
+        fileList: List[ Path ],
+        outputDir: Path,
+        channelNames: List[ str ],
+        subprocesses: int,
+
+):
+
+    outputDir.mkdir()
+
     allFilesAndChannels = []
 
     for sourceFile in fileList :
         ometiffFile = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
         allFilesAndChannels.append( ( sourceFile, ometiffFile, channelNames ) )
-    
-    with Pool( processes = 8 ) as pool :
+
+    with Pool( processes = subprocesses) as pool :
         pool.imap_unordered( convert_tiff_file, allFilesAndChannels )
         pool.close()
         pool.join()
@@ -120,12 +120,24 @@ def create_ome_tiffs(
 if __name__ == "__main__" :
 
     parser = argparse.ArgumentParser(
-            description = "Convert Cytokit's output TIFFs containing segmentation and extraction results to OME-TIFF, and add the channel names. Creates an \"ome-tiff\" directory inside the output/cytometry/tile and output/extract/expressions directories."
+        description=(
+            "Convert Cytokit's output TIFFs containing segmentation and extraction "
+            "results to OME-TIFF, and add the channel names. Creates an \"ome-tiff\" "
+            "directory inside the output/cytometry/tile and "
+            "output/extract/expressions directories."
+        ),
     )
     parser.add_argument(
-            "cytokit_output_dir",
-            help = "Path to Cytokit's output directory.",
-            type = Path
+        "cytokit_output_dir",
+        help="Path to Cytokit's output directory.",
+        type=Path,
+    )
+    parser.add_argument(
+        '-p',
+        '--processes',
+        help='Number of parallel OME-TIFF conversions to perform at once',
+        type=int,
+        default=8
     )
     """
     # Commented out until this file is available
@@ -134,12 +146,12 @@ if __name__ == "__main__" :
             help = "Path to file containing antibody information"
     )
     """
-    
+
     args = parser.parse_args()
-    
+
     cytometryTileDir = args.cytokit_output_dir / "cytometry" / "tile"
     extractDir = args.cytokit_output_dir / "extract" / "expressions"
-    
+
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
 
@@ -147,18 +159,20 @@ if __name__ == "__main__" :
     # one of the files, as they aren't guaranteed to be in the same order as
     # the YAML config.
     extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-    
-    if len( segmentationFileList ) > 0 :
+
+    if segmentationFileList:
         create_ome_tiffs(
             segmentationFileList,
             cytometryTileDir / "ome-tiff",
-            SEGMENTATION_CHANNEL_NAMES
+            SEGMENTATION_CHANNEL_NAMES,
+            args.processes,
         )
-    
-    if len( extractFileList ) > 0 :
+
+    if extractFileList:
         create_ome_tiffs(
             extractFileList,
             extractDir / "ome-tiff",
-            extractChannelNames
+            extractChannelNames,
+            args.processes,
         )
 
