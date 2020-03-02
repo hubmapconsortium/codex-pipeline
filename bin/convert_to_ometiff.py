@@ -45,10 +45,7 @@ def collect_tiff_file_list(
     return fileList
 
 
-def collect_expressions_extract_channels(
-        extractFile: Path
-) -> List[ str ] :
-
+def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     """
     Read file with TiffFile to get Labels attribute from ImageJ metadata. We
     need this to get the channel names in the correct order. Cytokit re-orders
@@ -92,23 +89,21 @@ def convert_tiff_file(
 
 
 def create_ome_tiffs(
-        fileList: List[ Path ],
-        outputDir: Path,
-        channelNames: List[ str ],
+        file_list: List[Path],
+        output_dir: Path,
+        channel_names: List[str],
         subprocesses: int,
-
 ):
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    outputDir.mkdir()
+    all_files_and_channels = []
 
-    allFilesAndChannels = []
+    for source_file in file_list:
+        ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
+        all_files_and_channels.append((source_file, ome_tiff_file, channel_names))
 
-    for sourceFile in fileList :
-        ometiffFile = ( outputDir / sourceFile.name ).with_suffix( ".ome.tiff" )
-        allFilesAndChannels.append( ( sourceFile, ometiffFile, channelNames ) )
-
-    with Pool( processes = subprocesses) as pool :
-        pool.imap_unordered( convert_tiff_file, allFilesAndChannels )
+    with Pool(processes=subprocesses) as pool:
+        pool.imap_unordered(convert_tiff_file, all_files_and_channels)
         pool.close()
         pool.join()
 
@@ -149,8 +144,14 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    cytometryTileDir = args.cytokit_output_dir / "cytometry" / "tile"
-    extractDir = args.cytokit_output_dir / "extract" / "expressions"
+    output_dir = Path('output')
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cytometry_tile_dir_piece = Path("cytometry/tile")
+    extract_expressions_piece = Path("extract/expressions")
+
+    cytometryTileDir = args.cytokit_output_dir / cytometry_tile_dir_piece
+    extractDir = args.cytokit_output_dir / extract_expressions_piece
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
@@ -163,7 +164,7 @@ if __name__ == "__main__" :
     if segmentationFileList:
         create_ome_tiffs(
             segmentationFileList,
-            cytometryTileDir / "ome-tiff",
+            output_dir / cytometry_tile_dir_piece / 'ome-tiff',
             SEGMENTATION_CHANNEL_NAMES,
             args.processes,
         )
@@ -171,7 +172,7 @@ if __name__ == "__main__" :
     if extractFileList:
         create_ome_tiffs(
             extractFileList,
-            extractDir / "ome-tiff",
+            output_dir / extract_expressions_piece / 'ome-tiff',
             extractChannelNames,
             args.processes,
         )
