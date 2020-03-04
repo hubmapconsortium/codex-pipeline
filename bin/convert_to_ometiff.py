@@ -132,7 +132,7 @@ if __name__ == "__main__" :
         '--processes',
         help='Number of parallel OME-TIFF conversions to perform at once',
         type=int,
-        default=8
+        default=8,
     )
     """
     # Commented out until this file is available
