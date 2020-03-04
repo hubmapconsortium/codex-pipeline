@@ -15,7 +15,7 @@ outputs:
     type: File
     label: "Pipeline config"
   experiment_config:
-    outputSource: collect_dataset_info/pipeline_config
+    outputSource: create_yaml_config/cytokit_config
     type: File
     label: "Cytokit configuration format"
   cytokit_processor_output:
