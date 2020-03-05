@@ -286,7 +286,7 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    output_dir = Path('output')
+    output_dir = Path( args.cytokit_output_dir )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cytometry_tile_dir_piece = Path("cytometry/tile")
