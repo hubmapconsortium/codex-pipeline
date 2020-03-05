@@ -8,13 +8,13 @@ import argparse
 import xml.etree.ElementTree as ET
 import json
 import logging
-from multiprocessing import Pool, log_to_stderr
+from multiprocessing import Pool
 import numpy as np
 from os import walk
 from pathlib import Path
 import re
 from shapely.geometry import Polygon
-from tifffile import TiffFile, imwrite
+from tifffile import TiffFile
 from typing import Dict, List, Tuple
 
 logging.basicConfig(
@@ -146,7 +146,7 @@ def create_roi_polygons(
                 attrib = {
                     "ID" : "Shape:" + str( i ),
                     "Points" : allCoordsString,
-                    "TheZ" : bestZforROI
+                    "TheZ" : str( bestZforROI )
                 }
         )
         
