@@ -289,8 +289,8 @@ if __name__ == "__main__" :
     extract_expressions_piece = Path("extract/expressions")
     processor_data_json_piece = Path("processor/data.json")
 
-    cytometryTileDir = output_dir / cytometry_tile_dir_piece
-    extractDir = output_dir / extract_expressions_piece
+    cytometryTileDir = args.cytokit_output_dir / cytometry_tile_dir_piece
+    extractDir = args.cytokit_output_dir / extract_expressions_piece
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
