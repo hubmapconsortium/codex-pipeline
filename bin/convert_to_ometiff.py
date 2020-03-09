@@ -5,7 +5,6 @@ from aicsimageio import AICSImage, imread
 from aicsimageio.writers import ome_tiff_writer
 from aicsimageio.vendor.omexml import OMEXML
 import argparse
-import xml.etree.ElementTree as ET
 import json
 import logging
 from multiprocessing import Pool
@@ -16,14 +15,13 @@ import re
 from shapely.geometry import Polygon
 from tifffile import TiffFile
 from typing import Dict, List, Tuple
+import xml.etree.ElementTree as ET
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-#log_to_stderr(logging.DEBUG)
-
 
 
 SEGMENTATION_CHANNEL_NAMES = [
@@ -34,8 +32,6 @@ SEGMENTATION_CHANNEL_NAMES = [
 ]
 
 TIFF_FILE_NAMING_PATTERN = re.compile( r'^R\d{3}_X(\d{3})_Y(\d{3})\.tif' )
-
-
 
 def collect_tiff_file_list(
         directory: Path,
@@ -106,7 +102,8 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
 def create_roi_polygons( 
     imageData: np.ndarray,
     bestZforROI: int,
-    omeXml
+    omeXml,
+    regionXY: str
 ) :
     
     cellBoundaryMask = imageData[ 0, 2, bestZforROI, :, : ]
@@ -149,7 +146,7 @@ def create_roi_polygons(
                     "TheZ" : str( bestZforROI )
                 }
         )
-        
+
     omeXmlWithROIs = OMEXML( xml = ET.tostring( omeXmlRoot ) )
 
     return omeXmlWithROIs
@@ -187,7 +184,8 @@ def convert_tiff_file(
     # If we've been passed a bestZ, we need to get the ROI info for
     # segmentation mask boundaries, and add it to the OME-XML.
     if bestZforROI is not None :
-        omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml )
+        regionXY = str( sourceFile.with_suffix( "" ).name )
+        omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml, regionXY )
     
     with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
         ome_writer.save(
@@ -239,14 +237,11 @@ def create_ome_tiffs(
                 )
         )
         
-        convert_tiff_file( ( source_file, ome_tiff_file, channel_names, bestZforROI ) )
-
-    """
+    # Commenting out parallelisation for testing
     with Pool(processes=subprocesses) as pool:
         pool.imap_unordered(convert_tiff_file, args_for_conversion)
         pool.close()
         pool.join()
-    """
 
 
 
@@ -286,30 +281,23 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    output_dir = Path( args.cytokit_output_dir )
+    output_dir = Path( 'output' )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cytometry_tile_dir_piece = Path("cytometry/tile")
     extract_expressions_piece = Path("extract/expressions")
     processor_data_json_piece = Path("processor/data.json")
 
-    cytometryTileDir = args.cytokit_output_dir / cytometry_tile_dir_piece
-    extractDir = args.cytokit_output_dir / extract_expressions_piece
+    cytometryTileDir = output_dir / cytometry_tile_dir_piece
+    extractDir = output_dir / extract_expressions_piece
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
 
     # For each tile, find the best focus Z plane.
-    bestZplanes = collect_best_zplanes( args.cytokit_output_dir / processor_data_json_piece )
+    bestZplanes = collect_best_zplanes( output_dir / processor_data_json_piece )
 
-    # For the extract, pull the correctly ordered list of channel names from
-    # one of the files, as they aren't guaranteed to be in the same order as
-    # the YAML config.
-    extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-    
-    # Create OME-TIFFs
-
-    # For segmentation mask files, need to pass the dictionary of best focus z-planes.
+    # Create segmentation mask OME-TIFFs
     if segmentationFileList:
         create_ome_tiffs(
             segmentationFileList,
@@ -318,7 +306,13 @@ if __name__ == "__main__" :
             args.processes,
             bestZplanes
         )
-
+    
+    # For the extract, pull the correctly ordered list of channel names from
+    # one of the files, as they aren't guaranteed to be in the same order as
+    # the YAML config.
+    extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
+    
+    # Create the extract OME-TIFFs.
     if extractFileList:
         create_ome_tiffs(
             extractFileList,
@@ -326,4 +320,4 @@ if __name__ == "__main__" :
             extractChannelNames,
             args.processes
         )
-
+    
