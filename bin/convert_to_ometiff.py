@@ -106,6 +106,7 @@ def create_roi_polygons(
     regionXY: str
 ) :
     
+    # TODO: only have cell shapes for now. Probably also want to add nuclei.
     cellBoundaryMask = imageData[ 0, 2, bestZforROI, :, : ]
 
     omeXmlRoot = ET.fromstring( omeXml.to_xml() )
