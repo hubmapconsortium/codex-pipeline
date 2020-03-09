@@ -102,8 +102,7 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
 def create_roi_polygons( 
     imageData: np.ndarray,
     bestZforROI: int,
-    omeXml,
-    regionXY: str
+    omeXml
 ) :
     
     # TODO: only have cell shapes for now. Probably also want to add nuclei.
@@ -185,8 +184,7 @@ def convert_tiff_file(
     # If we've been passed a bestZ, we need to get the ROI info for
     # segmentation mask boundaries, and add it to the OME-XML.
     if bestZforROI is not None :
-        regionXY = str( sourceFile.with_suffix( "" ).name )
-        omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml, regionXY )
+        omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml )
     
     with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
         ome_writer.save(
