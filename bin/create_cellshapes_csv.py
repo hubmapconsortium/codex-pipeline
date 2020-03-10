@@ -112,9 +112,12 @@ def create_cellshapes_csv_files(
         
         # Read OME-XML from OME-TIFF.
         omexmlObj = None
+
+        # FIXME: this doesn't work with large numbers of OME-TIFFs -- something
+        # goes wrong with Dask, need to figure this out.
         with ome_tiff_reader.OmeTiffReader( ometiffFilename ) as ometiffReader :
             omexmlObj = ometiffReader.metadata
-        #ometiffReader.close()
+        ometiffReader.close()
 
         omexml = ET.fromstring( omexmlObj.to_xml() )
         
