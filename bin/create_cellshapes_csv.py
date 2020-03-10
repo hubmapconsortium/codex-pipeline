@@ -114,7 +114,7 @@ def create_cellshapes_csv_files(
         omexmlObj = None
         with ome_tiff_reader.OmeTiffReader( ometiffFilename ) as ometiffReader :
             omexmlObj = ometiffReader.metadata
-        ometiffReader.close()
+        #ometiffReader.close()
 
         omexml = ET.fromstring( omexmlObj.to_xml() )
         
