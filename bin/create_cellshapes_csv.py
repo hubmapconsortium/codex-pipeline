@@ -4,6 +4,7 @@ from aicsimageio.readers import ome_tiff_reader
 import argparse
 import csv
 import logging
+from multiprocessing import Pool
 from os import walk
 from pathlib import Path
 import re
@@ -107,7 +108,7 @@ def create_cellshapes_csv_files(
                         "y" : row[ "y" ],
                         "z" : row[ "z" ]
                 }
-        cytokitCsvFile.close()
+        #cytokitCsvFile.close()
         
         # Read OME-XML from OME-TIFF.
         omexmlObj = None
@@ -137,7 +138,7 @@ def create_cellshapes_csv_files(
                                     polygonAttributes[ "Points" ]
                                 ]
                         )
-        csvFile.close()
+        #csvFile.close()
 
         logger.info( f"{tileName} cell shape CSV created." )
 
