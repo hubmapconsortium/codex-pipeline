@@ -108,7 +108,7 @@ def create_cellshapes_csv_files(
                         "y" : row[ "y" ],
                         "z" : row[ "z" ]
                 }
-        #cytokitCsvFile.close()
+        cytokitCsvFile.close()
         
         # Read OME-XML from OME-TIFF.
         omexmlObj = None
@@ -138,7 +138,7 @@ def create_cellshapes_csv_files(
                                     polygonAttributes[ "Points" ]
                                 ]
                         )
-        #csvFile.close()
+        csvFile.close()
 
         logger.info( f"{tileName} cell shape CSV created." )
 
