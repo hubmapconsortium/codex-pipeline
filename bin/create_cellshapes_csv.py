@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from aicsimageio.readers import ome_tiff_reader
 import argparse
 import csv
 import logging
@@ -8,6 +7,7 @@ from multiprocessing import Pool
 from os import walk
 from pathlib import Path
 import re
+from tifffile import TiffFile
 from typing import Dict, List
 import xml.etree.ElementTree as ET
 
@@ -110,19 +110,13 @@ def create_cellshapes_csv_files(
                 }
         cytokitCsvFile.close()
         
-        # Read OME-XML from OME-TIFF.
-        omexmlObj = None
-
-        # FIXME: this doesn't work with large numbers of OME-TIFFs -- something
-        # goes wrong with Dask, need to figure this out.
-        with ome_tiff_reader.OmeTiffReader( ometiffFilename ) as ometiffReader :
-            omexmlObj = ometiffReader.metadata
-        ometiffReader.close()
-
-        omexml = ET.fromstring( omexmlObj.to_xml() )
+        # Get the OME-XML from the OME-TIFF file.
+        img = TiffFile( ometiffFilename )
+        omexml = ET.fromstring( img.ome_metadata )
         
         cellShapesCsvFilename = cellShapesCsvDir / Path( tileName + ".shape.csv" )
         
+        # Create the new CSV.
         with open( cellShapesCsvFilename, 'w', newline='' ) as csvFile :
             csvWriter = csv.writer( csvFile, quoting = csv.QUOTE_MINIMAL )
             csvWriter.writerow( [ "id", "object", "x", "y", "z", "shape" ] )
