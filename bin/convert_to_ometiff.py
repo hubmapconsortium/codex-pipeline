@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 from aicsimageio import AICSImage, imread
 from aicsimageio.writers import ome_tiff_writer
 from aicsimageio.vendor.omexml import OMEXML
@@ -33,6 +32,14 @@ SEGMENTATION_CHANNEL_NAMES = [
 
 TIFF_FILE_NAMING_PATTERN = re.compile( r'^R\d{3}_X(\d{3})_Y(\d{3})\.tif' )
 
+
+"""
+Given a directory path and a regex, find all the files in the directory that
+match the regex.
+
+TODO: this is very similar to a function in create_cellshapes_csv.py -- could
+do to unify with a separate module?
+"""
 def collect_tiff_file_list(
         directory: Path,
         TIFF_FILE_NAMING_PATTERN: re.Pattern
@@ -50,6 +57,11 @@ def collect_tiff_file_list(
 
     return fileList
 
+"""
+Given the path to Cytokit's "data.json" file, containing results from the focal
+plane selector, create a dictionary with tile x,y coordinates pointing to the index
+of the best-focus z-plane.
+"""
 def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
 
     jsonData = open( dataJsonFile )
@@ -78,13 +90,14 @@ def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
     return bestZplanes
 
 
-def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
-    """
-    Read file with TiffFile to get Labels attribute from ImageJ metadata. We
-    need this to get the channel names in the correct order. Cytokit re-orders
-    them compared to the order in the YAML config.  The ImageJ "Labels"
-    attribute isn't picked up by AICSImageIO.
-    """
+"""
+Given a TIFF file path, read file with TiffFile to get Labels attribute from
+ImageJ metadata. Return a list of the channel names in the same order as they
+appear in the ImageJ metadata.
+We need to do this to get the channel names in the correct order, and the
+ImageJ "Labels" attribute isn't picked up by AICSImageIO.
+"""
+def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
     img = TiffFile( extractFile )
 
     numChannels = int( img.imagej_metadata[ "channels" ] )
@@ -99,6 +112,13 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     return channelList
 
 
+"""
+Given a NumPy ndarray of image data, the index of the best focus z-plane, and
+an aicsimageio.vendor.omexml.OMEXML object containing basic OME-XML, create
+strings representing the polygon shapes of segmented cells and add these to the
+"ROI" element of the OME-XML. Return the OME-XML with the ROI element
+populated.
+"""
 def create_roi_polygons( 
     imageData: np.ndarray,
     bestZforROI: int,
@@ -152,6 +172,12 @@ def create_roi_polygons(
     return omeXmlWithROIs
 
 
+"""
+Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
+a list of channel names, and an integer value for the best focus z-plane,
+convert the source TIFF file to OME-TIFF format, containing polygons for
+segmented cell shapes in the "ROI" OME-XML element.
+"""
 def convert_tiff_file(
         funcArgs: Tuple[ Path, Path, List, int ]
 ) :
@@ -197,6 +223,10 @@ def convert_tiff_file(
     logger.info( "OME-TIFF file created: " + str( ometiffFile ) )
 
 
+"""
+Given a tile TIFF file path and a dictionary of best focus z-planes indexed by
+tile x,y coordinates, find the tile's best focus z-plane index and return it.
+"""
 def find_best_z( sourceFile: Path, bestZplanes: Dict ) -> int :
 
     filenameMatch = TIFF_FILE_NAMING_PATTERN.match( str( sourceFile.name ) )
@@ -209,6 +239,15 @@ def find_best_z( sourceFile: Path, bestZplanes: Dict ) -> int :
     return bestZ
 
 
+"""
+Given: 
+    - a list of TIFF files
+    - an output directory path
+    - a list of channel names
+    - an integer value for the number of multiprocessing subprocesses
+    - a dictionary of best focus z-planes indexed by tile x,y coordinates
+Create OME-TIFF files using parallel processes.
+"""
 def create_ome_tiffs(
         file_list: List[Path],
         output_dir: Path,
@@ -241,8 +280,6 @@ def create_ome_tiffs(
         pool.imap_unordered(convert_tiff_file, args_for_conversion)
         pool.close()
         pool.join()
-
-
 
 
 ########
