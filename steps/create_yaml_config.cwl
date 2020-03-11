@@ -7,10 +7,15 @@ hints:
 baseCommand: /opt/create_cytokit_config.py
 
 inputs:
+  gpus:
+    type: string
+    inputBinding:
+      position: 1
+      prefix: "--gpus="
   pipeline_config:
     type: File
     inputBinding:
-      position: 1
+      position: 2
 outputs:
   cytokit_config:
     type: File

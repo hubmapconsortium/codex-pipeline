@@ -8,6 +8,11 @@ inputs:
   data_dir:
     label: "Directory containing CODEX data"
     type: Directory
+  gpus:
+    label: >-
+      GPUs to use, represented as a comma-separated list of integers.
+    type: string
+    default: "0"
 
 outputs:
   pipeline_config:
@@ -41,6 +46,8 @@ steps:
     in:
       - id: pipeline_config
         source: collect_dataset_info/pipeline_config
+      - id: gpus
+        source: gpus
     out:
       - cytokit_config
     run: steps/create_yaml_config.cwl
