@@ -43,27 +43,11 @@ def main(data_dir: str):
     st = os.stat( data_dir )
     readable = bool( st.st_mode & stat.S_IRUSR )
     if not readable :
-        logger.error(
-            "Source directory " +
-            data_dir +
-            " is not readable by the current user."
-        )
-        sys.exit(1)
-
+        raise Exception(f'Source directory {data_dir} is not readable by the current user.')
 
     # Get list of contents of source directory. This should contain a set of
     # subdirectories, one for each cycle-region pair.
-    sourceDirList = None
-    try :
-        sourceDirList = os.listdir( data_dir )
-    except OSError as err :
-        logger.error(
-            "Could not acquire list of contents for " +
-            data_dir +
-            " : " +
-            err.strerror
-        )
-        sys.exit(1)
+    sourceDirList = os.listdir( data_dir )
 
     # Filter the contents list of the source directory for directories matching
     # the expected raw data directory naming pattern (cycle-region pairs).
@@ -75,14 +59,8 @@ def main(data_dir: str):
         )
     )
     # If there were no matching directories found, exit.
-    if len( sourceDataDirs ) == 0 :
-
-        logger.error(
-            "No directories matching expected raw data directory naming pattern found in " +
-            data_dir
-        )
-        sys.exit(1)
-
+    if not sourceDataDirs:
+        raise Exception(f'No directories matching expected raw data directory naming pattern found in {data_dir}')
 
     # Go through the cycle-region directories and get a list of the contents of
     # each one. Each cycle-region directory should contain TIFF files,
@@ -91,18 +69,7 @@ def main(data_dir: str):
     sourceDataFiles = {}
     for sdir in sourceDataDirs :
 
-        fileList = None
-
-        try :
-            fileList = os.listdir( os.path.join( data_dir, sdir ) )
-        except OSError as err :
-            logger.error(
-                "Could not acquire list of contents for " +
-                sdir +
-                " : " +
-                err.strerror
-            )
-            sys.exit(1)
+        fileList = os.listdir( os.path.join( data_dir, sdir ) )
 
         # Validate naming pattern of raw data files according to pattern
         # defined above.
@@ -114,12 +81,8 @@ def main(data_dir: str):
         )
 
         # Die if we didn't get any matching files.
-        if len( fileList ) == 0 :
-            logger.error(
-                "No files found matching expected raw file naming pattern in " +
-                sdir
-            )
-            sys.exit(1)
+        if not fileList:
+            raise Exception(f'No files found matching expected raw file naming pattern in {sdir}')
 
         # Otherwise, collect the list of matching file names in the dictionary.
         else :
@@ -150,18 +113,8 @@ def main(data_dir: str):
     targetDirectory = "symlinks"
 
     # Create target directory.
-    try :
-        os.mkdir("symlinks")
-    except OSError as err :
-        logger.error(
-            "Could not create Cytokit data directory " +
-            targetDirectory +
-            " : " +
-            err.strerror
-        )
-        sys.exit(1)
-    else :
-        logger.info( "Cytokit data directory created at %s" % targetDirectory )
+    os.mkdir("symlinks")
+    logger.info( "Cytokit data directory created at %s" % targetDirectory )
 
     for sdir in sourceDataFiles :
 
@@ -171,16 +124,7 @@ def main(data_dir: str):
 
         cycleRegionDir = os.path.join( "symlinks", "Cyc" + cycle + "_reg" + region )
 
-        try :
-            os.mkdir( cycleRegionDir )
-        except OSError as err :
-            logger.error(
-                "Could not create target directory " +
-                cycleRegionDir +
-                " : " +
-                err.strerror
-            )
-            sys.exit(1)
+        os.mkdir( cycleRegionDir )
 
         # Create symlinks for TIFF files.
         for tifFileName in sourceDataFiles[ sdir ] :
@@ -195,17 +139,7 @@ def main(data_dir: str):
             sourceTifFilePath = os.path.join( data_dir, sdir, tifFileName )
 
             # Create the symlink.
-            try :
-                os.symlink(
-                    sourceTifFilePath,
-                    linkTifFilePath,
-                )
-            except OSError as err :
-                logger.error(
-                    "Count not create symbolic link: " +
-                    err.strerror
-                )
-                sys.exit(1)
+            os.symlink(sourceTifFilePath, linkTifFilePath)
 
     logger.info( "Links created in directories under %s" % targetDirectory )
 

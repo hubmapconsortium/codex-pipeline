@@ -15,7 +15,7 @@ outputs:
     type: File
     label: "Pipeline config"
   experiment_config:
-    outputSource: collect_dataset_info/pipeline_config
+    outputSource: create_yaml_config/cytokit_config
     type: File
     label: "Cytokit configuration format"
   cytokit_processor_output:
@@ -71,3 +71,13 @@ steps:
       - cytokit_output
     run: steps/cytokit_operator.cwl
     label: "CODEX analysis via Cytokit 'operator'"
+
+  - id: ome_tiff_creation
+    in:
+      - id: cytokit_output_dir
+        source: cytokit_operator/cytokit_output
+    out:
+      - cytokit_output
+    run: steps/ome_tiff_creation.cwl
+    label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
+
