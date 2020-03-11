@@ -12,6 +12,7 @@ inputs:
     inputBinding:
       position: 1
       prefix: "--gpus="
+      separate: false
   pipeline_config:
     type: File
     inputBinding:
