@@ -184,7 +184,7 @@ def convert_tiff_file(
 
     sourceFile, ometiffFile, channelNames, bestZforROI = funcArgs
 
-    logger.info( "Converting file: " + str( sourceFile ) )
+    logger.info( f"Converting file: { str( sourceFile ) }")
 
     image = AICSImage( sourceFile )
 
@@ -220,7 +220,7 @@ def convert_tiff_file(
             channel_names = channelNames
         )
    
-    logger.info( "OME-TIFF file created: " + str( ometiffFile ) )
+    logger.info( f"OME-TIFF file created: { str( ometiffFile ) }" )
 
 
 """
