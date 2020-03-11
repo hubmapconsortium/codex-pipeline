@@ -13,6 +13,6 @@ inputs:
       position: 1
 outputs:
   cytokit_output:
-    type: Directory:
+    type: Directory
     outputBinding:
       glob: output
