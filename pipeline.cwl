@@ -71,3 +71,13 @@ steps:
       - cytokit_output
     run: steps/cytokit_operator.cwl
     label: "CODEX analysis via Cytokit 'operator'"
+
+  - id: ome_tiff_creation
+    in:
+      - id: cytokit_output_dir
+        source: cytokit_operator/cytokit_output
+    out:
+      - cytokit_output
+    run: steps/ome_tiff_creation.cwl
+    label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
+
