@@ -4,7 +4,8 @@ import argparse
 import json
 import logging
 import re
-import sys
+from typing import List
+
 import yaml
 
 logging.basicConfig(
@@ -15,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 # Some constants to use below.
 path_format = "keyence_multi_cycle_v01"
-gpus = [ 0, 1 ]
 memory_limit = "64G"
 
-
+def comma_separated_integers(s: str) -> List[int]:
+    return [int(i.strip()) for i in s.split(',')]
 
 ########
 # MAIN #
@@ -29,18 +30,24 @@ if __name__ == "__main__" :
         description = "Create a YAML config file for Cytokit, based on a JSON file from the CODEX Toolkit pipeline. YAML file will be created in current working directory unless otherwise specified."
     )
     parser.add_argument(
+        '--gpus',
+        help='GPUs to use for Cytokit, specified as a comma-separated list of integers.',
+        type=comma_separated_integers,
+        default=[0, 1],
+    )
+    parser.add_argument(
         "pipelineConfigFilename",
-        help = "JSON file containing all information required for config generation."
+        help="JSON file containing all information required for config generation.",
     )
     parser.add_argument(
         "-o",
         "--outfile",
-        help = "Path to output YAML config file. Default: ./<dataset ID>_experiment.yaml."
+        help="Path to output YAML config file. Default: experiment.yaml",
     )
 
     args = parser.parse_args()
 
-    if not args.outfile :
+    if not args.outfile:
         args.outfile = "experiment.yaml"
 
     logger.info( "Reading pipeline config file " + args.pipelineConfigFilename + "..." )
@@ -59,7 +66,7 @@ if __name__ == "__main__" :
             "acquisition" : { }, # This is populated below.
             "processor" : {
                 "args" : {
-                    "gpus" : gpus,
+                    "gpus" : args.gpus,
                     "memory_limit" : memory_limit,
                     "run_crop" : True,
                     "run_tile_generator" : True,
