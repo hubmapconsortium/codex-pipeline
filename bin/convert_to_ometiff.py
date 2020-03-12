@@ -349,7 +349,7 @@ if __name__ == "__main__" :
         # one of the files, as they aren't guaranteed to be in the same order as
         # the YAML config.
         extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-    
+        
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / 'ome-tiff',

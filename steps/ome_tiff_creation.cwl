@@ -4,6 +4,8 @@ label: Create OME-TIFF versions of Cytokit segmentation and extract results
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
+  NetworkAccess:
+    networkAccess: true
 baseCommand: /opt/convert_to_ometiff.py
 
 inputs:
@@ -13,6 +15,6 @@ inputs:
       position: 1
 outputs:
   cytokit_output:
-    type: Directory:
+    type: Directory
     outputBinding:
       glob: output
