@@ -156,11 +156,6 @@ if __name__ == "__main__" :
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
 
-    # For the extract, pull the correctly ordered list of channel names from
-    # one of the files, as they aren't guaranteed to be in the same order as
-    # the YAML config.
-    extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-
     if segmentationFileList:
         create_ome_tiffs(
             segmentationFileList,
@@ -170,6 +165,11 @@ if __name__ == "__main__" :
         )
 
     if extractFileList:
+        # For the extract, pull the correctly ordered list of channel names from
+        # one of the files, as they aren't guaranteed to be in the same order as
+        # the YAML config.
+        extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
+
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / 'ome-tiff',
