@@ -87,4 +87,13 @@ steps:
       - cytokit_output
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
+    
+  - id: create_cellshapes_csv
+    in:
+      - id: cytokit_output_dir
+        source: ome_tiff_creation/cytokit_output
+    out:
+      - cytokit_output
+    run: steps/create_cellshapes_csv.cwl
+    label: "Create CSVs containing Cytokit cytometry information and cell shape polygons"
 
