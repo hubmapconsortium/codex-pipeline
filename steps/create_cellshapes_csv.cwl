@@ -7,12 +7,12 @@ hints:
 baseCommand: /opt/create_cellshapes_csv.py
 
 inputs:
-  cytokit_output_dir:
+  ome_tiffs:
     type: Directory
     inputBinding:
       position: 1
 outputs:
-  cytokit_output:
+  cell_shapes_csv:
     type: Directory
     outputBinding:
       glob: output

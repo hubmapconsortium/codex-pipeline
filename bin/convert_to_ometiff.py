@@ -10,6 +10,7 @@ from multiprocessing import Pool
 import numpy as np
 from os import walk
 from pathlib import Path
+from pprint import pprint
 import re
 from shapely.geometry import Polygon
 from tifffile import TiffFile
@@ -63,11 +64,9 @@ def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
     plane selector, create a dictionary with tile x,y coordinates pointing to the index
     of the best-focus z-plane.
     """
-    jsonData = open( dataJsonFile )
-
-    dataJsonDict = json.load( jsonData )
-
-    jsonData.close()
+    print('Collecting best z-planes from', dataJsonFile)
+    with open( dataJsonFile ) as jsonData:
+        dataJsonDict = json.load( jsonData )
 
     focalPlaneData = dataJsonDict[ "focal_plane_selector" ]
 
@@ -292,8 +291,13 @@ if __name__ == "__main__" :
         ),
     )
     parser.add_argument(
-        "cytokit_output_dir",
-        help="Path to Cytokit's output directory.",
+        "cytokit_processor_output",
+        help="Path to output of `cytokit processor`",
+        type=Path,
+    )
+    parser.add_argument(
+        "cytokit_operator_output",
+        help="Path to output of `cytokit operator`",
         type=Path,
     )
     parser.add_argument(
@@ -320,14 +324,21 @@ if __name__ == "__main__" :
     extract_expressions_piece = Path("extract/expressions")
     processor_data_json_piece = Path("processor/data.json")
 
-    cytometryTileDir = args.cytokit_output_dir / cytometry_tile_dir_piece
-    extractDir = args.cytokit_output_dir / extract_expressions_piece
+    cytometryTileDir = args.cytokit_processor_output / cytometry_tile_dir_piece
+    print('Cytometry tile directory:', cytometryTileDir)
+    extractDir = args.cytokit_operator_output / extract_expressions_piece
+    print('Extract expressions directory:', extractDir)
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
 
+    print('Cytokit processor output:')
+    pprint(sorted(args.cytokit_processor_output.glob('**/*')))
+    print('Cytokit operator output:')
+    pprint(sorted(args.cytokit_operator_output.glob('**/*')))
+
     # For each tile, find the best focus Z plane.
-    bestZplanes = collect_best_zplanes( output_dir / processor_data_json_piece )
+    bestZplanes = collect_best_zplanes( args.cytokit_processor_output / processor_data_json_piece )
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:

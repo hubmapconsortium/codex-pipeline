@@ -31,6 +31,14 @@ outputs:
     outputSource: cytokit_operator/cytokit_output
     type: Directory
     label: "Cytokit operator output"
+  ome_tiff_output:
+    outputSource: ome_tiff_creation/ome_tiffs
+    type: Directory
+    label: "Segmentation masks in OME-TIFF format"
+  cell_shapes_csv:
+    outputSource: create_cellshapes_csv/cell_shapes_csv
+    type: Directory
+    label: "Cell shapes (polygons) in CSV format"
 
 steps:
   - id: collect_dataset_info
@@ -81,19 +89,21 @@ steps:
 
   - id: ome_tiff_creation
     in:
-      - id: cytokit_output_dir
+      - id: cytokit_processor_output
+        source: cytokit_processor/cytokit_output
+      - id: cytokit_operator_output
         source: cytokit_operator/cytokit_output
     out:
-      - cytokit_output
+      - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
-    
+
   - id: create_cellshapes_csv
     in:
-      - id: cytokit_output_dir
-        source: ome_tiff_creation/cytokit_output
+      - id: ome_tiffs
+        source: ome_tiff_creation/ome_tiffs
     out:
-      - cytokit_output
+      - cell_shapes_csv
     run: steps/create_cellshapes_csv.cwl
     label: "Create CSVs containing Cytokit cytometry information and cell shape polygons"
 
