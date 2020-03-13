@@ -43,7 +43,7 @@ def main(data_dir: str):
     st = os.stat( data_dir )
     readable = bool( st.st_mode & stat.S_IRUSR )
     if not readable :
-        raise Exception(f'Source directory {data_dir} is not readable by the current user.')
+        raise Exception('Source directory {} is not readable by the current user.'.format(data_dir))
 
     # Get list of contents of source directory. This should contain a set of
     # subdirectories, one for each cycle-region pair.
@@ -60,7 +60,7 @@ def main(data_dir: str):
     )
     # If there were no matching directories found, exit.
     if not sourceDataDirs:
-        raise Exception(f'No directories matching expected raw data directory naming pattern found in {data_dir}')
+        raise Exception('No directories matching expected raw data directory naming pattern found in {}'.format(data_dir))
 
     # Go through the cycle-region directories and get a list of the contents of
     # each one. Each cycle-region directory should contain TIFF files,
@@ -82,7 +82,7 @@ def main(data_dir: str):
 
         # Die if we didn't get any matching files.
         if not fileList:
-            raise Exception(f'No files found matching expected raw file naming pattern in {sdir}')
+            raise Exception('No files found matching expected raw file naming pattern in {}'.format(sdir))
 
         # Otherwise, collect the list of matching file names in the dictionary.
         else :
