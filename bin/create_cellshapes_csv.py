@@ -6,10 +6,13 @@ import logging
 from multiprocessing import Pool
 from os import walk
 from pathlib import Path
+from pprint import pprint
 import re
 from tifffile import TiffFile
 from typing import Dict, List
 import xml.etree.ElementTree as ET
+
+from utils import print_directory_tree
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,8 +21,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 OMEXML_NAMESPACES = {
-        "ome" : "http://www.openmicroscopy.org/Schemas/ome/2013-06",
-        "roi" : "http://www.openmicroscopy.org/Schemas/ROI/2016-06"
+    "ome" : "http://www.openmicroscopy.org/Schemas/ome/2013-06",
+    "roi" : "http://www.openmicroscopy.org/Schemas/ROI/2016-06",
 }
 
 """
@@ -27,13 +30,13 @@ Given a directory and a file extension/suffix, return a list of the files in
 the directory with the given extension, that match Cytokit's region_tileX_tileY
 naming pattern.
 """
-def collect_file_list( 
-        directory: Path, 
-        suffix: str 
+def collect_file_list(
+        directory: Path,
+        suffix: str
     ) -> List[ Path ] :
 
     fileList = []
-    
+
     tileNamePattern = re.compile( r'^R\d{3}_X\d{3}_Y\d{3}' + suffix + '$' )
 
     for dirpath, dirnames, filenames in walk( directory ) :
@@ -42,10 +45,10 @@ def collect_file_list(
                 fileList.append( directory / filename )
 
     if len( fileList ) == 0 :
-        raise ValueError( 
+        raise ValueError(
             f"No files found matching tile naming pattern with suffix {suffix}"
         )
-    
+
     return fileList
 
 """
@@ -54,7 +57,7 @@ statistics CSV files, return a dictionary containing each "tile name" (region
 plus tile coordinates) pointing to the corresponding OME-TIFF file and Cytokit
 CSV file.
 """
-def collect_files_by_tile( 
+def collect_files_by_tile(
         ometiffFileList: List[ Path ],
         cytometryStatsDir: Path
     ) -> Dict :
@@ -62,15 +65,15 @@ def collect_files_by_tile(
     tileNamesAndFiles = {}
 
     for ometiffFile in ometiffFileList :
-        
+
         tileName = str( ometiffFile.name ).replace("".join(ometiffFile.suffixes), "")
-        
+
         tileNamesAndFiles[ tileName ] = { "ometiff" : ometiffFile }
-        
+
         # Find the matching CSV file for this tile.
         tileStatsCsvFilename = Path( tileName + ".csv" )
         tileStatsCsvPath = cytometryStatsDir / tileStatsCsvFilename
-        
+
         if not tileStatsCsvPath.exists() :
             raise ValueError(
                 f"No CSV file found matching tile name {tileName}"
@@ -86,18 +89,18 @@ CSV, plus an output directory, write a new CSV file to the output directory
 containing cell IDs, centroid x,y,z coordinates, and cell shape polygons for
 each tile.
 """
-def create_cellshapes_csv_files( 
-        tileNamesAndFiles: Dict, 
-        cellShapesCsvDir: Path 
+def create_cellshapes_csv_files(
+        tileNamesAndFiles: Dict,
+        cellShapesCsvDir: Path
     ) :
-    
+
     for tileName in tileNamesAndFiles :
-        
+
         logger.info( f"Creating cell shapes CSV for {tileName} ..." )
 
         cytokitCsvFilename = tileNamesAndFiles[ tileName ][ "csv" ]
         ometiffFilename = tileNamesAndFiles[ tileName ][ "ometiff" ]
-        
+
         # Read Cytokit's cytometric data from CSV.
         cytokitStats = {}
         with open( cytokitCsvFilename, newline='' ) as cytokitCsvFile :
@@ -106,16 +109,16 @@ def create_cellshapes_csv_files(
                 cytokitStats[ row[ "id" ] ] = {
                         "x" : row[ "x" ],
                         "y" : row[ "y" ],
-                        "z" : row[ "z" ]
+                        "z" : row[ "z" ],
                 }
         cytokitCsvFile.close()
-        
+
         # Get the OME-XML from the OME-TIFF file.
         img = TiffFile( ometiffFilename )
         omexml = ET.fromstring( img.ome_metadata )
-        
+
         cellShapesCsvFilename = cellShapesCsvDir / Path( tileName + ".shape.csv" )
-        
+
         # Create the new CSV.
         with open( cellShapesCsvFilename, 'w', newline='' ) as csvFile :
             csvWriter = csv.writer( csvFile, quoting = csv.QUOTE_MINIMAL )
@@ -132,7 +135,7 @@ def create_cellshapes_csv_files(
                                     cytokitStats[ cellID ][ "x" ],
                                     cytokitStats[ cellID ][ "y" ],
                                     cytokitStats[ cellID ][ "z" ],
-                                    polygonAttributes[ "Points" ]
+                                    polygonAttributes[ "Points" ],
                                 ]
                         )
         csvFile.close()
@@ -156,13 +159,29 @@ if __name__ == "__main__" :
         ),
     )
     parser.add_argument(
-        "cytokit_output_dir",
-        help="Path to Cytokit's output directory.",
+        "ome_tiffs",
+        help="Path to OME-TIFF segmentation masks",
         type=Path,
     )
-    
+    parser.add_argument(
+        "cytokit_processor_output",
+        help="Path to output of `cytokit processor`",
+        type=Path,
+    )
+    parser.add_argument(
+        "cytokit_operator_output",
+        help="Path to output of `cytokit operator`",
+        type=Path,
+    )
 
     args = parser.parse_args()
+
+    print('OME-TIFF output:')
+    print_directory_tree(args.ome_tiffs)
+    print('Cytokit processor output:')
+    print_directory_tree(args.cytokit_processor_output)
+    print('Cytokit operator output:')
+    print_directory_tree(args.cytokit_operator_output)
 
     output_dir = Path( 'output' )
     output_dir.mkdir( parents = True, exist_ok = True )
@@ -171,18 +190,18 @@ if __name__ == "__main__" :
     cytometry_stats_dir_piece = Path( "cytometry/statistics" )
     cellshapes_dir_piece = Path( "cytometry/statistics/cellshapes" )
 
-    cytometryOmetiffDir = args.cytokit_output_dir / cytometry_ometiff_dir_piece
-    cytometryStatsDir = args.cytokit_output_dir / cytometry_stats_dir_piece
-    
+    cytometryOmetiffDir = args.ome_tiffs / cytometry_ometiff_dir_piece
+    cytometryStatsDir = args.cytokit_processor_output / cytometry_stats_dir_piece
+
     # Directory to write new CSVs.
     cellShapesCsvDir = output_dir / cellshapes_dir_piece
     cellShapesCsvDir.mkdir( parents = True, exist_ok = True )
-    
+
     # Find all the OME-TIFF files with segmentation results.
     ometiffFileList = collect_file_list( cytometryOmetiffDir, ".ome.tiff" )
-    
+
     # Get the corresponding Cytokit CSV files and index files by tile name.
     tileNamesAndFiles = collect_files_by_tile( ometiffFileList, cytometryStatsDir )
-    
+
     # Create the new CSVs.
     create_cellshapes_csv_files( tileNamesAndFiles, cellShapesCsvDir )

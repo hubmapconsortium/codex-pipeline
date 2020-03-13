@@ -10,12 +10,13 @@ from multiprocessing import Pool
 import numpy as np
 from os import walk
 from pathlib import Path
-from pprint import pprint
 import re
 from shapely.geometry import Polygon
 from tifffile import TiffFile
 from typing import Dict, List, Tuple
 import xml.etree.ElementTree as ET
+
+from utils import print_directory_tree
 
 logging.basicConfig(
     level=logging.INFO,
@@ -317,6 +318,11 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
+    print('Cytokit processor output:')
+    print_directory_tree(args.cytokit_processor_output)
+    print('Cytokit operator output:')
+    print_directory_tree(args.cytokit_operator_output)
+
     output_dir = Path( 'output' )
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -331,11 +337,6 @@ if __name__ == "__main__" :
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
-
-    print('Cytokit processor output:')
-    pprint(sorted(args.cytokit_processor_output.glob('**/*')))
-    print('Cytokit operator output:')
-    pprint(sorted(args.cytokit_operator_output.glob('**/*')))
 
     # For each tile, find the best focus Z plane.
     bestZplanes = collect_best_zplanes( args.cytokit_processor_output / processor_data_json_piece )

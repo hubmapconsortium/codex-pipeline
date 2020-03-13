@@ -102,6 +102,10 @@ steps:
     in:
       - id: ome_tiffs
         source: ome_tiff_creation/ome_tiffs
+      - id: cytokit_processor_output
+        source: cytokit_processor/cytokit_output
+      - id: cytokit_operator_output
+        source: cytokit_operator/cytokit_output
     out:
       - cell_shapes_csv
     run: steps/create_cellshapes_csv.cwl

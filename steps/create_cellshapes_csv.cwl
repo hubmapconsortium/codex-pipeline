@@ -11,6 +11,14 @@ inputs:
     type: Directory
     inputBinding:
       position: 1
+  cytokit_processor_output:
+    type: Directory
+    inputBinding:
+      position: 2
+  cytokit_operator_output:
+    type: Directory
+    inputBinding:
+      position: 3
 outputs:
   cell_shapes_csv:
     type: Directory
