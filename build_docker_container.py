@@ -19,7 +19,7 @@ DOCKER_BUILD_COMMAND_TEMPLATE: List[str] = [
     '{label}',
     '-f',
     '{dockerfile_path}',
-    '{base_dir}',
+    '.',
 ]
 DOCKER_TAG_COMMAND_TEMPLATE: List[str] = [
     DOCKER,
@@ -39,12 +39,16 @@ IMAGES: List[Tuple[str, Path]] = [
     ('hubmap/cytokit', Path('cytokit-docker/Dockerfile')),
 ]
 
-def print_run(command: List[str], pretend: bool, return_stdout: bool=False):
-    print('Running "{}"'.format(' '.join(command)))
+def print_run(command: List[str], pretend: bool, return_stdout: bool=False, **kwargs):
+    if 'cwd' in kwargs:
+        directory_piece = f' in directory "{kwargs["cwd"]}"'
+    else:
+        directory_piece = ''
+    print('Running "{}"{}'.format(' '.join(command), directory_piece))
     if pretend:
         return '<pretend>'
     else:
-        kwargs = {}
+        kwargs = kwargs.copy()
         if return_stdout:
             kwargs['stdout'] = PIPE
         proc = run(command, check=True, **kwargs)
@@ -57,16 +61,16 @@ def main(tag_timestamp: bool, push: bool, pretend: bool):
     images_to_push = []
     for label_base, filename in IMAGES:
         label = f'{label_base}:latest'
+        base_dir = filename.parent
 
         docker_build_command = [
             piece.format(
                 label=label,
-                dockerfile_path=filename,
-                base_dir=directory_of_this_script,
+                dockerfile_path=filename.name,
             )
             for piece in DOCKER_BUILD_COMMAND_TEMPLATE
         ]
-        image_id = print_run(docker_build_command, pretend, return_stdout=True)
+        image_id = print_run(docker_build_command, pretend, return_stdout=True, cwd=base_dir)
         images_to_push.append(label)
         print('Tagged image', image_id, 'as', label)
 
