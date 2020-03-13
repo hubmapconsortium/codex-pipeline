@@ -33,18 +33,17 @@ SEGMENTATION_CHANNEL_NAMES = [
 TIFF_FILE_NAMING_PATTERN = re.compile( r'^R\d{3}_X(\d{3})_Y(\d{3})\.tif' )
 
 
-"""
-Given a directory path and a regex, find all the files in the directory that
-match the regex.
-
-TODO: this is very similar to a function in create_cellshapes_csv.py -- could
-do to unify with a separate module?
-"""
 def collect_tiff_file_list(
         directory: Path,
         TIFF_FILE_NAMING_PATTERN: re.Pattern
 ) -> List[ Path ] :
+    """
+    Given a directory path and a regex, find all the files in the directory that
+    match the regex.
 
+    TODO: this is very similar to a function in create_cellshapes_csv.py -- could
+    do to unify with a separate module?
+    """
     fileList = []
 
     for dirpath, dirnames, filenames in walk( directory ) :
@@ -57,13 +56,13 @@ def collect_tiff_file_list(
 
     return fileList
 
-"""
-Given the path to Cytokit's "data.json" file, containing results from the focal
-plane selector, create a dictionary with tile x,y coordinates pointing to the index
-of the best-focus z-plane.
-"""
-def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
 
+def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
+    """
+    Given the path to Cytokit's "data.json" file, containing results from the focal
+    plane selector, create a dictionary with tile x,y coordinates pointing to the index
+    of the best-focus z-plane.
+    """
     jsonData = open( dataJsonFile )
 
     dataJsonDict = json.load( jsonData )
@@ -73,13 +72,13 @@ def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
     focalPlaneData = dataJsonDict[ "focal_plane_selector" ]
 
     bestZplanes = {}
-    
+
     for tileData in focalPlaneData :
 
         tileX = int( tileData[ "tile_x" ] )
         tileY = int( tileData[ "tile_y" ] )
         bestZ = int( tileData[ "best_z" ] )
-        
+
         if tileX in bestZplanes :
             bestZplanes[ tileX ][ tileY ] = bestZ
         else :
@@ -90,14 +89,14 @@ def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
     return bestZplanes
 
 
-"""
-Given a TIFF file path, read file with TiffFile to get Labels attribute from
-ImageJ metadata. Return a list of the channel names in the same order as they
-appear in the ImageJ metadata.
-We need to do this to get the channel names in the correct order, and the
-ImageJ "Labels" attribute isn't picked up by AICSImageIO.
-"""
 def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
+    """
+    Given a TIFF file path, read file with TiffFile to get Labels attribute from
+    ImageJ metadata. Return a list of the channel names in the same order as they
+    appear in the ImageJ metadata.
+    We need to do this to get the channel names in the correct order, and the
+    ImageJ "Labels" attribute isn't picked up by AICSImageIO.
+    """
     img = TiffFile( extractFile )
 
     numChannels = int( img.imagej_metadata[ "channels" ] )
@@ -112,34 +111,33 @@ def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
     return channelList
 
 
-"""
-Given a NumPy ndarray of image data, the index of the best focus z-plane, and
-an aicsimageio.vendor.omexml.OMEXML object containing basic OME-XML, create
-strings representing the polygon shapes of segmented cells and add these to the
-"ROI" element of the OME-XML. Return the OME-XML with the ROI element
-populated.
-"""
-def create_roi_polygons( 
+def create_roi_polygons(
     imageData: np.ndarray,
     bestZforROI: int,
-    omeXml
+    omeXml,
 ) :
-    
+    """
+    Given a NumPy ndarray of image data, the index of the best focus z-plane, and
+    an aicsimageio.vendor.omexml.OMEXML object containing basic OME-XML, create
+    strings representing the polygon shapes of segmented cells and add these to the
+    "ROI" element of the OME-XML. Return the OME-XML with the ROI element
+    populated.
+    """
     # TODO: only have cell shapes for now. Probably also want to add nuclei.
     cellBoundaryMask = imageData[ 0, 2, bestZforROI, :, : ]
 
     omeXmlRoot = ET.fromstring( omeXml.to_xml() )
-    roiElement = ET.SubElement( 
-            omeXmlRoot, 
-            "ROI",
-            attrib = {
-                "xmlns" : "http://www.openmicroscopy.org/Schemas/ROI/2016-06",
-                "ID" : "ROI:1"
-            }
+    roiElement = ET.SubElement(
+        omeXmlRoot,
+        "ROI",
+        attrib = {
+            "xmlns" : "http://www.openmicroscopy.org/Schemas/ROI/2016-06",
+            "ID" : "ROI:1",
+        },
     )
     roiDesc = ET.SubElement( roiElement, "Description" )
     roiDesc.text = "Shapes representing cell boundaries"
-    
+
     roiUnion = ET.SubElement( roiElement, "Union" )
 
     for i in range( 1, cellBoundaryMask.max() + 1 ) :
@@ -147,24 +145,24 @@ def create_roi_polygons(
         roiShapeTuples = list( zip( roiShape[ 1 ], roiShape[ 0 ] ) )
         polygon = Polygon( roiShapeTuples )
         coords = polygon.exterior.coords
-        
+
         coordStrings = []
-        
+
         for coordPair in coords :
             coordPairString = ",".join( [ str( int( c ) ) for c in coordPair ] )
             coordStrings.append( coordPairString )
-        
+
         allCoordsString = " ".join( coordStrings )
 
         # Create Polygon with coordinates in.
-        roiPolygon = ET.SubElement( 
-                roiUnion,
-                "Polygon",
-                attrib = {
-                    "ID" : "Shape:" + str( i ),
-                    "Points" : allCoordsString,
-                    "TheZ" : str( bestZforROI )
-                }
+        roiPolygon = ET.SubElement(
+            roiUnion,
+            "Polygon",
+            attrib = {
+                "ID" : "Shape:" + str( i ),
+                "Points" : allCoordsString,
+                "TheZ" : str( bestZforROI ),
+            },
         )
 
     omeXmlWithROIs = OMEXML( xml = ET.tostring( omeXmlRoot ) )
@@ -172,16 +170,15 @@ def create_roi_polygons(
     return omeXmlWithROIs
 
 
-"""
-Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
-a list of channel names, and an integer value for the best focus z-plane,
-convert the source TIFF file to OME-TIFF format, containing polygons for
-segmented cell shapes in the "ROI" OME-XML element.
-"""
 def convert_tiff_file(
         funcArgs: Tuple[ Path, Path, List, int ]
 ) :
-
+    """
+    Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
+    a list of channel names, and an integer value for the best focus z-plane,
+    convert the source TIFF file to OME-TIFF format, containing polygons for
+    segmented cell shapes in the "ROI" OME-XML element.
+    """
     sourceFile, ometiffFile, channelNames, bestZforROI = funcArgs
 
     logger.info( f"Converting file: { str( sourceFile ) }")
@@ -189,7 +186,7 @@ def convert_tiff_file(
     image = AICSImage( sourceFile )
 
     imageDataForOmeTiff = image.get_image_data( "TCZYX" )
-    
+
     # Create a template OME-XML object.
     omeXml = OMEXML()
 
@@ -211,26 +208,25 @@ def convert_tiff_file(
     # segmentation mask boundaries, and add it to the OME-XML.
     if bestZforROI is not None :
         omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml )
-    
+
     with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
         ome_writer.save(
             imageDataForOmeTiff,
             ome_xml = omeXml,
             dimension_order = "TCZYX",
-            channel_names = channelNames
+            channel_names = channelNames,
         )
-   
-    logger.info( f"OME-TIFF file created: { str( ometiffFile ) }" )
+
+    logger.info( f"OME-TIFF file created: { ometiffFile }" )
 
 
-"""
-Given a tile TIFF file path and a dictionary of best focus z-planes indexed by
-tile x,y coordinates, find the tile's best focus z-plane index and return it.
-"""
 def find_best_z( sourceFile: Path, bestZplanes: Dict ) -> int :
-
+    """
+    Given a tile TIFF file path and a dictionary of best focus z-planes indexed by
+    tile x,y coordinates, find the tile's best focus z-plane index and return it.
+    """
     filenameMatch = TIFF_FILE_NAMING_PATTERN.match( str( sourceFile.name ) )
-    
+
     tileX = filenameMatch.group( 1 )
     tileY = filenameMatch.group( 2 )
 
@@ -239,15 +235,6 @@ def find_best_z( sourceFile: Path, bestZplanes: Dict ) -> int :
     return bestZ
 
 
-"""
-Given: 
-    - a list of TIFF files
-    - an output directory path
-    - a list of channel names
-    - an integer value for the number of multiprocessing subprocesses
-    - a dictionary of best focus z-planes indexed by tile x,y coordinates
-Create OME-TIFF files using parallel processes.
-"""
 def create_ome_tiffs(
         file_list: List[Path],
         output_dir: Path,
@@ -255,26 +242,35 @@ def create_ome_tiffs(
         subprocesses: int,
         bestZplanes: Dict = None
 ):
+    """
+    Given:
+        - a list of TIFF files
+        - an output directory path
+        - a list of channel names
+        - an integer value for the number of multiprocessing subprocesses
+        - a dictionary of best focus z-planes indexed by tile x,y coordinates
+    Create OME-TIFF files using parallel processes.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     args_for_conversion = []
 
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
-        
+
         bestZforROI = None
         if bestZplanes :
             bestZforROI = find_best_z( source_file, bestZplanes )
-        
+
         args_for_conversion.append(
-                (
-                    source_file, 
-                    ome_tiff_file, 
-                    channel_names, 
-                    bestZforROI
-                )
+            (
+                source_file,
+                ome_tiff_file,
+                channel_names,
+                bestZforROI,
+            )
         )
-        
+
     # Commenting out parallelisation for testing
     with Pool(processes=subprocesses) as pool:
         pool.imap_unordered(convert_tiff_file, args_for_conversion)
@@ -340,20 +336,19 @@ if __name__ == "__main__" :
             output_dir / cytometry_tile_dir_piece / 'ome-tiff',
             SEGMENTATION_CHANNEL_NAMES,
             args.processes,
-            bestZplanes
+            bestZplanes,
         )
-    
+
     # Create the extract OME-TIFFs.
     if extractFileList:
         # For the extract, pull the correctly ordered list of channel names from
         # one of the files, as they aren't guaranteed to be in the same order as
         # the YAML config.
         extractChannelNames = collect_expressions_extract_channels( extractFileList[ 0 ] )
-        
+
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / 'ome-tiff',
             extractChannelNames,
-            args.processes
+            args.processes,
         )
-    
