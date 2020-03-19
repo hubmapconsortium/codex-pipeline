@@ -91,11 +91,9 @@ if __name__ == "__main__" :
     expressions_ometiff_dir_piece = Path( "extract/expressions/ome-tiff" )
     cellshapes_dir_piece = Path( "cytometry/statistics/cellshapes" )
     
-    # Need to get full paths of these output directories, or the symlinks will
-    # not be valid.
-    cytometryOmeTiffDir = Path.cwd() / args.ometiff_dir / cytometry_ometiff_dir_piece
-    expressionsOmeTiffDir = Path.cwd() / args.ometiff_dir / expressions_ometiff_dir_piece
-    cellshapesDir = Path.cwd() / args.cellshapes_output_dir / cellshapes_dir_piece
+    cytometryOmeTiffDir = args.ometiff_dir / cytometry_ometiff_dir_piece
+    expressionsOmeTiffDir = args.ometiff_dir / expressions_ometiff_dir_piece
+    cellshapesDir = args.cellshapes_output_dir / cellshapes_dir_piece
     
     targetFiles = collect_target_files(
         tileNames,
@@ -111,14 +109,14 @@ if __name__ == "__main__" :
 
         tileDir = output_dir / Path( tile )
         tileDir.mkdir( parents = True, exist_ok = True )
-
+        
         exprsLink = tileDir / Path( "antigen_exprs.ome.tiff" )
-        exprsLink.symlink_to( targetFiles[ tile ][ "exprs_ome_tiff" ] )
+        exprsLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "exprs_ome_tiff" ] )
 
         segmLink = tileDir / Path( "segmentation.ome.tiff" )
-        segmLink.symlink_to( targetFiles[ tile ][ "segm_ome_tiff" ] )
+        segmLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "segm_ome_tiff" ] )
 
         cellCsvLink = tileDir / Path( "cell_spatial.csv" )
-        cellCsvLink.symlink_to( targetFiles[ tile][ "cellshapes_csv" ] )
+        cellCsvLink.symlink_to( Path( "../../" ) / targetFiles[ tile][ "cellshapes_csv" ] )
 
 
