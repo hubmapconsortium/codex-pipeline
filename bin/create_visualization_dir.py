@@ -90,10 +90,12 @@ if __name__ == "__main__" :
     cytometry_ometiff_dir_piece = Path( "cytometry/tile/ome-tiff" )
     expressions_ometiff_dir_piece = Path( "extract/expressions/ome-tiff" )
     cellshapes_dir_piece = Path( "cytometry/statistics/cellshapes" )
-
-    cytometryOmeTiffDir = args.ometiff_dir / cytometry_ometiff_dir_piece
-    expressionsOmeTiffDir = args.ometiff_dir / expressions_ometiff_dir_piece
-    cellshapesDir = args.cellshapes_output_dir / cellshapes_dir_piece
+    
+    # Need to get full paths of these output directories, or the symlinks will
+    # not be valid.
+    cytometryOmeTiffDir = Path.cwd() / args.ometiff_dir / cytometry_ometiff_dir_piece
+    expressionsOmeTiffDir = Path.cwd() / args.ometiff_dir / expressions_ometiff_dir_piece
+    cellshapesDir = Path.cwd() / args.cellshapes_output_dir / cellshapes_dir_piece
     
     targetFiles = collect_target_files(
         tileNames,
