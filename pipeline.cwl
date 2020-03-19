@@ -39,6 +39,10 @@ outputs:
     outputSource: create_cellshapes_csv/cell_shapes_csv
     type: Directory
     label: "Cell shapes (polygons) in CSV format"
+  for_viz_dir:
+    outputSource: create_dir_for_viz/for_viz_dir
+    type: Directory
+    label: "Symbolic links to files for visualization team"
 
 steps:
   - id: collect_dataset_info
@@ -111,3 +115,15 @@ steps:
     run: steps/create_cellshapes_csv.cwl
     label: "Create CSVs containing Cytokit cytometry information and cell shape polygons"
 
+  - id: create_dir_for_viz
+    in:
+      - id: cytokit_config_file
+        source: create_yaml_config/cytokit_output
+      - id: ome_tiffs
+        source: ome_tiff_creation/ome_tiffs
+      - id: cellshapes_output
+        source: create_cellshapes_csv/cell_shapes_csv
+    out:
+      - for_viz_dir
+    run: steps/create_dir_for_viz.cwl
+    label: "Create directory containing symlinks to relevant files for visualization team"
