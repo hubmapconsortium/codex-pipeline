@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+import re
 from typing import Dict, List
 import yaml
 
@@ -29,29 +30,37 @@ def collect_target_files(
     tileNames: List,
     cytometryOmeTiffDir: Path,
     expressionsOmeTiffDir: Path,
-    cellshapesDir: Path
+    sprmResultsDir: Path
 ) -> Dict :
 
     targetFiles = {}
 
     for tile in tileNames :
         
-        targetFiles[ tile ] = {}
+        tileNamePattern = re.compile( tile )
 
+        targetFiles[ tile ] = {}
+        
+        # Cytokit results files.
         segmOmeTiff = cytometryOmeTiffDir / Path( f"{tile}.ome.tiff" )
         exprsOmeTiff = expressionsOmeTiffDir / Path( f"{tile}.ome.tiff" )
-        cellCsv = cellshapesDir / Path( f"{tile}.shape.csv" )
         
-        # Make sure all the files we need actually exist.
-        for f in [ segmOmeTiff, exprsOmeTiff, cellCsv ] :
+        # Make sure the Cytokit results files we need actually exist.
+        for f in [ segmOmeTiff, exprsOmeTiff ] :
             if not f.exists() :
                 raise FileNotFoundError(
                     f"{f}"
                 )
         
+        sprmOutputs = []
+        for dirpath, dirname, filenames in walk( sprmResultsDir ) :
+            for filename in filenames :
+                if tileNamePattern.match( filename ) :
+                    sprmOutputs.append( sprmResultsDir / Path( filename ) )
+
         targetFiles[ tile ][ "segm_ome_tiff" ] = segmOmeTiff 
         targetFiles[ tile ][ "exprs_ome_tiff" ] = exprsOmeTiff
-        targetFiles[ tile ][ "cellshapes_csv" ] = cellCsv
+        targetFiles[ tile ][ "sprm_outputs" ] = sprmOutputs
 
     return targetFiles
 
@@ -74,8 +83,8 @@ if __name__ == "__main__" :
         type = Path
     )
     parser.add_argument(
-        "cellshapes_output_dir",
-        help = "Path to output directory from cell shape CSV creation pipeline step.",
+        "sprm_output_dir",
+        help = "Path to output directory from SPRM pipeline step.",
         type = Path
     )
     
@@ -89,34 +98,36 @@ if __name__ == "__main__" :
     
     cytometry_ometiff_dir_piece = Path( "cytometry/tile/ome-tiff" )
     expressions_ometiff_dir_piece = Path( "extract/expressions/ome-tiff" )
-    cellshapes_dir_piece = Path( "cytometry/statistics/cellshapes" )
     
     cytometryOmeTiffDir = args.ometiff_dir / cytometry_ometiff_dir_piece
     expressionsOmeTiffDir = args.ometiff_dir / expressions_ometiff_dir_piece
-    cellshapesDir = args.cellshapes_output_dir / cellshapes_dir_piece
-    
+
     targetFiles = collect_target_files(
         tileNames,
         cytometryOmeTiffDir,
         expressionsOmeTiffDir,
-        cellshapesDir
+        Path( args.sprm_output_dir )
     )
 
     output_dir = Path( "for-visualization" )
     output_dir.mkdir( parents = True, exist_ok = True )
     
     for tile in targetFiles.keys() :
-
+        
         tileDir = output_dir / Path( tile )
         tileDir.mkdir( parents = True, exist_ok = True )
         
+        # TODO: check if this works in CWL pipeline.
         exprsLink = tileDir / Path( "antigen_exprs.ome.tiff" )
         exprsLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "exprs_ome_tiff" ] )
 
         segmLink = tileDir / Path( "segmentation.ome.tiff" )
         segmLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "segm_ome_tiff" ] )
+        
+        tileOmeTiffPattern = re.compile( tile + "\.ome\.tiff-(.*)$" )
 
-        cellCsvLink = tileDir / Path( "cell_spatial.csv" )
-        cellCsvLink.symlink_to( Path( "../../" ) / targetFiles[ tile][ "cellshapes_csv" ] )
-
+        for sprmFile in targetFiles[ tile ][ "sprm_outputs" ] :
+            sprmLinkName = tileOmeTiffPattern.match( sprmFile.name ).group( 1 )
+            sprmLink = tileDir / Path( sprmLinkName )
+            sprmLink.symlink_to( Path( "../../" ) / sprmFile )
 
