@@ -15,7 +15,7 @@ inputs:
     type: Directory
     inputBinding:
       position: 2
-  cellshapes_output:
+  sprm_output:
     type: Directory
     inputBinding:
       position: 3
