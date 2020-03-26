@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from os import walk
 from pathlib import Path
 import re
 from typing import Dict, List
