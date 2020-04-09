@@ -6,7 +6,7 @@ hints:
     dockerPull: hubmap/codex-scripts
   NetworkAccess:
     networkAccess: true
-baseCommand: /opt/SPRM.py
+baseCommand: /opt/run_sprm.py
 
 inputs:
   sprm_script:
