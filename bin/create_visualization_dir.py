@@ -1,69 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-from os import walk
 from pathlib import Path
 import re
 from typing import Dict, List
-import yaml
 
-
-def infer_tile_names( cytokitConfig: Dict ) -> List :
-    
-    tileNames = []
-    
-    regionHeight, regionWidth = ( 
-        cytokitConfig[ "acquisition" ][ "region_height" ],
-        cytokitConfig[ "acquisition" ][ "region_width" ]
-    )
-    regionNames = cytokitConfig[ "acquisition" ][ "region_names" ]
-    
-    for r in range( 1, len( regionNames ) + 1 ) :
-        # Width is X values, height is Y values.
-        for x in range( 1, regionWidth + 1 ) :
-            for y in range( 1, regionHeight + 1 ) :
-                tileNames.append( f"R{r:03}_X{x:03}_Y{y:03}" )
-
-    return tileNames
-
-
-def collect_target_files(
-    tileNames: List,
-    cytometryOmeTiffDir: Path,
-    expressionsOmeTiffDir: Path,
-    sprmResultsDir: Path
-) -> Dict :
-
-    targetFiles = {}
-
-    for tile in tileNames :
-        
-        tileNamePattern = re.compile( tile )
-
-        targetFiles[ tile ] = {}
-        
-        # Cytokit results files.
-        segmOmeTiff = cytometryOmeTiffDir / Path( f"{tile}.ome.tiff" )
-        exprsOmeTiff = expressionsOmeTiffDir / Path( f"{tile}.ome.tiff" )
-        
-        # Make sure the Cytokit results files we need actually exist.
-        for f in [ segmOmeTiff, exprsOmeTiff ] :
-            if not f.exists() :
-                raise FileNotFoundError(
-                    f"{f}"
-                )
-        
-        sprmOutputs = []
-        for dirpath, dirname, filenames in walk( sprmResultsDir ) :
-            for filename in filenames :
-                if tileNamePattern.match( filename ) :
-                    sprmOutputs.append( sprmResultsDir / Path( filename ) )
-
-        targetFiles[ tile ][ "segm_ome_tiff" ] = segmOmeTiff 
-        targetFiles[ tile ][ "exprs_ome_tiff" ] = exprsOmeTiff
-        targetFiles[ tile ][ "sprm_outputs" ] = sprmOutputs
-
-    return targetFiles
+from utils import infer_tile_names, collect_files_by_tile
 
 
 if __name__ == "__main__" :
@@ -91,44 +33,39 @@ if __name__ == "__main__" :
     
     args = parser.parse_args()
     
-    cytokitConfigFile = open( args.cytokit_yaml_config, 'r' )
-    cytokitConfig = yaml.safe_load( cytokitConfigFile ) 
-    cytokitConfigFile.close()
-
-    tileNames = infer_tile_names( cytokitConfig )
+    tile_names = infer_tile_names( args.cytokit_yaml_config )
     
     cytometry_ometiff_dir_piece = Path( "cytometry/tile/ome-tiff" )
     expressions_ometiff_dir_piece = Path( "extract/expressions/ome-tiff" )
     
-    cytometryOmeTiffDir = args.ometiff_dir / cytometry_ometiff_dir_piece
-    expressionsOmeTiffDir = args.ometiff_dir / expressions_ometiff_dir_piece
-
-    targetFiles = collect_target_files(
-        tileNames,
-        cytometryOmeTiffDir,
-        expressionsOmeTiffDir,
-        Path( args.sprm_output_dir )
-    )
-
+    cytometry_ometiff_dir = args.ometiff_dir / cytometry_ometiff_dir_piece
+    expressions_ometiff_dir = args.ometiff_dir / expressions_ometiff_dir_piece
+    
+    segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
+    expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
+    sprm_outputs = collect_files_by_tile( tile_names, args.sprm_output_dir )
+    
     output_dir = Path( "for-visualization" )
     output_dir.mkdir( parents = True, exist_ok = True )
     
-    for tile in targetFiles.keys() :
+    for tile in tile_names :
+        tile_dir = output_dir / Path( tile )
+        tile_dir.mkdir( parents = True, exist_ok = True )
         
-        tileDir = output_dir / Path( tile )
-        tileDir.mkdir( parents = True, exist_ok = True )
-        
-        # TODO: check if this works in CWL pipeline.
-        exprsLink = tileDir / Path( "antigen_exprs.ome.tiff" )
-        exprsLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "exprs_ome_tiff" ] )
+    # TODO: Perhaps a proper function to do this in a less repetitive way would be nicer.
+    for tile in segmentation_mask_ometiffs :
+        symlink = output_dir / Path( tile ) / Path( "segmentation.ome.tiff" )
+        # There should only be one file here...
+        symlink.symlink_to( Path( "../.." ) / segmentation_mask_ometiffs[ tile ][ 0 ] )
+    
+    for tile in expressions_ometiffs :
+        symlink = output_dir / Path( tile ) / Path( "antigen_exprs.ome.tiff" )
+        symlink.symlink_to( Path( "../.." ) / expressions_ometiffs[ tile ][ 0 ] )
 
-        segmLink = tileDir / Path( "segmentation.ome.tiff" )
-        segmLink.symlink_to( Path( "../../" ) / targetFiles[ tile ][ "segm_ome_tiff" ] )
-        
-        tileOmeTiffPattern = re.compile( tile + "\.ome\.tiff-(.*)$" )
-
-        for sprmFile in targetFiles[ tile ][ "sprm_outputs" ] :
-            sprmLinkName = tileOmeTiffPattern.match( sprmFile.name ).group( 1 )
-            sprmLink = tileDir / Path( sprmLinkName )
-            sprmLink.symlink_to( Path( "../../" ) / sprmFile )
+    for tile in sprm_outputs :
+        tile_ometiff_pattern = re.compile( tile + "\.ome\.tiff-(.*)$" )
+        for sprm_file in sprm_outputs[ tile ] :
+            link_name = tile_ometiff_pattern.match( sprm_file.name ).group( 1 )
+            symlink = output_dir / Path( tile ) / Path( link_name )
+            symlink.symlink_to( Path( "../.." ) / sprm_file )
 

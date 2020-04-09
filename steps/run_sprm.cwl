@@ -1,26 +1,28 @@
 cwlVersion: v1.1
 class: CommandLineTool
-label: Create CSVs containing Cytokit cytometry information and cell shape polygons
+label: Run Spatial Process & Relationship Modeling (SPRM)
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
-baseCommand: /opt/create_cellshapes_csv.py
+  NetworkAccess:
+    networkAccess: true
+baseCommand: /opt/SPRM.py
 
 inputs:
-  ome_tiffs:
-    type: Directory
+  sprm_script:
+    type: File
     inputBinding:
       position: 1
-  cytokit_processor_output:
+  expressions_ometiff_dir:
     type: Directory
     inputBinding:
       position: 2
-  cytokit_operator_output:
+  cytometry_ometiff_dir:
     type: Directory
     inputBinding:
       position: 3
 outputs:
-  cell_shapes_csv:
+  sprm_output_dir:
     type: Directory
     outputBinding:
-      glob: output
+      glob: sprm_outputs

@@ -13,6 +13,9 @@ inputs:
       GPUs to use, represented as a comma-separated list of integers.
     type: string
     default: "0"
+  sprm_script_path:
+    label: "Path to SPRM.py"
+    type: File
 
 outputs:
   pipeline_config:
@@ -35,10 +38,10 @@ outputs:
     outputSource: ome_tiff_creation/ome_tiffs
     type: Directory
     label: "Segmentation masks in OME-TIFF format"
-  cell_shapes_csv:
-    outputSource: create_cellshapes_csv/cell_shapes_csv
+  sprm_output_dir:
+    outputSource: run_sprm/sprm_output_dir
     type: Directory
-    label: "Cell shapes (polygons) in CSV format"
+    label: "Directory containing all SPRM outputs"
   for_viz_dir:
     outputSource: create_dir_for_viz/for_viz_dir
     type: Directory
@@ -98,31 +101,32 @@ steps:
       - id: cytokit_operator_output
         source: cytokit_operator/cytokit_output
     out:
-      - ome_tiffs
+      - expressions_ometiff_dir
+      - cytometry_ometiff_dir
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
-
-  - id: create_cellshapes_csv
+  
+  - id: run_sprm
     in:
-      - id: ome_tiffs
-        source: ome_tiff_creation/ome_tiffs
-      - id: cytokit_processor_output
-        source: cytokit_processor/cytokit_output
-      - id: cytokit_operator_output
-        source: cytokit_operator/cytokit_output
+      - id: sprm_script
+        source: sprm_script_path
+      - id: expressions_ometiff_dir
+        source: ome_tiff_creation/expressions_ometiff_dir
+      - id: cytometry_ometiff_dir
+        source: ome_tiff_creation/cytometry_ometiff_dir
     out:
-      - cell_shapes_csv
-    run: steps/create_cellshapes_csv.cwl
-    label: "Create CSVs containing Cytokit cytometry information and cell shape polygons"
+      - sprm_output_dir
+    run: steps/run_sprm.cwl
+    label: "Run SPRM analysis of OME-TIFF files"
 
   - id: create_dir_for_viz
     in:
       - id: cytokit_config_file
-        source: create_yaml_config/cytokit_output
+        source: create_yaml_config/cytokit_config
       - id: ome_tiffs
         source: ome_tiff_creation/ome_tiffs
-      - id: cellshapes_output
-        source: create_cellshapes_csv/cell_shapes_csv
+      - id: sprm_output
+        source: run_sprm/sprm_output_dir
     out:
       - for_viz_dir
     run: steps/create_dir_for_viz.cwl
