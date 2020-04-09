@@ -13,8 +13,8 @@ inputs:
       GPUs to use, represented as a comma-separated list of integers.
     type: string
     default: "0"
-  sprm_script_path:
-    label: "Path to SPRM.py"
+  sprm_package_dir:
+    label: "Path to SPRM code"
     type: File
 
 outputs:
@@ -108,8 +108,8 @@ steps:
   
   - id: run_sprm
     in:
-      - id: sprm_script
-        source: sprm_script_path
+      - id: sprm_dir
+        source: sprm_package_dir
       - id: expressions_ometiff_dir
         source: ome_tiff_creation/expressions_ometiff_dir
       - id: cytometry_ometiff_dir

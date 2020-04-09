@@ -9,8 +9,8 @@ hints:
 baseCommand: /opt/run_sprm.py
 
 inputs:
-  sprm_script:
-    type: File
+  sprm_dir:
+    type: Directory
     inputBinding:
       position: 1
   expressions_ometiff_dir:
