@@ -105,7 +105,7 @@ if __name__ == '__main__':
     p.add_argument('--push', action='store_true')
     p.add_argument('--pretend', action='store_true')
     p.add_argument(
-        'sprm-checkout',
+        'sprm_checkout',
         help = "Path to cloned SPRM git repo.",
         type = Path
     )
