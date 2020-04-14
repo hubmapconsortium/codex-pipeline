@@ -50,8 +50,8 @@ if __name__ == "__main__" :
     
     try :
         SPRM.main(
-            expressions_ometiff_dir,
-            cytometry_ometiff_dir,
+            args.expressions_ometiff_dir,
+            args.cytometry_ometiff_dir,
             args.sprm_dir / Path( "options.txt" )
         )
     except Exception as e :
