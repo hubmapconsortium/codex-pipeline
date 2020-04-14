@@ -69,6 +69,7 @@ def main(tag_timestamp: bool, push: bool, pretend: bool, sprm_checkout):
             piece.format(
                 label=label,
                 dockerfile_path=filename.name,
+                sprm_checkout=sprm_checkout
             )
             for piece in DOCKER_BUILD_COMMAND_TEMPLATE
         ]
