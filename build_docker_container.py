@@ -17,6 +17,8 @@ DOCKER_BUILD_COMMAND_TEMPLATE: List[str] = [
     '-q',
     '-t',
     '{label}',
+    '--build-arg',
+    'SPRM_CHECKOUT={sprm_checkout}',
     '-f',
     '{dockerfile_path}',
     '.',
@@ -55,7 +57,7 @@ def print_run(command: List[str], pretend: bool, return_stdout: bool=False, **kw
         if return_stdout:
             return proc.stdout.strip().decode('utf-8')
 
-def main(tag_timestamp: bool, push: bool, pretend: bool):
+def main(tag_timestamp: bool, push: bool, pretend: bool, sprm_checkout):
     directory_of_this_script = Path(__file__).parent
     timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
     images_to_push = []
@@ -109,4 +111,4 @@ if __name__ == '__main__':
     )
     args = p.parse_args()
 
-    main(args.tag_timestamp, args.push, args.pretend)
+    main(args.tag_timestamp, args.push, args.pretend, args.sprm_checkout)
