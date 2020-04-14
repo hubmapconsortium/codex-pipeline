@@ -15,7 +15,8 @@ inputs:
     default: "0"
   sprm_package_dir:
     label: "Path to SPRM code"
-    type: File
+    type: Directory
+    default: /opt/sprm
 
 outputs:
   pipeline_config:
@@ -123,8 +124,10 @@ steps:
     in:
       - id: cytokit_config_file
         source: create_yaml_config/cytokit_config
-      - id: ome_tiffs
-        source: ome_tiff_creation/ome_tiffs
+      - id: expressions_ometiff_dir
+        source: ome_tiff_creation/expressions_ometiff_dir
+      - id: cytometry_ometiff_dir
+        source: ome_tiff_creation/cytometry_ometiff_dir
       - id: sprm_output
         source: run_sprm/sprm_output_dir
     out:

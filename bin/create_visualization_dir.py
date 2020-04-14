@@ -21,8 +21,13 @@ if __name__ == "__main__" :
         type = Path
     )
     parser.add_argument(
-        "ometiff_dir",
-        help = "Path to Cytokit output directory from OME-TIFF creation pipeline step.",
+        "expressions_ometiff_dir",
+        help = "Path to Cytokit extract output directory from OME-TIFF creation pipeline step.",
+        type = Path
+    )
+    parser.add_argument(
+        "cytometry_ometiff_dir",
+        help = "Path to Cytokit cytometry output directory from OME-TIFF creation pipeline step.",
         type = Path
     )
     parser.add_argument(
@@ -35,11 +40,8 @@ if __name__ == "__main__" :
     
     tile_names = infer_tile_names( args.cytokit_yaml_config )
     
-    cytometry_ometiff_dir_piece = Path( "cytometry/tile/ome-tiff" )
-    expressions_ometiff_dir_piece = Path( "extract/expressions/ome-tiff" )
-    
-    cytometry_ometiff_dir = args.ometiff_dir / cytometry_ometiff_dir_piece
-    expressions_ometiff_dir = args.ometiff_dir / expressions_ometiff_dir_piece
+    cytometry_ometiff_dir = args.cytometry_ometiff_dir
+    expressions_ometiff_dir = args.expressions_ometiff_dir
     
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )

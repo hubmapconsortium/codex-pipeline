@@ -102,6 +102,11 @@ if __name__ == '__main__':
     p.add_argument('--tag-timestamp', action='store_true')
     p.add_argument('--push', action='store_true')
     p.add_argument('--pretend', action='store_true')
+    p.add_argument(
+        'sprm-checkout',
+        help = "Path to cloned SPRM git repo.",
+        type = Path
+    )
     args = p.parse_args()
 
     main(args.tag_timestamp, args.push, args.pretend)

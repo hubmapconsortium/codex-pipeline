@@ -4,7 +4,6 @@ import argparse
 import logging
 from os import chdir, environ, remove
 from pathlib import Path
-from subprocess import check_call, CalledProcessError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +20,7 @@ if __name__ == "__main__" :
     )
     parser.add_argument(
         "sprm_dir",
-        help = "Path to SPRM.py",
+        help = "Path to SPRM checkout.",
         type = Path
     )
     parser.add_argument(
@@ -42,21 +41,20 @@ if __name__ == "__main__" :
     output_dir.mkdir( parents = True, exist_ok = True )
     chdir( output_dir )
     
-    sprm_script = args.sprm_dir / Path( "SPRM.py" )
-    env = environ.copy()
-    env[ 'PYTHONPATH' ] = str( args.sprm_dir )
+    import sys
+    sys.path.append( str( args.sprm_dir ) )
+    import SPRM
 
     # Run SPRM.
     logger.info( "Running SPRM ..." )
-    sprm_command = [
-        "python",
-        str( sprm_script ),
-        str( args.expressions_ometiff_dir ),
-        str( args.cytometry_ometiff_dir )
-    ]
+    
     try :
-        check_call( sprm_command, env=env )
-    except CalledProcessError as e :
+        SPRM.main(
+            expressions_ometiff_dir,
+            cytometry_ometiff_dir,
+            args.sprm_dir / Path( "options.txt" )
+        )
+    except Exception as e :
         logger.error( f"SPRM failed: {e}" )
     else :
         logger.info( "SPRM completed." )

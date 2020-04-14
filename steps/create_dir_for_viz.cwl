@@ -11,14 +11,18 @@ inputs:
     type: File
     inputBinding:
       position: 1
-  ome_tiffs:
+  expressios_ometiff_dir:
     type: Directory
     inputBinding:
       position: 2
-  sprm_output:
+  cytometry_ometiff_dir:
     type: Directory
     inputBinding:
       position: 3
+  sprm_output:
+    type: Directory
+    inputBinding:
+      position: 4
 outputs:
   for_viz_dir:
     type: Directory

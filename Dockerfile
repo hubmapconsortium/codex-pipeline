@@ -8,3 +8,5 @@ RUN pip install --no-cache-dir pyyaml \
  && pip install --no-cache-dir matplotlib
 
 COPY bin /opt
+
+COPY $SPRM_CHECKOUT /opt/sprm
