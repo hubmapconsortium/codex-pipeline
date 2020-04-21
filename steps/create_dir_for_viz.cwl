@@ -11,7 +11,7 @@ inputs:
     type: File
     inputBinding:
       position: 1
-  expressios_ometiff_dir:
+  expressions_ometiff_dir:
     type: Directory
     inputBinding:
       position: 2
