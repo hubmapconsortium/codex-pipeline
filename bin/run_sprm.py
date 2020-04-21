@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from os import chdir, environ, remove
+from os import chdir
 from pathlib import Path
 
 logging.basicConfig(
@@ -52,7 +52,7 @@ if __name__ == "__main__" :
         SPRM.main(
             args.expressions_ometiff_dir,
             args.cytometry_ometiff_dir,
-            args.sprm_dir / Path( "options.txt" )
+            str( args.sprm_dir / Path( "options.txt" ) )
         )
     except Exception as e :
         logger.error( f"SPRM failed: {e}" )
