@@ -25,4 +25,4 @@ outputs:
   sprm_output_dir:
     type: Directory
     outputBinding:
-      glob: sprm_outputs
+      glob: sprm_outputs/results
