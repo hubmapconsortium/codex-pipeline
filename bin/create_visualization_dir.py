@@ -8,6 +8,8 @@ from typing import Dict, List
 
 from utils import infer_tile_names, collect_files_by_tile
 
+import os
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)-7s - %(message)s'
@@ -51,6 +53,7 @@ if __name__ == "__main__" :
     expressions_ometiff_dir = args.expressions_ometiff_dir
 
     logger.info( args.cytometry_ometiff_dir )
+    logger.info( os.listdir( args.cytometry_ometiff_dir ) )
     
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
