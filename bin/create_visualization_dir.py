@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 from pathlib import Path
 import re
 from typing import Dict, List
 
 from utils import infer_tile_names, collect_files_by_tile
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)-7s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__" :
@@ -42,6 +49,8 @@ if __name__ == "__main__" :
     
     cytometry_ometiff_dir = args.cytometry_ometiff_dir
     expressions_ometiff_dir = args.expressions_ometiff_dir
+
+    logger.info( args.cytometry_ometiff_dir )
     
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
