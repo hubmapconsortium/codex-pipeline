@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from os import walk
 from pathlib import Path
 import re
 from typing import Dict, List
