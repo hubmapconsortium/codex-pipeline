@@ -13,6 +13,7 @@ import logging
 import math
 from os import fspath, walk
 from pathlib import Path
+import re
 from typing import Dict, List, Tuple
 
 logging.basicConfig(
@@ -26,7 +27,9 @@ PROCESSED_DIRECTORY_NAME_PIECES = [
     'processed',
     'drv',
 ]
-
+# TODO: don't duplicate this in ../cytokit-docker/setup_data_directory.py.
+#   Can't share code easily because these files go to different containers
+RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORECASE)
 
 def find_files(
         base_directory: Path,
@@ -93,7 +96,7 @@ def collect_attribute( fieldNames, configDict: Dict ) :
     # If we're still here, it means we tried all the possible field names and
     # didn't find a match in the config, so we have to fail.
     fieldNameString = ", ".join(fieldNames)
-    raise ValueError(f"No match found for field name(s) in config: {fieldNameString}")
+    raise KeyError(f"No match found for field name(s) in config: {fieldNameString}")
 
 
 def infer_channel_name_from_index(
@@ -213,6 +216,16 @@ def find_raw_data_dir(directory: Path) -> Path:
     return raw_data_dir_possibilities[0]
 
 
+def get_region_names_from_directories(base_path: Path) -> List[str]:
+    regions = set()
+    for child in base_path.iterdir():
+        if not child.is_dir():
+            continue
+        if m := RAW_DIR_NAMING_PATTERN.match(child.name):
+            regions.add(m.group('region'))
+    return sorted(regions)
+
+
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
@@ -303,7 +316,6 @@ def standardize_metadata(directory: Path):
         ("num_z_planes", ["num_z_planes"]),
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
-        ("region_names", ["region_names"]),
         ("region_height", ["region_height"]),
         ("region_width", ["region_width"]),
         ("tile_height", ["tile_height"]),
@@ -316,6 +328,12 @@ def standardize_metadata(directory: Path):
 
     for target_key, possibilities in info_key_mapping:
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
+
+    try:
+        datasetInfo['region_names'] = collect_attribute(['region_names'], exptConfigDict)
+    except KeyError:
+        # Not present in experiment configuration. Get from filesystem
+        datasetInfo['region_names'] = get_region_names_from_directories(raw_data_location)
 
     if channel_names_files:
         channel_names_file = min(
