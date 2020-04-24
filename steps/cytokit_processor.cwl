@@ -3,7 +3,7 @@ class: CommandLineTool
 label: CODEX analysis via Cytokit
 hints:
   DockerRequirement:
-    dockerPull: hubmap/cytokit:20200313-124813
+    dockerPull: hubmap/cytokit:20200424-145612
   DockerGpuRequirement: {}
 baseCommand: /opt/cytokit_wrapper.py
 

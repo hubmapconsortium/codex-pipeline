@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Create CSVs containing Cytokit cytometry information and cell shape polygons
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:20200313-124813
+    dockerPull: hubmap/codex-scripts:20200424-145612
 baseCommand: /opt/create_cellshapes_csv.py
 
 inputs:
