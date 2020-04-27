@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-from os import chdir
 from pathlib import Path
 
 logging.basicConfig(
@@ -36,11 +35,6 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
-    # Set up an output directory and move to it.
-    output_dir = Path( "sprm_outputs" )
-    output_dir.mkdir( parents = True, exist_ok = True )
-    chdir( output_dir )
-    
     import sys
     sys.path.append( str( args.sprm_dir ) )
     import SPRM
@@ -50,11 +44,15 @@ if __name__ == "__main__" :
     
     try :
         SPRM.main(
-            args.expressions_ometiff_dir,
-            args.cytometry_ometiff_dir,
+            str( args.expressions_ometiff_dir ),
+            str( args.cytometry_ometiff_dir ),
             str( args.sprm_dir / Path( "options.txt" ) )
         )
     except Exception as e :
         logger.error( f"SPRM failed: {e}" )
     else :
         logger.info( "SPRM completed." )
+    
+    
+    sprm_dir = Path( "results" )
+    sprm_dir.rename( "sprm_outputs" )
