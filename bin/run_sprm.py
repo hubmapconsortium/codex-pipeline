@@ -36,12 +36,12 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     import sys
-    sys.path.append( str( args.sprm_dir ) )
+    sys.path.append( '/opt/sprm' )
     import SPRM
 
     # Run SPRM.
     logger.info( "Running SPRM ..." )
-    
+
     try :
         SPRM.main(
             str( args.expressions_ometiff_dir ),
@@ -52,7 +52,7 @@ if __name__ == "__main__" :
         logger.error( f"SPRM failed: {e}" )
     else :
         logger.info( "SPRM completed." )
-    
-    
+
+
     sprm_dir = Path( "results" )
     sprm_dir.rename( "sprm_outputs" )
