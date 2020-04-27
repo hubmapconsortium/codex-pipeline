@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from os import fspath
 from pathlib import Path
 
 logging.basicConfig(
@@ -9,6 +10,8 @@ logging.basicConfig(
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+SPRM_DIR = Path('/opt/sprm')
 
 if __name__ == "__main__" :
 
@@ -31,7 +34,7 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
     import sys
-    sys.path.append( '/opt/sprm' )
+    sys.path.append( fspath('/opt/sprm') )
     import SPRM
 
     # Run SPRM.
@@ -39,15 +42,14 @@ if __name__ == "__main__" :
 
     try :
         SPRM.main(
-            str( args.expressions_ometiff_dir ),
-            str( args.cytometry_ometiff_dir ),
-            str( args.sprm_dir / Path( "options.txt" ) )
+            fspath( args.expressions_ometiff_dir ),
+            fspath( args.cytometry_ometiff_dir ),
+            fspath( SPRM_DIR / "options.txt" )
         )
     except Exception as e :
-        logger.error( f"SPRM failed: {e}" )
+        logger.exception( "SPRM failed." )
     else :
         logger.info( "SPRM completed." )
-
 
     sprm_dir = Path( "results" )
     sprm_dir.rename( "sprm_outputs" )
