@@ -2,8 +2,10 @@
 
 import argparse
 import logging
-from os import fspath
+from os import chdir, fspath
 from pathlib import Path
+
+from utils import print_directory_tree
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +42,8 @@ if __name__ == "__main__" :
     # Run SPRM.
     logger.info( "Running SPRM ..." )
 
+    orig_dir = Path().absolute()
+
     try :
         SPRM.main(
             fspath( args.expressions_ometiff_dir ),
@@ -50,6 +54,9 @@ if __name__ == "__main__" :
         logger.exception( "SPRM failed." )
     else :
         logger.info( "SPRM completed." )
+    finally:
+        print('Changing directory to', orig_dir)
+        chdir(orig_dir)
 
     sprm_dir = Path( "results" )
     sprm_dir.rename( "sprm_outputs" )
