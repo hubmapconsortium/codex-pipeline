@@ -18,11 +18,6 @@ if __name__ == "__main__" :
         )
     )
     parser.add_argument(
-        "sprm_dir",
-        help = "Path to SPRM checkout.",
-        type = Path
-    )
-    parser.add_argument(
         "expressions_ometiff_dir",
         help = "Path to directory containing OME-TIFF files with expression intensities.",
         type = Path
