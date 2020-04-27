@@ -31,8 +31,12 @@ outputs:
     outputSource: cytokit_operator/cytokit_output
     type: Directory
     label: "Cytokit operator output"
-  ome_tiff_output:
-    outputSource: ome_tiff_creation/ome_tiffs
+  ome_tiff_expressions:
+    outputSource: ome_tiff_creation/expressions_ometiff_dir
+    type: Directory
+    label: "Segmentation masks in OME-TIFF format"
+  ome_tiff_cytometry:
+    outputSource: ome_tiff_creation/cytometry_ometiff_dir
     type: Directory
     label: "Segmentation masks in OME-TIFF format"
   sprm_output_dir:
