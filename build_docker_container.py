@@ -10,6 +10,9 @@ from typing import List, Set, Tuple
 class RefusalToBuildException(Exception):
     pass
 
+ERROR_COLOR = '\033[01;31m'
+NO_COLOR = '\033[00m'
+
 # Would like to include timezone offset, but not worth the
 # complexity of including pytz/etc.
 TIMESTAMP_FORMAT = '%Y%m%d-%H%M%S%z'
@@ -145,4 +148,5 @@ if __name__ == '__main__':
     try:
         main(args.tag_timestamp, args.push, args.ignore_missing_submodules, args.pretend)
     except RefusalToBuildException as e:
+        print(ERROR_COLOR + 'Refusing to build Docker containers, for reason:' + NO_COLOR)
         sys.exit(e.args[0])
