@@ -1,11 +1,8 @@
 FROM python:3
 
-RUN pip install --no-cache-dir pyyaml \
- && pip install --no-cache-dir aicsimageio \
- && pip install --no-cache-dir tifffile \
- && pip install --no-cache-dir pandas \
- && pip install --no-cache-dir sklearn \
- && pip install --no-cache-dir matplotlib
+COPY requirements.txt /opt
+RUN python3 -m pip install -r /opt/requirements.txt \
+ && rm -rf /root/.cache/pip
 
 COPY bin /opt
 
