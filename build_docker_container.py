@@ -87,7 +87,7 @@ def check_submodules(directory: Path, ignore_missing_submodules: bool):
         message_pieces = ['Found uninitialized submodules:']
         for name, commit in sorted(uninitialized_submodules):
             message_pieces.append(f'\t{name} (at commit {commit})')
-        message_pieces.append("Refusing to build Docker containers. Maybe you need to run")
+        message_pieces.append("Maybe you need to run")
         message_pieces.append("\tgit submodule update --init")
         message_pieces.append("(Override with '--ignore-missing-submodules' if you're really sure.)")
 
