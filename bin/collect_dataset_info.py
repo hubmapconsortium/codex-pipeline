@@ -424,9 +424,9 @@ def standardize_metadata(directory: Path):
     datasetInfo["num_cycles"] = int(
         len(channelNames) / len(datasetInfo["per_cycle_channel_names"])
     )
-
-    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel"], exptConfigDict)
-    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle"], exptConfigDict)
+    
+    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel", "referenceChannel"], exptConfigDict)
+    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle", "referenceCycle"], exptConfigDict)
     bestFocusChannelName = infer_channel_name_from_index(
         int(bestFocusCycle),
         int(bestFocusChannel),
@@ -434,8 +434,8 @@ def standardize_metadata(directory: Path):
         len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel"], exptConfigDict)
-    driftCompCycle = collect_attribute(["driftCompReferenceCycle"], exptConfigDict)
+    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel", "referenceChannel"], exptConfigDict)
+    driftCompCycle = collect_attribute(["driftCompReferenceCycle", "referenceCycle"], exptConfigDict)
     driftCompChannelName = infer_channel_name_from_index(
         int(driftCompCycle),
         int(driftCompChannel),
