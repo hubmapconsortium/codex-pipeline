@@ -227,7 +227,7 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
 
 def calculate_pixel_overlaps_from_proportional( target_key: str, exptConfigDict: Dict ) -> str :
     
-    if target_key is not "tile_overlap_x" and target_key is not "tile_overlap_y" :
+    if target_key != "tile_overlap_x" and target_key != "tile_overlap_y" :
         raise ValueError( f"Invalid target_key for looking up tile overlap: {target_key}" )
 
     components = target_key.split( '_' )
