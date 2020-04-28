@@ -253,6 +253,18 @@ def calculate_pixel_overlaps_from_proportional( target_key: str, exptConfigDict:
         raise ValueError( f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}." )
 
 
+def collect_tiling_mode( exptConfigDict: Dict ) -> str :
+
+    tiling_mode = collect_attribute( [ "tilingMode" ], exptConfigDict ) 
+    
+    if re.search( "snake", tiling_mode, re.IGNORECASE ) :
+        return "snake"
+    elif re.search( "grid", tiling_mode, re.IGNORECASE ) :
+        return "grid"
+    else :
+        raise ValueError( f"Unknown tiling mode found: {tiling_mode}" )
+
+
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
@@ -347,33 +359,29 @@ def standardize_metadata(directory: Path):
         ("region_width", ["region_width"]),
         ("tile_height", ["tile_height"]),
         ("tile_width", ["tile_width"]),
-        #("tile_overlap_x", ["tile_overlap_X"]),
-        #("tile_overlap_y", ["tile_overlap_Y"]),
-        ("tiling_mode", ["tiling_mode"]),
         ("per_cycle_channel_names", ["channel_names"]),
+        ("region_names", ["region_names", "regIdx"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
 
-    try:
-        datasetInfo['region_names'] = collect_attribute(['region_names'], exptConfigDict)
-    except KeyError:
-        # Not present in experiment configuration. Get from filesystem
-        datasetInfo['region_names'] = get_region_names_from_directories(raw_data_location)
-    
     # Get tile overlaps.
     tile_overlap_mappings = [
         ( 'tile_overlap_x', 'tile_overlap_X' ),
         ( 'tile_overlap_y', 'tile_overlap_Y' )
     ]
-
     for target_key, possibleMatch in tile_overlap_mappings :
-        
         try:
             datasetInfo[ target_key ] = collect_attribute([ possibleMatch ], exptConfigDict)
-        except:
+        except KeyError:
             datasetInfo[ target_key ] = calculate_pixel_overlaps_from_proportional( target_key, exptConfigDict )
+
+    # Get tiling mode.
+    try:
+        datasetInfo[ 'tiling_mode' ] = collect_attribute( [ 'tiling_mode' ], exptConfigDict )
+    except KeyError:
+        datasetInfo[ 'tiling_mode' ] = collect_tiling_mode( exptConfigDict )
 
 
     if channel_names_files:
