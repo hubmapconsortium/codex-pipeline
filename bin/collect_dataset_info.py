@@ -225,6 +225,33 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
             regions.add(m.group('region'))
     return sorted(regions)
 
+def calculate_pixel_overlaps_from_proportional( target_key: str, exptConfigDict: Dict ) -> str :
+    
+    if target_key is not "tile_overlap_x" and target_key is not "tile_overlap_y" :
+        raise ValueError( f"Invalid target_key for looking up tile overlap: {target_key}" )
+
+    components = target_key.split( '_' )
+
+    overlap_proportion_key = components[0] + ''.join(x.title() for x in components[1:])
+
+    overlap_proportion = collect_attribute( [ overlap_proportion_key ], exptConfigDict )
+
+    # Fail if we find something >1 here, proportions can't be >1.
+    if overlap_proportion > 1 :
+        raise ValueError( f"Tile overlap proportion at key {overlap_proportion_key} is greater than 1; this doesn't make sense." )
+    
+    # If we're still here then we need to get the size of the appropriate
+    # dimension in pixels, so that we can calculate the overlap in pixels.
+    dimension_mapping = { "x" : "tileWidth", "y" : "tileHeight" }
+    target_dimension = dimension_mapping[ components[ 2 ] ]
+    
+    pixel_overlap = collect_attribute( [ target_dimension ], exptConfigDict ) * overlap_proportion 
+    
+    if float( pixel_overlap ).is_integer() :
+        return int( pixel_overlap )
+    else :
+        raise ValueError( f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}." )
+
 
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
@@ -320,8 +347,8 @@ def standardize_metadata(directory: Path):
         ("region_width", ["region_width"]),
         ("tile_height", ["tile_height"]),
         ("tile_width", ["tile_width"]),
-        ("tile_overlap_x", ["tile_overlap_X"]),
-        ("tile_overlap_y", ["tile_overlap_Y"]),
+        #("tile_overlap_x", ["tile_overlap_X"]),
+        #("tile_overlap_y", ["tile_overlap_Y"]),
         ("tiling_mode", ["tiling_mode"]),
         ("per_cycle_channel_names", ["channel_names"]),
     ]
@@ -334,6 +361,20 @@ def standardize_metadata(directory: Path):
     except KeyError:
         # Not present in experiment configuration. Get from filesystem
         datasetInfo['region_names'] = get_region_names_from_directories(raw_data_location)
+    
+    # Get tile overlaps.
+    tile_overlap_mappings = [
+        ( 'tile_overlap_x', 'tile_overlap_X' ),
+        ( 'tile_overlap_y', 'tile_overlap_Y' )
+    ]
+
+    for target_key, possibleMatch in tile_overlap_mappings :
+        
+        try:
+            datasetInfo[ target_key ] = collect_attribute([ possibleMatch ], exptConfigDict)
+        except:
+            datasetInfo[ target_key ] = calculate_pixel_overlaps_from_proportional( target_key, exptConfigDict )
+
 
     if channel_names_files:
         channel_names_file = min(
