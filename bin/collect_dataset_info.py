@@ -264,6 +264,17 @@ def collect_tiling_mode( exptConfigDict: Dict ) -> str :
     else :
         raise ValueError( f"Unknown tiling mode found: {tiling_mode}" )
 
+def create_cycle_channel_names( exptConfigDict: Dict ) -> List :
+
+    num_channels = collect_attribute( [ "numChannels" ], exptConfigDict )
+
+    cycle_channel_names = []
+    
+    for i in range( 1, num_channels + 1 ) :
+        cycle_channel_names.append( f"CH{ str( i ) }" )
+
+    return cycle_channel_names
+
 
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
@@ -359,7 +370,6 @@ def standardize_metadata(directory: Path):
         ("region_width", ["region_width"]),
         ("tile_height", ["tile_height"]),
         ("tile_width", ["tile_width"]),
-        ("per_cycle_channel_names", ["channel_names"]),
         ("region_names", ["region_names", "regIdx"]),
     ]
 
@@ -368,8 +378,8 @@ def standardize_metadata(directory: Path):
 
     # Get tile overlaps.
     tile_overlap_mappings = [
-        ( 'tile_overlap_x', 'tile_overlap_X' ),
-        ( 'tile_overlap_y', 'tile_overlap_Y' )
+        ( "tile_overlap_x", "tile_overlap_X" ),
+        ( "tile_overlap_y", "tile_overlap_Y" )
     ]
     for target_key, possibleMatch in tile_overlap_mappings :
         try:
@@ -379,9 +389,16 @@ def standardize_metadata(directory: Path):
 
     # Get tiling mode.
     try:
-        datasetInfo[ 'tiling_mode' ] = collect_attribute( [ 'tiling_mode' ], exptConfigDict )
+        datasetInfo[ "tiling_mode" ] = collect_attribute( [ "tiling_mode" ], exptConfigDict )
     except KeyError:
-        datasetInfo[ 'tiling_mode' ] = collect_tiling_mode( exptConfigDict )
+        datasetInfo[ "tiling_mode" ] = collect_tiling_mode( exptConfigDict )
+    
+    
+    # Get per-cycle channel names.
+    try:
+        datasetInfo[ "per_cycle_channel_names" ] = collect_attribute( [ "channel_names" ], exptConfigDict )
+    except KeyError:
+        datasetInfo[ "per_cycle_channel_names" ] = create_cycle_channel_names( exptConfigDict )
 
 
     if channel_names_files:
