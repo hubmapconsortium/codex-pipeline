@@ -135,14 +135,12 @@ if __name__ == "__main__" :
         symlink = output_dir / tile / "segmentation.ome.tiff"
         # There should only be one file here...
         link_target = output_relative_parent / segmentation_mask_ometiffs[ tile ][ 0 ]
-        symlink.symlink_to(link_target)
         symlinks_to_archive.append((symlink, link_target))
     
     for tile in expressions_ometiffs :
         symlink = output_dir / tile / "antigen_exprs.ome.tiff"
         link_target = output_relative_parent / expressions_ometiffs[ tile ][ 0 ]
         symlinks_to_archive.append((symlink, link_target))
-        symlink.symlink_to(link_target)
 
     for tile in sprm_outputs :
         tile_ometiff_pattern = re.compile( tile + "\.ome\.tiff-(.*)$" )
