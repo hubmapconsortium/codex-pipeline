@@ -225,6 +225,56 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
             regions.add(m.group('region'))
     return sorted(regions)
 
+def calculate_pixel_overlaps_from_proportional( target_key: str, exptConfigDict: Dict ) -> str :
+    
+    if target_key != "tile_overlap_x" and target_key != "tile_overlap_y" :
+        raise ValueError( f"Invalid target_key for looking up tile overlap: {target_key}" )
+
+    components = target_key.split( '_' )
+
+    overlap_proportion_key = components[0] + ''.join(x.title() for x in components[1:])
+
+    overlap_proportion = collect_attribute( [ overlap_proportion_key ], exptConfigDict )
+
+    # Fail if we find something >1 here, proportions can't be >1.
+    if overlap_proportion > 1 :
+        raise ValueError( f"Tile overlap proportion at key {overlap_proportion_key} is greater than 1; this doesn't make sense." )
+    
+    # If we're still here then we need to get the size of the appropriate
+    # dimension in pixels, so that we can calculate the overlap in pixels.
+    dimension_mapping = { "x" : "tileWidth", "y" : "tileHeight" }
+    target_dimension = dimension_mapping[ components[ 2 ] ]
+    
+    pixel_overlap = collect_attribute( [ target_dimension ], exptConfigDict ) * overlap_proportion 
+    
+    if float( pixel_overlap ).is_integer() :
+        return int( pixel_overlap )
+    else :
+        raise ValueError( f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}." )
+
+
+def collect_tiling_mode( exptConfigDict: Dict ) -> str :
+
+    tiling_mode = collect_attribute( [ "tilingMode" ], exptConfigDict ) 
+    
+    if re.search( "snake", tiling_mode, re.IGNORECASE ) :
+        return "snake"
+    elif re.search( "grid", tiling_mode, re.IGNORECASE ) :
+        return "grid"
+    else :
+        raise ValueError( f"Unknown tiling mode found: {tiling_mode}" )
+
+def create_cycle_channel_names( exptConfigDict: Dict ) -> List :
+
+    num_channels = collect_attribute( [ "numChannels" ], exptConfigDict )
+
+    cycle_channel_names = []
+    
+    for i in range( 1, num_channels + 1 ) :
+        cycle_channel_names.append( f"CH{ str( i ) }" )
+
+    return cycle_channel_names
+
 
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
@@ -320,20 +370,36 @@ def standardize_metadata(directory: Path):
         ("region_width", ["region_width"]),
         ("tile_height", ["tile_height"]),
         ("tile_width", ["tile_width"]),
-        ("tile_overlap_x", ["tile_overlap_X"]),
-        ("tile_overlap_y", ["tile_overlap_Y"]),
-        ("tiling_mode", ["tiling_mode"]),
-        ("per_cycle_channel_names", ["channel_names"]),
+        ("region_names", ["region_names", "regIdx"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
 
+    # Get tile overlaps.
+    tile_overlap_mappings = [
+        ( "tile_overlap_x", "tile_overlap_X" ),
+        ( "tile_overlap_y", "tile_overlap_Y" )
+    ]
+    for target_key, possibleMatch in tile_overlap_mappings :
+        try:
+            datasetInfo[ target_key ] = collect_attribute([ possibleMatch ], exptConfigDict)
+        except KeyError:
+            datasetInfo[ target_key ] = calculate_pixel_overlaps_from_proportional( target_key, exptConfigDict )
+
+    # Get tiling mode.
     try:
-        datasetInfo['region_names'] = collect_attribute(['region_names'], exptConfigDict)
+        datasetInfo[ "tiling_mode" ] = collect_attribute( [ "tiling_mode" ], exptConfigDict )
     except KeyError:
-        # Not present in experiment configuration. Get from filesystem
-        datasetInfo['region_names'] = get_region_names_from_directories(raw_data_location)
+        datasetInfo[ "tiling_mode" ] = collect_tiling_mode( exptConfigDict )
+    
+    
+    # Get per-cycle channel names.
+    try:
+        datasetInfo[ "per_cycle_channel_names" ] = collect_attribute( [ "channel_names" ], exptConfigDict )
+    except KeyError:
+        datasetInfo[ "per_cycle_channel_names" ] = create_cycle_channel_names( exptConfigDict )
+
 
     if channel_names_files:
         channel_names_file = min(
@@ -358,9 +424,9 @@ def standardize_metadata(directory: Path):
     datasetInfo["num_cycles"] = int(
         len(channelNames) / len(datasetInfo["per_cycle_channel_names"])
     )
-
-    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel"], exptConfigDict)
-    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle"], exptConfigDict)
+    
+    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel", "referenceChannel"], exptConfigDict)
+    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle", "referenceCycle"], exptConfigDict)
     bestFocusChannelName = infer_channel_name_from_index(
         int(bestFocusCycle),
         int(bestFocusChannel),
@@ -368,8 +434,8 @@ def standardize_metadata(directory: Path):
         len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel"], exptConfigDict)
-    driftCompCycle = collect_attribute(["driftCompReferenceCycle"], exptConfigDict)
+    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel", "referenceChannel"], exptConfigDict)
+    driftCompCycle = collect_attribute(["driftCompReferenceCycle", "referenceCycle"], exptConfigDict)
     driftCompChannelName = infer_channel_name_from_index(
         int(driftCompCycle),
         int(driftCompChannel),

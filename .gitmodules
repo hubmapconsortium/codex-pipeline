@@ -1,0 +1,3 @@
+[submodule "sprm"]
+	path = sprm
+	url = git@github.com:hubmapconsortium/sprm
