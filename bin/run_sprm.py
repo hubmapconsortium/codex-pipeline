@@ -35,8 +35,13 @@ if __name__ == "__main__" :
 
     args = parser.parse_args()
 
+    print('Expressions OME-TIFF directory:')
+    print_directory_tree(args.expressions_ometiff_dir)
+    print('Cytometry OME-TIFF directory:')
+    print_directory_tree(args.cytometry_ometiff_dir)
+
     import sys
-    sys.path.append( fspath('/opt/sprm') )
+    sys.path.append( fspath(SPRM_DIR) )
     import SPRM
 
     # Run SPRM.
@@ -46,9 +51,9 @@ if __name__ == "__main__" :
 
     try :
         SPRM.main(
-            fspath( args.expressions_ometiff_dir ),
-            fspath( args.cytometry_ometiff_dir ),
-            fspath( SPRM_DIR / "options.txt" )
+            args.expressions_ometiff_dir,
+            args.cytometry_ometiff_dir,
+            SPRM_DIR / "options.txt",
         )
     except Exception as e :
         logger.exception( "SPRM failed." )
@@ -58,5 +63,7 @@ if __name__ == "__main__" :
         print('Changing directory to', orig_dir)
         chdir(orig_dir)
 
+    print('Output:')
+    print_directory_tree(orig_dir)
     sprm_dir = Path( "results" )
     sprm_dir.rename( "sprm_outputs" )

@@ -155,3 +155,6 @@ if __name__ == "__main__" :
             symlink.symlink_to(link_target)
             logger.info(f'Archiving symlink {symlink} -> {link_target}')
             t.add(symlink)
+
+    for symlink, link_target in symlinks_to_archive:
+        symlink.unlink()
