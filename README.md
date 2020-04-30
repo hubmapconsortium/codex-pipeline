@@ -90,6 +90,8 @@ Update all timestamped tags in the CWL files in `steps` to refer to the new time
 Then, tag a new version of the repository and push the tag and `release` branch. If you have a GPG key you can use
 to sign tags, replace the `-a` option with `-s` below.
 ```shell script
+git add steps
+git commit -m 'Update container timestamps for version v0.whatever'
 git tag -a v0.whatever
 git push
 git push --tags
