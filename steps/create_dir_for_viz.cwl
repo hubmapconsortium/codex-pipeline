@@ -1,26 +1,26 @@
 cwlVersion: v1.1
 class: CommandLineTool
-label: Create CSVs containing Cytokit cytometry information and cell shape polygons
+label: Create directory containing symlinks to relevant files for visualization team
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
-baseCommand: /opt/create_cellshapes_csv.py
+baseCommand: /opt/create_visualization_dir.py
 
 inputs:
-  ome_tiffs:
-    type: Directory
+  cytokit_config_file:
+    type: File
     inputBinding:
       position: 1
-  cytokit_processor_output:
+  ometiff_dir:
     type: Directory
     inputBinding:
       position: 2
-  cytokit_operator_output:
+  sprm_output:
     type: Directory
     inputBinding:
       position: 3
 outputs:
-  cell_shapes_csv:
-    type: Directory
+  for_viz_dir:
+    type: File
     outputBinding:
-      glob: output
+      glob: symlinks.tar
