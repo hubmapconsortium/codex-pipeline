@@ -112,9 +112,6 @@ if __name__ == "__main__" :
     print('SPRM directory listing:')
     print_directory_tree(args.sprm_output_dir)
 
-    logger.info( args.cytometry_ometiff_dir )
-    logger.info( os.listdir( args.cytometry_ometiff_dir ) )
-    
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
     sprm_outputs = collect_files_by_tile( tile_names, args.sprm_output_dir )
