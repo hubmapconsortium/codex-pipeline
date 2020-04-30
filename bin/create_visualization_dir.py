@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 import argparse
+from collections import defaultdict
 import logging
 from os import walk
 from pathlib import Path
 import re
-from typing import Dict, List
+import tarfile
+from typing import Dict, List, Tuple
 import yaml
 
-#from utils import infer_tile_names, collect_files_by_tile
+from utils import print_directory_tree
 
 import os
 
@@ -19,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def infer_tile_names( cytokit_config_filename: Path ) -> List :
+def infer_tile_names( cytokit_config_filename: Path ) -> List[str] :
     
     cytokit_config_file = open( cytokit_config_filename, 'r' )
     cytokit_config = yaml.safe_load( cytokit_config_file ) 
@@ -43,34 +45,29 @@ def infer_tile_names( cytokit_config_filename: Path ) -> List :
 
 
 def collect_files_by_tile(
-    tile_names: List,
-    directory: Path
-) -> Dict :
+    tile_names: List[str],
+    directory: Path,
+) -> Dict[str, List[Path]] :
 
-    files_by_tile = {}
+    files_by_tile: Dict[str, List[Path]] = defaultdict(list)
 
     for tile in tile_names :
-        
-        files_by_tile[ tile ] = []
-
         tile_name_pattern = re.compile( tile )
 
-        for dirpath, dirnames, filenames in walk( directory ) :
+        for dirpath_str, dirnames, filenames in walk( directory ) :
+            dirpath = Path(dirpath_str)
             for filename in filenames :
                 if tile_name_pattern.match( filename ) :
-                    files_by_tile[ tile ].append( directory / Path( filename ) )
-    
+                    files_by_tile[ tile ].append( dirpath / filename )
+
     # If a tile doesn't have any files, throw an error.
     for tile in tile_names :
         if len( files_by_tile[ tile ] ) == 0 :
             raise ValueError(
                 f"No files were found for tile {tile}"
             )
-            return
 
     return files_by_tile
-
-
 
 if __name__ == "__main__" :
 
@@ -107,6 +104,14 @@ if __name__ == "__main__" :
     cytometry_ometiff_dir = args.cytometry_ometiff_dir
     expressions_ometiff_dir = args.expressions_ometiff_dir
 
+    # TODO: use logging for this
+    print('Cytometry OME-TIFF directory listing:')
+    print_directory_tree(cytometry_ometiff_dir)
+    print('Expressions OME-TIFF directory listing:')
+    print_directory_tree(expressions_ometiff_dir)
+    print('SPRM directory listing:')
+    print_directory_tree(args.sprm_output_dir)
+
     logger.info( args.cytometry_ometiff_dir )
     logger.info( os.listdir( args.cytometry_ometiff_dir ) )
     
@@ -116,25 +121,39 @@ if __name__ == "__main__" :
     
     output_dir = Path( "for-visualization" )
     output_dir.mkdir( parents = True, exist_ok = True )
-    
+
+    output_relative_parent = Path('../..')
+
     for tile in tile_names :
-        tile_dir = output_dir / Path( tile )
+        tile_dir = output_dir / tile
         tile_dir.mkdir( parents = True, exist_ok = True )
-        
+
+    symlinks_to_archive: List[Tuple[Path, Path]] = []
+
     # TODO: Perhaps a proper function to do this in a less repetitive way would be nicer.
     for tile in segmentation_mask_ometiffs :
-        symlink = output_dir / Path( tile ) / Path( "segmentation.ome.tiff" )
+        symlink = output_dir / tile / "segmentation.ome.tiff"
         # There should only be one file here...
-        symlink.symlink_to( Path( "../.." ) / segmentation_mask_ometiffs[ tile ][ 0 ] )
+        link_target = output_relative_parent / segmentation_mask_ometiffs[ tile ][ 0 ]
+        symlink.symlink_to(link_target)
+        symlinks_to_archive.append((symlink, link_target))
     
     for tile in expressions_ometiffs :
-        symlink = output_dir / Path( tile ) / Path( "antigen_exprs.ome.tiff" )
-        symlink.symlink_to( Path( "../.." ) / expressions_ometiffs[ tile ][ 0 ] )
+        symlink = output_dir / tile / "antigen_exprs.ome.tiff"
+        link_target = output_relative_parent / expressions_ometiffs[ tile ][ 0 ]
+        symlinks_to_archive.append((symlink, link_target))
+        symlink.symlink_to(link_target)
 
     for tile in sprm_outputs :
         tile_ometiff_pattern = re.compile( tile + "\.ome\.tiff-(.*)$" )
         for sprm_file in sprm_outputs[ tile ] :
             link_name = tile_ometiff_pattern.match( sprm_file.name ).group( 1 )
-            symlink = output_dir / Path( tile ) / Path( link_name )
-            symlink.symlink_to( Path( "../.." ) / sprm_file )
+            link_target = output_relative_parent / sprm_file
+            symlink = output_dir / tile / link_name
+            symlinks_to_archive.append((symlink, link_target))
 
+    with tarfile.open('symlinks.tar', 'w') as t:
+        for symlink, link_target in symlinks_to_archive:
+            symlink.symlink_to(link_target)
+            logger.info(f'Archiving symlink {symlink} -> {link_target}')
+            t.add(symlink)
