@@ -45,8 +45,8 @@ outputs:
     label: "Directory containing all SPRM outputs"
   for_viz_dir:
     outputSource: create_dir_for_viz/for_viz_dir
-    type: Directory
-    label: "Symbolic links to files for visualization team"
+    type: File
+    label: "Archive of symbolic links to files for visualization team"
 
 steps:
   - id: collect_dataset_info

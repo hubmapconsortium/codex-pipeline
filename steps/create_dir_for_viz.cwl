@@ -25,6 +25,6 @@ inputs:
       position: 4
 outputs:
   for_viz_dir:
-    type: Directory
+    type: File
     outputBinding:
-      glob: for-visualization
+      glob: symlinks.tar
