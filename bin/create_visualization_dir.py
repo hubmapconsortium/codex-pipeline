@@ -22,19 +22,18 @@ logger = logging.getLogger(__name__)
 
 
 def infer_tile_names( cytokit_config_filename: Path ) -> List[str] :
-    
-    cytokit_config_file = open( cytokit_config_filename, 'r' )
-    cytokit_config = yaml.safe_load( cytokit_config_file ) 
-    cytokit_config_file.close()
+
+    with open( cytokit_config_filename, 'r' ) as cytokit_config_file:
+        cytokit_config = yaml.safe_load( cytokit_config_file )
 
     tile_names = []
-    
-    region_height, region_width = ( 
+
+    region_height, region_width = (
         cytokit_config[ "acquisition" ][ "region_height" ],
-        cytokit_config[ "acquisition" ][ "region_width" ]
+        cytokit_config[ "acquisition" ][ "region_width" ],
     )
     region_names = cytokit_config[ "acquisition" ][ "region_names" ]
-    
+
     for r in range( 1, len( region_names ) + 1 ) :
         # Width is X values, height is Y values.
         for x in range( 1, region_width + 1 ) :
@@ -82,13 +81,8 @@ if __name__ == "__main__" :
         type = Path
     )
     parser.add_argument(
-        "expressions_ometiff_dir",
-        help = "Path to Cytokit extract output directory from OME-TIFF creation pipeline step.",
-        type = Path
-    )
-    parser.add_argument(
-        "cytometry_ometiff_dir",
-        help = "Path to Cytokit cytometry output directory from OME-TIFF creation pipeline step.",
+        "ometiff_dir",
+        help = "Path to Cytokit output directory from OME-TIFF creation pipeline step.",
         type = Path
     )
     parser.add_argument(
@@ -96,13 +90,13 @@ if __name__ == "__main__" :
         help = "Path to output directory from SPRM pipeline step.",
         type = Path
     )
-    
+
     args = parser.parse_args()
-    
+
     tile_names = infer_tile_names( args.cytokit_yaml_config )
-    
-    cytometry_ometiff_dir = args.cytometry_ometiff_dir
-    expressions_ometiff_dir = args.expressions_ometiff_dir
+
+    expressions_ometiff_dir = args.ometiff_dir / 'extract/expressions/ome-tiff'
+    cytometry_ometiff_dir = args.ometiff_dir / 'cytometry/tile/ome-tiff'
 
     # TODO: use logging for this
     print('Cytometry OME-TIFF directory listing:')
@@ -115,7 +109,7 @@ if __name__ == "__main__" :
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
     sprm_outputs = collect_files_by_tile( tile_names, args.sprm_output_dir )
-    
+
     output_dir = Path( "for-visualization" )
     output_dir.mkdir( parents = True, exist_ok = True )
 
@@ -133,7 +127,7 @@ if __name__ == "__main__" :
         # There should only be one file here...
         link_target = output_relative_parent / segmentation_mask_ometiffs[ tile ][ 0 ]
         symlinks_to_archive.append((symlink, link_target))
-    
+
     for tile in expressions_ometiffs :
         symlink = output_dir / tile / "antigen_exprs.ome.tiff"
         link_target = output_relative_parent / expressions_ometiffs[ tile ][ 0 ]

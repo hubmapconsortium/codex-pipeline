@@ -9,14 +9,10 @@ hints:
 baseCommand: /opt/run_sprm.py
 
 inputs:
-  expressions_ometiff_dir:
+  ometiff_dir:
     type: Directory
     inputBinding:
       position: 2
-  cytometry_ometiff_dir:
-    type: Directory
-    inputBinding:
-      position: 3
 outputs:
   sprm_output_dir:
     type: Directory

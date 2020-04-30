@@ -23,22 +23,19 @@ if __name__ == "__main__" :
         )
     )
     parser.add_argument(
-        "expressions_ometiff_dir",
-        help = "Path to directory containing OME-TIFF files with expression intensities.",
+        "ometiff_dir",
+        help = "Path to directory containing OME-TIFF files.",
         type = Path
     )
-    parser.add_argument(
-        "cytometry_ometiff_dir",
-        help = "Path to directory containing OME-TIFF files with Cytokit segmentation masks in.",
-        type = Path
-    )
-
     args = parser.parse_args()
 
+    expressions_ometiff_dir = args.ometiff_dir / 'extract/expressions/ome-tiff'
+    cytometry_ometiff_dir = args.ometiff_dir / 'cytometry/tile/ome-tiff'
+
     print('Expressions OME-TIFF directory:')
-    print_directory_tree(args.expressions_ometiff_dir)
+    print_directory_tree(expressions_ometiff_dir)
     print('Cytometry OME-TIFF directory:')
-    print_directory_tree(args.cytometry_ometiff_dir)
+    print_directory_tree(cytometry_ometiff_dir)
 
     import sys
     sys.path.append( fspath(SPRM_DIR) )
@@ -51,8 +48,8 @@ if __name__ == "__main__" :
 
     try :
         SPRM.main(
-            args.expressions_ometiff_dir,
-            args.cytometry_ometiff_dir,
+            expressions_ometiff_dir,
+            cytometry_ometiff_dir,
             SPRM_DIR / "options.txt",
         )
     except Exception as e :

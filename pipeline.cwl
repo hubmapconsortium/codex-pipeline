@@ -31,12 +31,8 @@ outputs:
     outputSource: cytokit_operator/cytokit_output
     type: Directory
     label: "Cytokit operator output"
-  ome_tiff_expressions:
-    outputSource: ome_tiff_creation/expressions_ometiff_dir
-    type: Directory
-    label: "Segmentation masks in OME-TIFF format"
-  ome_tiff_cytometry:
-    outputSource: ome_tiff_creation/cytometry_ometiff_dir
+  ome_tiff_output:
+    outputSource: ome_tiff_creation/ome_tiffs
     type: Directory
     label: "Segmentation masks in OME-TIFF format"
   sprm_output_dir:
@@ -102,17 +98,14 @@ steps:
       - id: cytokit_operator_output
         source: cytokit_operator/cytokit_output
     out:
-      - expressions_ometiff_dir
-      - cytometry_ometiff_dir
+      - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
 
   - id: run_sprm
     in:
-      - id: expressions_ometiff_dir
-        source: ome_tiff_creation/expressions_ometiff_dir
-      - id: cytometry_ometiff_dir
-        source: ome_tiff_creation/cytometry_ometiff_dir
+      - id: ometiff_dir
+        source: ome_tiff_creation/ome_tiffs
     out:
       - sprm_output_dir
     run: steps/run_sprm.cwl
@@ -122,10 +115,8 @@ steps:
     in:
       - id: cytokit_config_file
         source: create_yaml_config/cytokit_config
-      - id: expressions_ometiff_dir
-        source: ome_tiff_creation/expressions_ometiff_dir
-      - id: cytometry_ometiff_dir
-        source: ome_tiff_creation/cytometry_ometiff_dir
+      - id: ometiff_dir
+        source: ome_tiff_creation/ome_tiffs
       - id: sprm_output
         source: run_sprm/sprm_output_dir
     out:

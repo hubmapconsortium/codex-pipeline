@@ -18,11 +18,7 @@ inputs:
     inputBinding:
       position: 2
 outputs:
-  expressions_ometiff_dir:
+  ome_tiffs:
     type: Directory
     outputBinding:
-      glob: output/extract/expressions/ome-tiff
-  cytometry_ometiff_dir:
-    type: Directory
-    outputBinding:
-      glob: output/cytometry/tile/ome-tiff
+      glob: output
