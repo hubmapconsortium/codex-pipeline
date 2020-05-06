@@ -124,6 +124,7 @@ def add_pixel_size_units( omeXml ) :
     
     omeXmlRoot = ET.fromstring( omeXml.to_xml() )
     
+    # FIXME: this is pretty horrible but it works for now. How can we not hardcode XML namespaces?
     image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Image' )
     pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Pixels' )
     pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
