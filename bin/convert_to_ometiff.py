@@ -120,6 +120,19 @@ def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
     return channelList
 
 
+def add_pixel_size_units( omeXml ) :
+    
+    omeXmlRoot = ET.fromstring( omeXml.to_xml() )
+    
+    image_node = omeXmlRoot.find( 'Image' )
+    pixels_node = image_node.find( 'Pixels' )
+    pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
+    pixels_node.set( 'PhysicalSizeYUnit', 'nm' )
+    
+    omexml_with_pixel_units = OMEXML( xml = ET.tostring( omeXmlRoot ) )
+    return omexml_with_pixel_units 
+
+
 def create_roi_polygons(
     imageData: np.ndarray,
     bestZforROI: int,
@@ -213,6 +226,8 @@ def convert_tiff_file(
     #omeXml.image().Pixels.set_PhysicalSizeXUnit( "nm" )
     omeXml.image().Pixels.set_PhysicalSizeY( lateral_resolution )
     #omeXml.image().Pixels.set_PhysicalSizeYUnit( "nm" )
+    
+    omeXml = add_pixel_size_units( omeXml )
 
     for i in range( 0, len( channelNames ) ) :
         omeXml.image().Pixels.Channel( i ).Name = channelNames[ i ]
