@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Create OME-TIFF versions of Cytokit segmentation and extract results
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:20200506-124026
+    dockerPull: hubmap/codex-scripts:20200506-194412
   NetworkAccess:
     networkAccess: true
 baseCommand: /opt/convert_to_ometiff.py

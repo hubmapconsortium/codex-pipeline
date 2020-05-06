@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Collect dataset info for Cytokit
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:20200506-124026
+    dockerPull: hubmap/codex-scripts:20200506-194412
 baseCommand: /opt/collect_dataset_info.py
 
 inputs:
