@@ -65,7 +65,7 @@ def get_lateral_resolution( cytokit_config_filename: Path ) -> float :
     with open(cytokit_config_filename) as cytokit_config_file:
         cytokit_config = yaml.safe_load( cytokit_config_file )
 
-    lateral_resolution = float( "%0.2f" % cytokit_config[ "acquisition" ][ "lateral_resolution" ] )
+    return float( "%0.2f" % cytokit_config[ "acquisition" ][ "lateral_resolution" ] )
 
 
 def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
@@ -210,9 +210,9 @@ def convert_tiff_file(
     omeXml.image().Pixels.set_DimensionOrder( "XYZCT" )
     omeXml.image().Pixels.channel_count = len( channelNames )
     omeXml.image().Pixels.set_PhysicalSizeX( lateral_resolution )
-    omeXml.image().Pixels.set_PhysicalSizeXUnit( "nm" )
+    #omeXml.image().Pixels.set_PhysicalSizeXUnit( "nm" )
     omeXml.image().Pixels.set_PhysicalSizeY( lateral_resolution )
-    omeXml.image().Pixels.set_PhysicalSizeYUnit( "nm" )
+    #omeXml.image().Pixels.set_PhysicalSizeYUnit( "nm" )
 
     for i in range( 0, len( channelNames ) ) :
         omeXml.image().Pixels.Channel( i ).Name = channelNames[ i ]
@@ -288,11 +288,13 @@ def create_ome_tiffs(
             )
         )
 
-    # Commenting out parallelisation for testing
-    with Pool(processes=subprocesses) as pool:
-        pool.imap_unordered(convert_tiff_file, args_for_conversion)
-        pool.close()
-        pool.join()
+    for argtuple in args_for_conversion :
+        convert_tiff_file( argtuple )
+
+    #with Pool(processes=subprocesses) as pool:
+    #    pool.imap_unordered(convert_tiff_file, args_for_conversion)
+    #    pool.close()
+    #    pool.join()
 
 
 ########
