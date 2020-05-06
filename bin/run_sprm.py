@@ -2,13 +2,13 @@
 
 import argparse
 import logging
-from os import chdir, fspath
+from os import fspath
 from pathlib import Path
 
-from utils import print_directory_tree
+from utils import list_directory_tree
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(levelname)-7s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -32,10 +32,10 @@ if __name__ == "__main__" :
     expressions_ometiff_dir = args.ometiff_dir / 'extract/expressions/ome-tiff'
     cytometry_ometiff_dir = args.ometiff_dir / 'cytometry/tile/ome-tiff'
 
-    print('Expressions OME-TIFF directory:')
-    print_directory_tree(expressions_ometiff_dir)
-    print('Cytometry OME-TIFF directory:')
-    print_directory_tree(cytometry_ometiff_dir)
+    logger.debug('Expressions OME-TIFF directory:')
+    logger.debug(list_directory_tree(expressions_ometiff_dir))
+    logger.debug('Cytometry OME-TIFF directory:')
+    logger.debug(list_directory_tree(cytometry_ometiff_dir))
 
     import sys
     sys.path.append( fspath(SPRM_DIR) )
@@ -44,23 +44,18 @@ if __name__ == "__main__" :
     # Run SPRM.
     logger.info( "Running SPRM ..." )
 
-    orig_dir = Path().absolute()
-
+    sprm_output_dir = Path("sprm_outputs")
     try :
         SPRM.main(
             expressions_ometiff_dir,
             cytometry_ometiff_dir,
+            sprm_output_dir,
             SPRM_DIR / "options.txt",
         )
     except Exception as e :
         logger.exception( "SPRM failed." )
     else :
         logger.info( "SPRM completed." )
-    finally:
-        print('Changing directory to', orig_dir)
-        chdir(orig_dir)
 
-    print('Output:')
-    print_directory_tree(orig_dir)
-    sprm_dir = Path( "results" )
-    sprm_dir.rename( "sprm_outputs" )
+    logger.debug('Output:')
+    logger.debug(list_directory_tree(sprm_output_dir))
