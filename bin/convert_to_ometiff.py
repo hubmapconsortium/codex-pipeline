@@ -124,8 +124,8 @@ def add_pixel_size_units( omeXml ) :
     
     omeXmlRoot = ET.fromstring( omeXml.to_xml() )
     
-    image_node = omeXmlRoot.find( 'Image' )
-    pixels_node = image_node.find( 'Pixels' )
+    image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Image' )
+    pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Pixels' )
     pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
     pixels_node.set( 'PhysicalSizeYUnit', 'nm' )
     
