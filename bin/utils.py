@@ -9,7 +9,7 @@ import yaml
 
 
 def list_directory_tree(directory: Path) -> str:
-    return pformat(sorted(directory.glob('**/*')))
+    return pformat(sorted(directory.glob('**/*'))) + '\n'
 
 
 def print_directory_tree(directory: Path):
