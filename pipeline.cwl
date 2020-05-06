@@ -97,6 +97,8 @@ steps:
         source: cytokit_processor/cytokit_output
       - id: cytokit_operator_output
         source: cytokit_operator/cytokit_output
+      - id: cytokit_config
+        source: create_yaml_config/cytokit_config
     out:
       - ome_tiffs
     run: steps/ome_tiff_creation.cwl

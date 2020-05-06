@@ -15,6 +15,7 @@ from shapely.geometry import Polygon
 from tifffile import TiffFile
 from typing import Dict, List, Tuple
 import xml.etree.ElementTree as ET
+import yaml
 
 from utils import print_directory_tree
 
@@ -57,6 +58,14 @@ def collect_tiff_file_list(
         logger.warning( "No files found in " + str( directory ) )
 
     return fileList
+
+
+def get_lateral_resolution( cytokit_config_filename: Path ) -> float :
+    
+    with open(cytokit_config_filename) as cytokit_config_file:
+        cytokit_config = yaml.safe_load( cytokit_config_file )
+
+    return float( "%0.2f" % cytokit_config[ "acquisition" ][ "lateral_resolution" ] )
 
 
 def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
@@ -109,6 +118,20 @@ def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
     channelList = [ procPattern.match( channel ).group( 1 ) for channel in channelList ]
 
     return channelList
+
+
+def add_pixel_size_units( omeXml ) :
+    
+    omeXmlRoot = ET.fromstring( omeXml.to_xml() )
+    
+    # FIXME: this is pretty horrible but it works for now. How can we not hardcode XML namespaces?
+    image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Image' )
+    pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Pixels' )
+    pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
+    pixels_node.set( 'PhysicalSizeYUnit', 'nm' )
+    
+    omexml_with_pixel_units = OMEXML( xml = ET.tostring( omeXmlRoot ) )
+    return omexml_with_pixel_units 
 
 
 def create_roi_polygons(
@@ -171,15 +194,16 @@ def create_roi_polygons(
 
 
 def convert_tiff_file(
-        funcArgs: Tuple[ Path, Path, List, int ]
+        funcArgs: Tuple[ Path, Path, List, float, int ]
 ) :
     """
     Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
-    a list of channel names, and an integer value for the best focus z-plane,
-    convert the source TIFF file to OME-TIFF format, containing polygons for
-    segmented cell shapes in the "ROI" OME-XML element.
+    a list of channel names, a float value for the lateral resolution in
+    nanometres, and an integer value for the best focus z-plane, convert the
+    source TIFF file to OME-TIFF format, containing polygons for segmented cell
+    shapes in the "ROI" OME-XML element.
     """
-    sourceFile, ometiffFile, channelNames, bestZforROI = funcArgs
+    sourceFile, ometiffFile, channelNames, lateral_resolution, bestZforROI = funcArgs
 
     logger.info( f"Converting file: { str( sourceFile ) }")
 
@@ -199,6 +223,12 @@ def convert_tiff_file(
     omeXml.image().Pixels.set_PixelType( str( imageDataForOmeTiff.dtype ) )
     omeXml.image().Pixels.set_DimensionOrder( "XYZCT" )
     omeXml.image().Pixels.channel_count = len( channelNames )
+    omeXml.image().Pixels.set_PhysicalSizeX( lateral_resolution )
+    #omeXml.image().Pixels.set_PhysicalSizeXUnit( "nm" )
+    omeXml.image().Pixels.set_PhysicalSizeY( lateral_resolution )
+    #omeXml.image().Pixels.set_PhysicalSizeYUnit( "nm" )
+    
+    omeXml = add_pixel_size_units( omeXml )
 
     for i in range( 0, len( channelNames ) ) :
         omeXml.image().Pixels.Channel( i ).Name = channelNames[ i ]
@@ -239,6 +269,7 @@ def create_ome_tiffs(
         file_list: List[Path],
         output_dir: Path,
         channel_names: List[str],
+        lateral_resolution: float,
         subprocesses: int,
         bestZplanes: Dict = None
 ):
@@ -247,6 +278,7 @@ def create_ome_tiffs(
         - a list of TIFF files
         - an output directory path
         - a list of channel names
+        - a float value for the lateral resolution in nanometres (aka XY resolution aka pixel size).
         - an integer value for the number of multiprocessing subprocesses
         - a dictionary of best focus z-planes indexed by tile x,y coordinates
     Create OME-TIFF files using parallel processes.
@@ -267,15 +299,18 @@ def create_ome_tiffs(
                 source_file,
                 ome_tiff_file,
                 channel_names,
+                lateral_resolution,
                 bestZforROI,
             )
         )
 
-    # Commenting out parallelisation for testing
-    with Pool(processes=subprocesses) as pool:
-        pool.imap_unordered(convert_tiff_file, args_for_conversion)
-        pool.close()
-        pool.join()
+    for argtuple in args_for_conversion :
+        convert_tiff_file( argtuple )
+
+    #with Pool(processes=subprocesses) as pool:
+    #    pool.imap_unordered(convert_tiff_file, args_for_conversion)
+    #    pool.close()
+    #    pool.join()
 
 
 ########
@@ -299,6 +334,11 @@ if __name__ == "__main__" :
     parser.add_argument(
         "cytokit_operator_output",
         help="Path to output of `cytokit operator`",
+        type=Path,
+    )
+    parser.add_argument(
+        "cytokit_config",
+        help="Path to Cytokit YAML config file",
         type=Path,
     )
     parser.add_argument(
@@ -337,6 +377,8 @@ if __name__ == "__main__" :
 
     segmentationFileList = collect_tiff_file_list( cytometryTileDir, TIFF_FILE_NAMING_PATTERN )
     extractFileList = collect_tiff_file_list( extractDir, TIFF_FILE_NAMING_PATTERN )
+    
+    lateral_resolution = get_lateral_resolution( args.cytokit_config )
 
     # For each tile, find the best focus Z plane.
     bestZplanes = collect_best_zplanes( args.cytokit_processor_output / processor_data_json_piece )
@@ -347,6 +389,7 @@ if __name__ == "__main__" :
             segmentationFileList,
             output_dir / cytometry_tile_dir_piece / 'ome-tiff',
             SEGMENTATION_CHANNEL_NAMES,
+            lateral_resolution,
             args.processes,
             bestZplanes,
         )
@@ -362,5 +405,6 @@ if __name__ == "__main__" :
             extractFileList,
             output_dir / extract_expressions_piece / 'ome-tiff',
             extractChannelNames,
+            lateral_resolution,
             args.processes,
         )

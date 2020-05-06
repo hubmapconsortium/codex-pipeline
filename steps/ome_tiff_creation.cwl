@@ -17,6 +17,10 @@ inputs:
     type: Directory
     inputBinding:
       position: 2
+  cytokit_config:
+    type: File
+    inputBinding:
+      position: 3
 outputs:
   ome_tiffs:
     type: Directory
