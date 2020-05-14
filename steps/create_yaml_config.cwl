@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Create Cytokit experiment config
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:20200513-125735
+    dockerPull: hubmap/codex-scripts:20200514-120515
 baseCommand: /opt/create_cytokit_config.py
 
 inputs:
