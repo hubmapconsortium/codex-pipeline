@@ -38,8 +38,10 @@ def infer_tile_names( cytokit_config_filename: Path ) -> List[str] :
 
 
 def collect_files_by_tile(
-    tile_names: List[str],
-    directory: Path,
+        tile_names: List[str],
+        directory: Path,
+        *,
+        allow_empty_tiles: bool = False,
 ) -> Dict[str, List[Path]] :
 
     files_by_tile: Dict[str, List[Path]] = defaultdict(list)
@@ -53,9 +55,10 @@ def collect_files_by_tile(
                 if tile_name_pattern.match( filename ) :
                     files_by_tile[ tile ].append( dirpath / filename )
 
-    # If a tile doesn't have any files, throw an error.
-    for tile in tile_names :
-        if len( files_by_tile[ tile ] ) == 0 :
-            raise ValueError(f"No files were found for tile {tile}")
+    # If a tile doesn't have any files, throw an error unless explicitly allowed.
+    if not allow_empty_tiles:
+        for tile in tile_names :
+            if len( files_by_tile[ tile ] ) == 0 :
+                raise ValueError(f"No files were found for tile {tile}")
 
     return files_by_tile
