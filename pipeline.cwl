@@ -15,22 +15,10 @@ inputs:
     default: "0"
 
 outputs:
-  pipeline_config:
-    outputSource: collect_dataset_info/pipeline_config
-    type: File
-    label: "Pipeline config"
   experiment_config:
     outputSource: create_yaml_config/cytokit_config
     type: File
     label: "Cytokit configuration format"
-  cytokit_processor_output:
-    outputSource: cytokit_processor/cytokit_output
-    type: Directory
-    label: "Cytokit processor output"
-  cytokit_operator_output:
-    outputSource: cytokit_operator/cytokit_output
-    type: Directory
-    label: "Cytokit operator output"
   ome_tiff_output:
     outputSource: ome_tiff_creation/ome_tiffs
     type: Directory
