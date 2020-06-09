@@ -71,7 +71,7 @@ if __name__ == "__main__" :
 
     segmentation_mask_ometiffs = collect_files_by_tile( tile_names, cytometry_ometiff_dir )
     expressions_ometiffs = collect_files_by_tile( tile_names, expressions_ometiff_dir )
-    sprm_outputs = collect_files_by_tile( tile_names, args.sprm_output_dir )
+    sprm_outputs = collect_files_by_tile( tile_names, args.sprm_output_dir, allow_empty_tiles=True )
 
     output_dir = Path( "for-visualization" )
     output_dir.mkdir( parents = True, exist_ok = True )
