@@ -207,7 +207,7 @@ def find_raw_data_dir(directory: Path) -> Path:
     for child in directory.iterdir():
         if not child.is_dir():
             continue
-        if not any(piece in child.name for piece in PROCESSED_DIRECTORY_NAME_PIECES):
+        if not any(piece in child.name for piece in NONRAW_DIRECTORY_NAME_PIECES):
             raw_data_dir_possibilities.append(child)
 
     if len(raw_data_dir_possibilities) > 1:
