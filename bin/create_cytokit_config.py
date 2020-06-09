@@ -165,7 +165,7 @@ if __name__ == "__main__" :
                 )
             else :
                 channel_qc_pass = pipelineConfigInfo[ "channel_names_qc_pass" ][ channelName ][0]
-                if channel_qc_pass == 'False' :
+                if channel_qc_pass.casefold() == 'false'.casefold() :
                     continue
 
         # Append to operator extract channels with "proc_" prepended -- this
