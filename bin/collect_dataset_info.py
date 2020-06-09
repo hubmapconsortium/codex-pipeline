@@ -364,6 +364,8 @@ def standardize_metadata(directory: Path):
             csvreader = csv.reader( csvfile, delimiter=',' )
             for row in csvreader :
                 channel_names_qc_pass[ row[ 0 ] ].append( row[ 1 ] )
+    else :
+        logger.warning( "No channelnames_report.csv file found. Including all channels in final output." )
         
     raw_data_location = find_raw_data_dir(directory)
     logger.info(f'Raw data location: {raw_data_location}')
