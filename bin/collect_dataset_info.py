@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 NONRAW_DIRECTORY_NAME_PIECES = [
     'processed',
     'drv',
-    'metadata,
+    'metadata',
 ]
 
 
