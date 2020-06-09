@@ -24,10 +24,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-PROCESSED_DIRECTORY_NAME_PIECES = [
+NONRAW_DIRECTORY_NAME_PIECES = [
     'processed',
     'drv',
+    'metadata,
 ]
+
+
 # TODO: don't duplicate this in ../cytokit-docker/setup_data_directory.py.
 #   Can't share code easily because these files go to different containers
 RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORECASE)
@@ -35,7 +38,7 @@ RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORE
 def find_files(
         base_directory: Path,
         filename: str,
-        ignore_processed_derived_dirs: bool = False,
+        ignore_processed_derived_metadata_dirs: bool = False,
 ) -> List[Path]:
     """
     This returns a full list instead of a generator function because we very
@@ -44,13 +47,13 @@ def find_files(
 
     :param base_directory:
     :param filename:
-    :param ignore_processed_derived_dirs:
+    :param ignore_processed_derived_metadata_dirs:
     :return:
     """
     file_paths = []
 
     for dirpath, dirnames, filenames in walk(base_directory):
-        if ignore_processed_derived_dirs:
+        if ignore_processed_derived_metadata_dirs:
             # Skip any directory that has 'processed' in the name.
             # Since deleting items from a Python list takes linear time, be a little
             # fancier: find directory names that we *should* recurse into, clear the
@@ -58,7 +61,7 @@ def find_files(
             # directories only have 4-5 children, but quadratic runtime feels wrong
             dirnames_to_recurse = []
             for dirname in dirnames:
-                if not any(piece in dirname for piece in PROCESSED_DIRECTORY_NAME_PIECES):
+                if not any(piece in dirname for piece in NONRAW_DIRECTORY_NAME_PIECES):
                     dirnames_to_recurse.append(dirname)
             dirnames.clear()
             dirnames.extend(dirnames_to_recurse)
@@ -279,12 +282,12 @@ def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
         'experiment.json',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
     )
     segmentation_json_files = find_files(
         directory,
         'segmentation.json',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
     )
     segmentation_text_files = find_files(
         directory,
@@ -293,12 +296,12 @@ def standardize_metadata(directory: Path):
     channel_names_files = find_files(
         directory,
         'channelNames.txt',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
     )
     channel_names_report_files = find_files(
         directory,
         'channelnames_report.csv',
-        ignore_processed_derived_dirs=True
+        ignore_processed_derived_metadata_dirs=True
     )
 
     warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
