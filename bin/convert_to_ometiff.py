@@ -304,13 +304,13 @@ def create_ome_tiffs(
             )
         )
 
-    for argtuple in args_for_conversion :
-        convert_tiff_file( argtuple )
+    #for argtuple in args_for_conversion :
+    #    convert_tiff_file( argtuple )
 
-    #with Pool(processes=subprocesses) as pool:
-    #    pool.imap_unordered(convert_tiff_file, args_for_conversion)
-    #    pool.close()
-    #    pool.join()
+    with Pool(processes=subprocesses) as pool:
+        pool.imap_unordered(convert_tiff_file, args_for_conversion)
+        pool.close()
+        pool.join()
 
 
 ########
