@@ -363,7 +363,7 @@ def standardize_metadata(directory: Path):
         with open( channel_names_report_file, newline = '' ) as csvfile :
             csvreader = csv.reader( csvfile, delimiter=',' )
             for row in csvreader :
-                channel_names_qc_pass[ row[ 0 ] ].append( row[ 1 ] )
+                channel_names_qc_pass[ row[ 0 ] ].append( row[ 1 ].lstrip() )
     else :
         logger.warning( "No channelnames_report.csv file found. Including all channels in final output." )
         
