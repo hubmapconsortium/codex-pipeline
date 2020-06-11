@@ -11,7 +11,6 @@ import numpy as np
 from os import walk
 from pathlib import Path
 import re
-from shapely.geometry import Polygon
 from tifffile import TiffFile
 from typing import Dict, List, Tuple
 import xml.etree.ElementTree as ET
@@ -68,36 +67,6 @@ def get_lateral_resolution( cytokit_config_filename: Path ) -> float :
     return float( "%0.2f" % cytokit_config[ "acquisition" ][ "lateral_resolution" ] )
 
 
-def collect_best_zplanes( dataJsonFile: Path ) -> Dict :
-    """
-    Given the path to Cytokit's "data.json" file, containing results from the focal
-    plane selector, create a dictionary with tile x,y coordinates pointing to the index
-    of the best-focus z-plane.
-    """
-    print('Collecting best z-planes from', dataJsonFile)
-    with open( dataJsonFile ) as jsonData:
-        dataJsonDict = json.load( jsonData )
-
-    focalPlaneData = dataJsonDict[ "focal_plane_selector" ]
-
-    bestZplanes = {}
-
-    for tileData in focalPlaneData :
-
-        tileX = int( tileData[ "tile_x" ] )
-        tileY = int( tileData[ "tile_y" ] )
-        bestZ = int( tileData[ "best_z" ] )
-
-        if tileX in bestZplanes :
-            bestZplanes[ tileX ][ tileY ] = bestZ
-        else :
-            bestZplanes[ tileX ] = {
-                tileY : bestZ
-            }
-
-    return bestZplanes
-
-
 def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
     """
     Given a TIFF file path, read file with TiffFile to get Labels attribute from
@@ -125,8 +94,9 @@ def add_pixel_size_units( omeXml ) :
     omeXmlRoot = ET.fromstring( omeXml.to_xml() )
     
     # FIXME: this is pretty horrible but it works for now. How can we not hardcode XML namespaces?
-    image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Image' )
-    pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/ome/2013-06}Pixels' )
+    image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/OME/2016-06}Image' )
+    pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/OME/2016-06}Pixels' )
+    
     pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
     pixels_node.set( 'PhysicalSizeYUnit', 'nm' )
     
@@ -134,76 +104,16 @@ def add_pixel_size_units( omeXml ) :
     return omexml_with_pixel_units 
 
 
-def create_roi_polygons(
-    imageData: np.ndarray,
-    bestZforROI: int,
-    omeXml,
-) :
-    """
-    Given a NumPy ndarray of image data, the index of the best focus z-plane, and
-    an aicsimageio.vendor.omexml.OMEXML object containing basic OME-XML, create
-    strings representing the polygon shapes of segmented cells and add these to the
-    "ROI" element of the OME-XML. Return the OME-XML with the ROI element
-    populated.
-    """
-    # TODO: only have cell shapes for now. Probably also want to add nuclei.
-    cellBoundaryMask = imageData[ 0, 2, bestZforROI, :, : ]
-
-    omeXmlRoot = ET.fromstring( omeXml.to_xml() )
-    roiElement = ET.SubElement(
-        omeXmlRoot,
-        "ROI",
-        attrib = {
-            "xmlns" : "http://www.openmicroscopy.org/Schemas/ROI/2016-06",
-            "ID" : "ROI:1",
-        },
-    )
-    roiDesc = ET.SubElement( roiElement, "Description" )
-    roiDesc.text = "Shapes representing cell boundaries"
-
-    roiUnion = ET.SubElement( roiElement, "Union" )
-
-    for i in range( 1, cellBoundaryMask.max() + 1 ) :
-        roiShape = np.where( cellBoundaryMask == i )
-        roiShapeTuples = list( zip( roiShape[ 1 ], roiShape[ 0 ] ) )
-        polygon = Polygon( roiShapeTuples )
-        coords = polygon.exterior.coords
-
-        coordStrings = []
-
-        for coordPair in coords :
-            coordPairString = ",".join( [ str( int( c ) ) for c in coordPair ] )
-            coordStrings.append( coordPairString )
-
-        allCoordsString = " ".join( coordStrings )
-
-        # Create Polygon with coordinates in.
-        roiPolygon = ET.SubElement(
-            roiUnion,
-            "Polygon",
-            attrib = {
-                "ID" : "Shape:" + str( i ),
-                "Points" : allCoordsString,
-                "TheZ" : str( bestZforROI ),
-            },
-        )
-
-    omeXmlWithROIs = OMEXML( xml = ET.tostring( omeXmlRoot ) )
-
-    return omeXmlWithROIs
-
-
 def convert_tiff_file(
-        funcArgs: Tuple[ Path, Path, List, float, int ]
+        funcArgs: Tuple[ Path, Path, List, float ]
 ) :
     """
     Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
     a list of channel names, a float value for the lateral resolution in
-    nanometres, and an integer value for the best focus z-plane, convert the
-    source TIFF file to OME-TIFF format, containing polygons for segmented cell
-    shapes in the "ROI" OME-XML element.
+    nanometres, convert the source TIFF file to OME-TIFF format, containing
+    polygons for segmented cell shapes in the "ROI" OME-XML element.
     """
-    sourceFile, ometiffFile, channelNames, lateral_resolution, bestZforROI = funcArgs
+    sourceFile, ometiffFile, channelNames, lateral_resolution = funcArgs
 
     logger.info( f"Converting file: { str( sourceFile ) }")
 
@@ -224,20 +134,13 @@ def convert_tiff_file(
     omeXml.image().Pixels.set_DimensionOrder( "XYZCT" )
     omeXml.image().Pixels.channel_count = len( channelNames )
     omeXml.image().Pixels.set_PhysicalSizeX( lateral_resolution )
-    #omeXml.image().Pixels.set_PhysicalSizeXUnit( "nm" )
     omeXml.image().Pixels.set_PhysicalSizeY( lateral_resolution )
-    #omeXml.image().Pixels.set_PhysicalSizeYUnit( "nm" )
-    
+
     omeXml = add_pixel_size_units( omeXml )
 
     for i in range( 0, len( channelNames ) ) :
         omeXml.image().Pixels.Channel( i ).Name = channelNames[ i ]
         omeXml.image().Pixels.Channel( i ).ID = "Channel:0:" + str( i )
-
-    # If we've been passed a bestZ, we need to get the ROI info for
-    # segmentation mask boundaries, and add it to the OME-XML.
-    if bestZforROI is not None :
-        omeXml = create_roi_polygons( imageDataForOmeTiff, bestZforROI, omeXml )
 
     with ome_tiff_writer.OmeTiffWriter( ometiffFile ) as ome_writer :
         ome_writer.save(
@@ -250,28 +153,12 @@ def convert_tiff_file(
     logger.info( f"OME-TIFF file created: { ometiffFile }" )
 
 
-def find_best_z( sourceFile: Path, bestZplanes: Dict ) -> int :
-    """
-    Given a tile TIFF file path and a dictionary of best focus z-planes indexed by
-    tile x,y coordinates, find the tile's best focus z-plane index and return it.
-    """
-    filenameMatch = TIFF_FILE_NAMING_PATTERN.match( str( sourceFile.name ) )
-
-    tileX = filenameMatch.group( 1 )
-    tileY = filenameMatch.group( 2 )
-
-    bestZ = bestZplanes[ int( tileX ) - 1 ][ int( tileY ) - 1 ]
-
-    return bestZ
-
-
 def create_ome_tiffs(
         file_list: List[Path],
         output_dir: Path,
         channel_names: List[str],
         lateral_resolution: float,
         subprocesses: int,
-        bestZplanes: Dict = None
 ):
     """
     Given:
@@ -290,27 +177,22 @@ def create_ome_tiffs(
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
 
-        bestZforROI = None
-        if bestZplanes :
-            bestZforROI = find_best_z( source_file, bestZplanes )
-
         args_for_conversion.append(
             (
                 source_file,
                 ome_tiff_file,
                 channel_names,
                 lateral_resolution,
-                bestZforROI,
             )
         )
 
-    for argtuple in args_for_conversion :
-        convert_tiff_file( argtuple )
+    #for argtuple in args_for_conversion :
+    #    convert_tiff_file( argtuple )
 
-    #with Pool(processes=subprocesses) as pool:
-    #    pool.imap_unordered(convert_tiff_file, args_for_conversion)
-    #    pool.close()
-    #    pool.join()
+    with Pool(processes=subprocesses) as pool:
+        pool.imap_unordered(convert_tiff_file, args_for_conversion)
+        pool.close()
+        pool.join()
 
 
 ########
@@ -380,9 +262,6 @@ if __name__ == "__main__" :
     
     lateral_resolution = get_lateral_resolution( args.cytokit_config )
 
-    # For each tile, find the best focus Z plane.
-    bestZplanes = collect_best_zplanes( args.cytokit_processor_output / processor_data_json_piece )
-
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
         create_ome_tiffs(
@@ -391,7 +270,6 @@ if __name__ == "__main__" :
             SEGMENTATION_CHANNEL_NAMES,
             lateral_resolution,
             args.processes,
-            bestZplanes,
         )
 
     # Create the extract OME-TIFFs.

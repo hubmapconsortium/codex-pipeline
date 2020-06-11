@@ -6,7 +6,8 @@ submission formats.
 """
 
 import argparse
-from collections import Counter
+from collections import Counter, defaultdict
+import csv
 import datetime
 import json
 import logging
@@ -23,10 +24,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-PROCESSED_DIRECTORY_NAME_PIECES = [
+NONRAW_DIRECTORY_NAME_PIECES = [
     'processed',
     'drv',
+    'metadata',
 ]
+
+
 # TODO: don't duplicate this in ../cytokit-docker/setup_data_directory.py.
 #   Can't share code easily because these files go to different containers
 RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORECASE)
@@ -34,7 +38,7 @@ RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORE
 def find_files(
         base_directory: Path,
         filename: str,
-        ignore_processed_derived_dirs: bool = False,
+        ignore_processed_derived_metadata_dirs: bool = False,
 ) -> List[Path]:
     """
     This returns a full list instead of a generator function because we very
@@ -43,13 +47,13 @@ def find_files(
 
     :param base_directory:
     :param filename:
-    :param ignore_processed_derived_dirs:
+    :param ignore_processed_derived_metadata_dirs:
     :return:
     """
     file_paths = []
 
     for dirpath, dirnames, filenames in walk(base_directory):
-        if ignore_processed_derived_dirs:
+        if ignore_processed_derived_metadata_dirs:
             # Skip any directory that has 'processed' in the name.
             # Since deleting items from a Python list takes linear time, be a little
             # fancier: find directory names that we *should* recurse into, clear the
@@ -57,7 +61,7 @@ def find_files(
             # directories only have 4-5 children, but quadratic runtime feels wrong
             dirnames_to_recurse = []
             for dirname in dirnames:
-                if not any(piece in dirname for piece in PROCESSED_DIRECTORY_NAME_PIECES):
+                if not any(piece in dirname for piece in NONRAW_DIRECTORY_NAME_PIECES):
                     dirnames_to_recurse.append(dirname)
             dirnames.clear()
             dirnames.extend(dirnames_to_recurse)
@@ -149,34 +153,32 @@ def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int 
     return [ dims[ "height" ], dims[ "width" ] ]
 
 
-def make_channel_names_unique( channelNames ) :
+def make_DAPI_channel_names_unique( channelNames ) :
     """
-    Sometimes channel names are not unique, e.g. if DAPI was used in every cycle,
-    sometimes each DAPI channel is just named "DAPI", other times they are named
-    "DAPI1", "DAPI2", "DAPI3", etc. The latter is better, because it enables us
-    to select the specific DAPI channel from the correct cycle to use for
-    segmentation and/or for best focus plane selection. So, if there are
-    duplicated channel names, we will append an index, starting at 1, to each
-    occurrence of the channel name.
+    Sometimes DAPI channel names are not unique, e.g. if DAPI was used in every
+    cycle, sometimes each DAPI channel is just named "DAPI", other times they
+    are named "DAPI1", "DAPI2", "DAPI3", etc. The latter is better, because it
+    enables us to select the specific DAPI channel from the correct cycle to
+    use for segmentation and/or for best focus plane selection. So, if there
+    are duplicated channel names, we will append an index, starting at 1, to
+    each occurrence of the channel name.
     """
 
     uniqueNames = Counter(channelNames)
 
     newNames = []
 
-    seenCounts = {}
+    dapiCount = 1
 
     for channel in channelNames :
-        if uniqueNames[ channel ] > 1 :
-            if channel in seenCounts :
-                newNames.append( channel + "_" + str( seenCounts[ channel ] + 1 ) )
-                seenCounts[ channel ] += 1
+        if channel == 'DAPI' :
+            if uniqueNames[ channel ] > 1 :
+                newNames.append( channel + "_" + str( dapiCount ) )
+                dapiCount += 1
             else :
-                newNames.append( channel + "_1" )
-                seenCounts[ channel ] = 1
+                newNames.append( channel )
         else :
             newNames.append( channel )
-
     return newNames
 
 
@@ -205,7 +207,7 @@ def find_raw_data_dir(directory: Path) -> Path:
     for child in directory.iterdir():
         if not child.is_dir():
             continue
-        if not any(piece in child.name for piece in PROCESSED_DIRECTORY_NAME_PIECES):
+        if not any(piece in child.name for piece in NONRAW_DIRECTORY_NAME_PIECES):
             raw_data_dir_possibilities.append(child)
 
     if len(raw_data_dir_possibilities) > 1:
@@ -280,12 +282,12 @@ def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
         'experiment.json',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
     )
     segmentation_json_files = find_files(
         directory,
         'segmentation.json',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
     )
     segmentation_text_files = find_files(
         directory,
@@ -294,12 +296,18 @@ def standardize_metadata(directory: Path):
     channel_names_files = find_files(
         directory,
         'channelNames.txt',
-        ignore_processed_derived_dirs=True,
+        ignore_processed_derived_metadata_dirs=True,
+    )
+    channel_names_report_files = find_files(
+        directory,
+        'channelnames_report.csv',
+        ignore_processed_derived_metadata_dirs=True
     )
 
     warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
     warn_if_multiple_files(segmentation_text_files, "segmentation text")
     warn_if_multiple_files(channel_names_files, "channel names")
+    warn_if_multiple_files(channel_names_report_files, "channel names report CSV")
 
     if not (segmentation_json_files or segmentation_text_files):
         raise ValueError("Segmentation parameters files not found. Cannot continue.")
@@ -348,7 +356,17 @@ def standardize_metadata(directory: Path):
                 segmParams[fieldName] = fieldContents
 
     logger.info("Finished reading segmentation parameters.")
-
+    
+    channel_names_qc_pass: Dict[ str, List[ str ] ] = defaultdict( list )
+    if channel_names_report_files :
+        channel_names_report_file = channel_names_report_files[ 0 ]
+        with open( channel_names_report_file, newline = '' ) as csvfile :
+            csvreader = csv.reader( csvfile, delimiter=',' )
+            for row in csvreader :
+                channel_names_qc_pass[ row[ 0 ] ].append( row[ 1 ].lstrip() )
+    else :
+        logger.warning( "No channelnames_report.csv file found. Including all channels in final output." )
+        
     raw_data_location = find_raw_data_dir(directory)
     logger.info(f'Raw data location: {raw_data_location}')
 
@@ -357,6 +375,7 @@ def standardize_metadata(directory: Path):
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     datasetInfo["raw_data_location"] = fspath(raw_data_location.absolute())
+    datasetInfo["channel_names_qc_pass"] = dict( channel_names_qc_pass )
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
@@ -417,7 +436,7 @@ def standardize_metadata(directory: Path):
 
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
-    channelNames = make_channel_names_unique(channelNames)
+    channelNames = make_DAPI_channel_names_unique(channelNames)
 
     datasetInfo["channel_names"] = channelNames
 

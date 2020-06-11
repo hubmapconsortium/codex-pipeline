@@ -156,6 +156,17 @@ if __name__ == "__main__" :
         elif hoechstChannelPattern.match( channelName ) :
             if channelName != pipelineConfigInfo[ "nuclei_channel" ] :
                 continue
+        
+        # Skip channels that failed QC.
+        if pipelineConfigInfo[ "channel_names_qc_pass" ] :
+            if len( pipelineConfigInfo[ "channel_names_qc_pass" ][ channelName ] ) > 1:
+                raise ValueError(
+                    f"More than one {channelName} channel found."
+                )
+            else :
+                channel_qc_pass = pipelineConfigInfo[ "channel_names_qc_pass" ][ channelName ][0]
+                if channel_qc_pass.casefold() == 'false'.casefold() :
+                    continue
 
         # Append to operator extract channels with "proc_" prepended -- this
         # tells Cytokit to extract the channels from the processed tiles.
