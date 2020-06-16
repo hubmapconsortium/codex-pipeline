@@ -1,9 +1,10 @@
-PyYAML~=5.3.1
-numpy~=1.18.3
-aicsimageio~=3.1.4
-tifffile~=2020.2.16
-pandas~=1.0.3
+aicsimageio~=3.2.2
+lxml~=4.5.1
 matplotlib~=3.2.1
-scikit-learn~=0.22.2.post1
-scikit-image~=0.16.2
+numpy~=1.18.3
+pandas~=1.0.3
+PyYAML~=5.3.1
+scikit-image~=0.17.2
+scikit-learn~=0.23.1
 shapely~=1.7.0
+tifffile~=2020.2.16

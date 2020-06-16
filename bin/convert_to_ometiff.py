@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
-from aicsimageio import AICSImage, imread
-from aicsimageio.writers import ome_tiff_writer
-from aicsimageio.vendor.omexml import OMEXML
 import argparse
 import json
 import logging
 from multiprocessing import Pool
-import numpy as np
 from os import walk
 from pathlib import Path
 import re
+from typing import List, Tuple
+
+from aicsimageio import AICSImage
+from aicsimageio.writers import ome_tiff_writer
+from aicsimageio.vendor.omexml import OMEXML
+import lxml.etree
+import numpy as np
 from tifffile import TiffFile
-from typing import Dict, List, Tuple
-import xml.etree.ElementTree as ET
 import yaml
 
 from utils import print_directory_tree
@@ -90,17 +91,19 @@ def collect_expressions_extract_channels( extractFile: Path ) -> List[str]:
 
 
 def add_pixel_size_units( omeXml ) :
-    
-    omeXmlRoot = ET.fromstring( omeXml.to_xml() )
-    
-    # FIXME: this is pretty horrible but it works for now. How can we not hardcode XML namespaces?
-    image_node = omeXmlRoot.find( '{http://www.openmicroscopy.org/Schemas/OME/2016-06}Image' )
-    pixels_node = image_node.find( '{http://www.openmicroscopy.org/Schemas/OME/2016-06}Pixels' )
+    # Don't take any chances about locale environment variables in Docker containers
+    # and headless server systems; be explicit about using UTF-8
+    encoding = 'utf-8'
+    omeXmlRoot = lxml.etree.fromstring(omeXml.to_xml(encoding=encoding).encode(encoding))
+
+    namespace_prefix = omeXmlRoot.nsmap[None]
+    image_node = omeXmlRoot.find(f'{{{namespace_prefix}}}Image')
+    pixels_node = image_node.find(f'{{{namespace_prefix}}}Pixels')
     
     pixels_node.set( 'PhysicalSizeXUnit', 'nm' )
     pixels_node.set( 'PhysicalSizeYUnit', 'nm' )
     
-    omexml_with_pixel_units = OMEXML( xml = ET.tostring( omeXmlRoot ) )
+    omexml_with_pixel_units = OMEXML(xml=lxml.etree.tostring(omeXmlRoot))
     return omexml_with_pixel_units 
 
 
