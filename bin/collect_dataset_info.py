@@ -382,7 +382,7 @@ def standardize_metadata(directory: Path):
         ("axial_resolution", ["zPitch", "z_pitch"]),
         ("lateral_resolution", ["xyResolution", "per_pixel_XY_resolution"]),
         ("magnification", ["magnification"]),
-        ("num_z_planes", ["num_z_planes"]),
+        ("num_z_planes", [ "numZPlanes", "num_z_planes"]),
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height"]),
