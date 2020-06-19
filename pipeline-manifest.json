@@ -11,99 +11,98 @@
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-channel_pca\\.ome\\.tiff",
-		"description": "Major components of variation in multiple channels output for region {region}, in OME-TIFF format",
+		"description": "Major components of variation in multiple channels output for region {region}, in OME-TIFF format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-superpixel\\.ome\\.tiff",
-		"description": "Clustering based on intensities in all channels (superpixel) output for region {region}, in OME-TIFF format",
+		"description": "Clustering based on intensities in all channels (superpixel) output for region {region}, in OME-TIFF format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cell_shape\\.csv",
-		"description": "PCA of parametric outlines of cells output for region {region}, in CSV format",
+		"description": "PCA of parametric outlines of cells output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-polygons_spatial\\.csv",
-		"description": "Polygon outlines of cell shapes output for region {region}, in CSV format",
+		"description": "Polygon outlines of cell shapes output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cell_channel_covar\\.csv",
-		"description": "Covariance of intensities in each channel output for region {region}, in CSV format",
+		"description": "Covariance of intensities in each channel output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cell_channel_mean\\.csv",
-		"description": "Mean intensities in each channel output for region {region}, in CSV format",
+		"description": "Mean intensities in each channel output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cell_channel_total\\.csv",
-		"description": "Total intensities in each channel output for region {region}, in CSV format",
-	},	
+		"description": "Total intensities in each channel output for region {region}, in CSV format"
+	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cell_cluster\\.csv",
-		"description": "Cluster number of each cell for each cluster (column) output for region {region}, in CSV format",
+		"description": "Cluster number of each cell for each cluster (column) output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-clustercells_cellcovariance_legend\\.csv",
-		"description": "Show major contributors to covariance cluster output for region {region}, in CSV format",
-	},	
+		"description": "Show major contributors to covariance cluster output for region {region}, in CSV format"
+	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-cluster_cellmeanALL_legend\\.csv",
-		"description": "Show major contributors to mean of all channels intensity cluster output for region {region}, in CSV format",
-	},		
+		"description": "Show major contributors to mean of all channels intensity cluster output for region {region}, in CSV format"
+	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-clustercells_cellmean_legend\\.csv",
-		"description": "Show major contributors to mean intensity of cell cluster output for region {region}, in CSV format",
-	},	
+		"description": "Show major contributors to mean intensity of cell cluster output for region {region}, in CSV format"
+	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-clustercells_cellshape_legend\\.csv",
-		"description": "Show major contributors to cell shape cluster output for region {region}, in CSV format",
+		"description": "Show major contributors to cell shape cluster output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-clustercells_celltotal_legend\\.csv",
-		"description": "Show major contributors to total intensity cluster output for region {region}, in CSV format",
+		"description": "Show major contributors to total intensity cluster output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByCovarPerCell\\.png",
-		"description": "Image with each cell colored by covariance clustering output for region {region}, in PNG format",
+		"description": "Image with each cell colored by covariance clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByMeansAllMasks\\.png",
-		"description": "Image with each cell colored by mean intensity of all channels output for region {region}, in PNG format",
+		"description": "Image with each cell colored by mean intensity of all channels output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByMeansPerCell\\.png",
-		"description": "Image with each cell colored by mean cell intensity clustering output for region {region}, in PNG format",
+		"description": "Image with each cell colored by mean cell intensity clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByShape\\.png",
-		"description": "Image with each cell colored by shape clustering output for region {region}, in PNG format",
+		"description": "Image with each cell colored by shape clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByTotalPerCell\\.png",
-		"description": "Image with each cell colored by total intensity clustering output for region {region}, in PNG format",
+		"description": "Image with each cell colored by total intensity clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-ClusterByCovarPerCell\\.png",
-		"description": "Image with each cell colored by covariance clustering output for region {region}, in PNG format",
+		"description": "Image with each cell colored by covariance clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-Superpixels\\.png",
-		"description": "Image with superpixel clustering output for region {region}, in PNG format",
+		"description": "Image with superpixel clustering output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-Top3ChannelPCA\\.png",
-		"description": "Image with PCA clustering of top 3 channels output for region {region}, in PNG format",
+		"description": "Image with PCA clustering of top 3 channels output for region {region}, in PNG format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-SNR\\.CSV",
-		"description": "Signal to noise ratio of all channels output for region {region}, in CSV format",
+		"description": "Signal to noise ratio of all channels output for region {region}, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-summary_otsu\\.csv",
-		"description": "Summary file of a complete run that includes a column of image processed along with a count of total cells, and signal to noise ratio using otsu calculation for all channels, in CSV format",
+		"description": "Summary file of a complete run that includes a column of image processed along with a count of total cells, and signal to noise ratio using otsu calculation for all channels, in CSV format"
 	},
 	{
 		"pattern": "results/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff\\-summary_zscore\\.csv",
-		"description": "Summary file of a complete run that includes a column of image processed along with a count of total cells, and signal to noise ratio using z-score calculation for all channels, in CSV format",
-	},
+		"description": "Summary file of a complete run that includes a column of image processed along with a count of total cells, and signal to noise ratio using z-score calculation for all channels, in CSV format"
+	}
 ]
-
