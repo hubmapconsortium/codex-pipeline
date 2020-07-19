@@ -38,16 +38,12 @@ if __name__ == "__main__":
     logger.info("Running SPRM ...")
 
     sprm_output_dir = Path("sprm_outputs")
-    try:
-        SPRM.main(
-            expressions_ometiff_dir,
-            cytometry_ometiff_dir,
-            output_dir=sprm_output_dir,
-        )
-    except Exception as e:
-        logger.exception("SPRM failed.")
-    else:
-        logger.info("SPRM completed.")
+    SPRM.main(
+        expressions_ometiff_dir,
+        cytometry_ometiff_dir,
+        output_dir=sprm_output_dir,
+    )
+    logger.info("SPRM completed.")
 
     logger.debug('Output:')
     logger.debug(list_directory_tree(sprm_output_dir))
