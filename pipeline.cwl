@@ -19,6 +19,10 @@ outputs:
     outputSource: create_yaml_config/cytokit_config
     type: File
     label: "Cytokit configuration format"
+  data_json:
+    outputSource: cytokit_processor/data_json
+    type: File
+    label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection"
   ome_tiff_output:
     outputSource: ome_tiff_creation/ome_tiffs
     type: Directory
@@ -63,6 +67,7 @@ steps:
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
+      - data_json
     run: steps/cytokit_processor.cwl
     label: "CODEX analysis via Cytokit 'processor'"
 

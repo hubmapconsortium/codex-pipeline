@@ -27,3 +27,7 @@ outputs:
     type: Directory
     outputBinding:
       glob: output
+  data_json:
+    type: File
+    outputBinding:
+      glob: output/processor/data.json
