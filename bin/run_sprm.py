@@ -2,8 +2,9 @@
 
 import argparse
 import logging
-from os import fspath
 from pathlib import Path
+
+from sprm import SPRM
 
 from utils import list_directory_tree
 
@@ -13,19 +14,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-SPRM_DIR = Path('/opt/sprm')
-
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description = (
-            "Wrapper script for SPRM analysis code."
-        )
+        description="Wrapper script for SPRM analysis code.",
     )
     parser.add_argument(
         "ometiff_dir",
-        help = "Path to directory containing OME-TIFF files.",
-        type = Path
+        help="Path to directory containing OME-TIFF files.",
+        type=Path,
     )
     args = parser.parse_args()
 
@@ -37,25 +34,20 @@ if __name__ == "__main__" :
     logger.debug('Cytometry OME-TIFF directory:')
     logger.debug(list_directory_tree(cytometry_ometiff_dir))
 
-    import sys
-    sys.path.append( fspath(SPRM_DIR) )
-    import SPRM
-
     # Run SPRM.
-    logger.info( "Running SPRM ..." )
+    logger.info("Running SPRM ...")
 
     sprm_output_dir = Path("sprm_outputs")
-    try :
+    try:
         SPRM.main(
             expressions_ometiff_dir,
             cytometry_ometiff_dir,
-            sprm_output_dir,
-            SPRM_DIR / "options.txt",
+            output_dir=sprm_output_dir,
         )
-    except Exception as e :
-        logger.exception( "SPRM failed." )
-    else :
-        logger.info( "SPRM completed." )
+    except Exception as e:
+        logger.exception("SPRM failed.")
+    else:
+        logger.info("SPRM completed.")
 
     logger.debug('Output:')
     logger.debug(list_directory_tree(sprm_output_dir))
