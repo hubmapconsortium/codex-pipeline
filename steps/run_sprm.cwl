@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Run Spatial Process & Relationship Modeling (SPRM)
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:1.6.4
+    dockerPull: hubmap/codex-scripts:1.6.5
   NetworkAccess:
     networkAccess: true
 baseCommand: /opt/run_sprm.py
