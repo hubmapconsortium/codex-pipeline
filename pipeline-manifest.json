@@ -1,4 +1,9 @@
-[
+[   
+    {
+        "pattern": "processor/data.json",
+        "description": "File containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection, in JSON format",
+        "edam_ontology_term": "EDAM_1.24.format_3464"
+    },
 	{
 		"pattern": "cytometry/tile/ome-tiff/R(?P<region>\\d+)_X(\\d+)_Y(\\d+)\\.ome\\.tiff",
 		"description": "Cytokit cytometry output for region {region}, in OME-TIFF format",
