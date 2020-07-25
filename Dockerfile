@@ -13,3 +13,5 @@ RUN cd sprm \
  && rm -rf sprm
 
 COPY bin /opt
+
+CMD ["/bin/bash"]
