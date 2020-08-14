@@ -68,7 +68,7 @@ if __name__ == "__main__" :
                 "args" : {
                     "gpus" : args.gpus,
                     "memory_limit" : memory_limit,
-                    "run_crop" : True,
+                    "run_crop" : False,
                     "run_tile_generator" : True,
                     "run_drift_comp" : True,
                     "run_cytometry" : True,
