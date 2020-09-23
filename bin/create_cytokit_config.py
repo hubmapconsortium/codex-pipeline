@@ -86,7 +86,8 @@ if __name__ == "__main__" :
                         "memb_min_dist" : 8,
                         "memb_sigma" : 5,
                         "memb_gamma" : .25,
-                        "marker_dilation" : 3
+                        "marker_dilation" : 3,
+                        "marker_min_size" : 2
                     },
                     "quantification_params" : {
                         "nucleus_intensity" : True,
