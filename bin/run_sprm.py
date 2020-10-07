@@ -26,8 +26,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    expressions_ometiff_dir = args.ometiff_dir / 'extract/expressions/ome-tiff'
-    cytometry_ometiff_dir = args.ometiff_dir / 'cytometry/tile/ome-tiff'
+    expressions_ometiff_dir = args.ometiff_dir / 'output/codex'
+    cytometry_ometiff_dir = args.ometiff_dir / 'output/mask'
 
     logger.debug('Expressions OME-TIFF directory:')
     logger.debug(list_directory_tree(expressions_ometiff_dir))

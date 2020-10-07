@@ -45,24 +45,33 @@ steps:
       - pipeline_config
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
+    
+  - id: first_stitching
+    in:
+      - id: pipeline_config
+        source: collect_dataset_info/pipeline_config
+    out:
+       - modified_pipeline_config
+       - image_tiles
+    run: steps/first_stitching.cwl
 
   - id: create_yaml_config
     in:
       - id: pipeline_config
-        source: collect_dataset_info/pipeline_config
+        source: first_stitching/modified_pipeline_config
       - id: gpus
         source: gpus
     out:
       - cytokit_config
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
-
+    
   - id: cytokit_processor
     in:
       - id: data_dir
         source: data_dir
       - id: pipeline_config
-        source: collect_dataset_info/pipeline_config
+        source: first_stitching/modified_pipeline_config
       - id: yaml_config
         source: create_yaml_config/cytokit_config
     out:
@@ -76,7 +85,7 @@ steps:
       - id: data_dir
         source: cytokit_processor/cytokit_output
       - id: pipeline_config
-        source: collect_dataset_info/pipeline_config
+        source: first_stitching/modified_pipeline_config
       - id: yaml_config
         source: create_yaml_config/cytokit_config
     out:
@@ -96,11 +105,22 @@ steps:
       - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
-
+    
+  - id: second_stitching
+    in:
+      - id: pipeline_config
+        source: first_stitching/modified_pipeline_config
+      - id: ometiff_dir
+        source: ome_tiff_creation/ome_tiffs
+    out: 
+       - stitched_images
+    run: steps/second_stitching.cwl
+    
+    
   - id: run_sprm
     in:
       - id: ometiff_dir
-        source: ome_tiff_creation/ome_tiffs
+        source: second_stitching/stitched_images
     out:
       - sprm_output_dir
     run: steps/run_sprm.cwl

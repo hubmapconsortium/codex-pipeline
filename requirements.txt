@@ -8,3 +8,5 @@ scikit-image~=0.17.2
 scikit-learn~=0.23.1
 shapely~=1.7.0
 tifffile~=2020.2.16
+opencv-contrib-python-headless>=4.3.0
+dask[delayed]>=2.6.0
