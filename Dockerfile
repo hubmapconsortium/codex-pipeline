@@ -9,6 +9,7 @@ RUN apt-get -qq update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /opt
+RUN python3 -m pip install numpy
 RUN python3 -m pip install -r /opt/requirements.txt \
  && rm -rf /root/.cache/pip
 
