@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.com/hubmapconsortium/codex-pipeline.svg?branch=master)](https://travis-ci.com/hubmapconsortium/codex-pipeline)[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Build Status](https://travis-ci.com/hubmapconsortium/codex-pipeline.svg?branch=master)](https://travis-ci.com/hubmapconsortium/codex-pipeline)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # codex-pipeline
 A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.akoyabio.com/codextm/technology) image data, using [Cytokit](https://github.com/hammerlab/cytokit).
