@@ -34,7 +34,7 @@ def create_relative_symlink_target(
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description=("Set up a directory containing the files for the visualization team.")
+        description="Set up a directory containing the files for the visualization team."
     )
     parser.add_argument(
         "cytokit_yaml_config",
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         symlinks_to_archive.append((symlink, link_target))
 
     for tile in sprm_outputs:
-        tile_ometiff_pattern = re.compile(tile + "\.ome\.tiff-(.*)$")
+        tile_ometiff_pattern = re.compile(tile + r"\.ome\.tiff-(.*)$")
         for sprm_file in sprm_outputs[tile]:
             link_name = tile_ometiff_pattern.match(sprm_file.name).group(1)
             symlink = output_dir / tile / link_name
