@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.8
 
 COPY requirements.txt /opt
 RUN python3 -m pip install -r /opt/requirements.txt \
