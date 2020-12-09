@@ -13,28 +13,25 @@ import yaml
 # TODO ↓↓↓ unify this script with setting up the data directory
 #  instead of calling this script as a separate executable
 SETUP_DATA_DIR_COMMAND = [
-    '/opt/setup_data_directory.py',
-    '{data_dir}',
+    "/opt/setup_data_directory.py",
+    "{data_dir}",
 ]
 CYTOKIT_COMMAND = [
-    'cytokit',
-    '{command}',
-    'run_all',
-    '--config-path={yaml_config}',
-    '--data-dir={data_dir}',
-    '--output-dir=output',
+    "cytokit",
+    "{command}",
+    "run_all",
+    "--config-path={yaml_config}",
+    "--data-dir={data_dir}",
+    "--output-dir=output",
 ]
 
-CYTOKIT_PROCESSOR_OUTPUT_DIRS = frozenset({'cytometry', 'processor'})
+CYTOKIT_PROCESSOR_OUTPUT_DIRS = frozenset({"cytometry", "processor"})
 
 
 def symlink_images(data_dir: Path):
     # TODO: unify, don't call another command-line script
-    command = [
-        piece.format(data_dir=data_dir)
-        for piece in SETUP_DATA_DIR_COMMAND
-    ]
-    print('Running:', ' '.join(command))
+    command = [piece.format(data_dir=data_dir) for piece in SETUP_DATA_DIR_COMMAND]
+    print("Running:", " ".join(command))
     check_call(command)
 
 
@@ -75,21 +72,21 @@ def find_or_prep_data_directory(cytokit_command: str, data_dir: Path, pipeline_c
     # Ubuntu 16.04, which comes with 3.5
     with pipeline_config.open() as f:
         config = yaml.safe_load(f)
-    dir_name = osps(config['raw_data_location'])[1]
+    dir_name = osps(config["raw_data_location"])[1]
 
     data_subdir = data_dir / dir_name
 
-    if cytokit_command == 'processor':
+    if cytokit_command == "processor":
         symlink_images(data_subdir)
-        return Path('symlinks')
-    elif cytokit_command == 'operator':
+        return Path("symlinks")
+    elif cytokit_command == "operator":
         # Need to find the output from 'cytokit processor'
         processor_dir = find_cytokit_processor_output(data_dir)
-        output_path = Path('output')
+        output_path = Path("output")
         output_path.mkdir()
         for child in processor_dir.iterdir():
             link = output_path / child.name
-            print('Symlinking', child, 'to', link)
+            print("Symlinking", child, "to", link)
             link.symlink_to(child)
         return output_path
     else:
@@ -105,18 +102,18 @@ def run_cytokit(cytokit_command: str, data_directory: Path, yaml_config: Path):
         )
         for piece in CYTOKIT_COMMAND
     ]
-    print('Running:', ' '.join(command))
+    print("Running:", " ".join(command))
     env = environ.copy()
-    env['PYTHONPATH'] = '/lab/repos/cytokit/python/pipeline'
+    env["PYTHONPATH"] = "/lab/repos/cytokit/python/pipeline"
     check_call(command, env=env)
 
-    print('Cytokit completed successfully')
+    print("Cytokit completed successfully")
     # I feel really bad about this, but not bad enough not to do it
-    if cytokit_command == 'operator':
-        output_dir = Path('output')
+    if cytokit_command == "operator":
+        output_dir = Path("output")
         for dirname in CYTOKIT_PROCESSOR_OUTPUT_DIRS:
-            dir_to_delete = (output_dir / dirname)
-            print('Deleting', dir_to_delete)
+            dir_to_delete = output_dir / dirname
+            print("Deleting", dir_to_delete)
             dir_to_delete.unlink()
 
 
@@ -125,12 +122,12 @@ def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_confi
     run_cytokit(cytokit_command, data_dir, yaml_config)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     p = ArgumentParser()
-    p.add_argument('cytokit_command')
-    p.add_argument('data_dir', type=Path)
-    p.add_argument('pipeline_config', type=Path)
-    p.add_argument('yaml_config', type=Path)
+    p.add_argument("cytokit_command")
+    p.add_argument("data_dir", type=Path)
+    p.add_argument("pipeline_config", type=Path)
+    p.add_argument("yaml_config", type=Path)
     args = p.parse_args()
 
     main(args.cytokit_command, args.data_dir, args.pipeline_config, args.yaml_config)
