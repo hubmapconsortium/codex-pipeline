@@ -84,6 +84,7 @@ if __name__ == "__main__":
                     "memb_sigma": 5,
                     "memb_gamma": 0.25,
                     "marker_dilation": 3,
+                    "marker_min_size": 2,
                 },
                 "quantification_params": {"nucleus_intensity": True, "cell_graph": True},
             },
