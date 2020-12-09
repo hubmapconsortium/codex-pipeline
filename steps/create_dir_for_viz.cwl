@@ -3,7 +3,7 @@ class: CommandLineTool
 label: Create directory containing symlinks to relevant files for visualization team
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:1.6.7
+    dockerPull: hubmap/codex-scripts:1.6.8
 baseCommand: /opt/create_visualization_dir.py
 
 inputs:
