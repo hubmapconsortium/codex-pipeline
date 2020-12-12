@@ -8,10 +8,7 @@ from sprm import SPRM
 
 from utils import list_directory_tree
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)-7s - %(message)s'
-)
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
@@ -26,12 +23,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    expressions_ometiff_dir = args.ometiff_dir / 'extract/expressions/ome-tiff'
-    cytometry_ometiff_dir = args.ometiff_dir / 'cytometry/tile/ome-tiff'
+    expressions_ometiff_dir = args.ometiff_dir / "extract/expressions/ome-tiff"
+    cytometry_ometiff_dir = args.ometiff_dir / "cytometry/tile/ome-tiff"
 
-    logger.debug('Expressions OME-TIFF directory:')
+    logger.debug("Expressions OME-TIFF directory:")
     logger.debug(list_directory_tree(expressions_ometiff_dir))
-    logger.debug('Cytometry OME-TIFF directory:')
+    logger.debug("Cytometry OME-TIFF directory:")
     logger.debug(list_directory_tree(cytometry_ometiff_dir))
 
     # Run SPRM.
@@ -45,5 +42,5 @@ if __name__ == "__main__":
     )
     logger.info("SPRM completed.")
 
-    logger.debug('Output:')
+    logger.debug("Output:")
     logger.debug(list_directory_tree(sprm_output_dir))
