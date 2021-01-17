@@ -6,15 +6,15 @@ submission formats.
 """
 
 import argparse
-from collections import Counter, defaultdict
 import csv
 import datetime
 import json
 import logging
 import math
+import re
+from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
-import re
 from typing import Dict, List, Tuple
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")

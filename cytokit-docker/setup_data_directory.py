@@ -4,10 +4,10 @@ import argparse
 import json
 import logging
 import os
-from pathlib import Path
 import re
 import stat
 import sys
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)

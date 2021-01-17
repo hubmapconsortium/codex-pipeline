@@ -3,19 +3,19 @@
 import argparse
 import json
 import logging
+import re
 from multiprocessing import Pool
 from os import walk
 from pathlib import Path
-import re
 from typing import List, Tuple
 
-from aicsimageio import AICSImage
-from aicsimageio.writers import ome_tiff_writer
-from aicsimageio.vendor.omexml import OMEXML
 import lxml.etree
 import numpy as np
-from tifffile import TiffFile
 import yaml
+from aicsimageio import AICSImage
+from aicsimageio.vendor.omexml import OMEXML
+from aicsimageio.writers import ome_tiff_writer
+from tifffile import TiffFile
 
 from utils import print_directory_tree
 

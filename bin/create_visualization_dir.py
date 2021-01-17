@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-from collections import defaultdict
 import logging
-from os import walk
-from pathlib import Path
+import os
 import re
 import tarfile
+from collections import defaultdict
+from os import walk
+from pathlib import Path
 from typing import Dict, List, Tuple
+
 import yaml
 
 from utils import collect_files_by_tile, infer_tile_names, list_directory_tree
-
-import os
 
 logging.basicConfig(
     level=logging.DEBUG,

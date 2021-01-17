@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 
 from sprm import SPRM
-
 from utils import list_directory_tree
 
 logging.basicConfig(level=logging.DEBUG, format="%(levelname)-7s - %(message)s")
