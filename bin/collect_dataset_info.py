@@ -25,6 +25,7 @@ NONRAW_DIRECTORY_NAME_PIECES = [
     "processed",
     "drv",
     "metadata",
+    "extras",
 ]
 
 
