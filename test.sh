@@ -9,3 +9,7 @@ die() { set +v; echo "$*" 1>&2 ; exit 1; }
 start black
 black --check .
 end black
+
+start isort
+isort --check-only .
+end isort
