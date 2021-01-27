@@ -4,30 +4,26 @@ class: CommandLineTool
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
+    dockerOutputDirectory: /output
   NetworkAccess:
     networkAccess: true
-baseCommand: /opt/codex_stitching/secondary_stitcher_runner.py
+baseCommand: ["python", "/opt/codex_stitching/secondary_sticher/secondary_stitcher_runner.py"]
 
 
 inputs: 
-  pipeline_config_path:
+  pipeline_config:
     type: File
-  inputBinding:
-    prefix: "--pipeline_config_path"
+    inputBinding:
+      prefix: "--pipeline_config_path"
   
-  mask_tiles:
+  ometiff_dir:
     type: Directory
-  inputBinding:
-    prefix: "--path_to_mask_tiles"
-   
-  codex_tiles:
-     type: Directory
-  inputBinding:
-    prefix: "--path_to_mask_tiles"
+    inputBinding:
+      prefix: "--ometiff_dir"
   
 outputs:
   stitched_images:
     type: Directory
     outputBinding:
-      glob: output
+      glob: /output/stitched
    

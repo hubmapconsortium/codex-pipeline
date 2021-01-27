@@ -20,7 +20,9 @@ ENV PATH /opt/conda/bin:$PATH
 COPY environment.yml /tmp/
 RUN conda env update -f /tmp/environment.yml \
     && echo "source activate base" > ~/.bashrc \
-    && conda clean --index-cache --tarballs --yes
+    && conda clean --index-cache --tarballs --yes \
+    && rm /tmp/environment.yml
+
 ENV PATH /opt/conda/envs/hubmap/bin:$PATH
 
 WORKDIR /opt
@@ -33,18 +35,13 @@ RUN cd sprm \
 
 COPY bin /opt
 COPY codex_stitching /opt/codex_stitching
+RUN mkdir /output && chmod -R a+rwx /output
 
 
-#Get imagej
-RUN wget --quiet https://downloads.imagej.net/fiji/latest/fiji-linux64.zip -P /tmp/ \
-    && unzip /tmp/fiji-linux64.zip -d /opt/ \
-    && rm /tmp/fiji-linux64.zip
+#Copy fiji from container
+COPY --from=vaskivskyi/fiji_bigstitcher:latest /opt/Fiji.app /opt/Fiji.app
 
 ENV PATH /opt/Fiji.app:$PATH
-
-# Update imagej
-RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
-&& ImageJ-linux64 --headless --update update
 
 
 CMD ["/bin/bash"]

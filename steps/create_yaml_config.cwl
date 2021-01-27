@@ -4,7 +4,7 @@ label: Create Cytokit experiment config
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
-baseCommand: /opt/create_cytokit_config.py
+baseCommand: ["python", "/opt/create_cytokit_config.py"]
 
 inputs:
   gpus:

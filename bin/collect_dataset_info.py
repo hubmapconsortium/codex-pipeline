@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 This script is not part of the automatic pipeline. It should be run manually
 and is hopefully just a temporary necessity until we have standardised

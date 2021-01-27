@@ -4,24 +4,32 @@ class: CommandLineTool
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
+    dockerOutputDirectory: "/output"
   NetworkAccess:
     networkAccess: true
-baseCommand: /opt/codex_stitching/stitch.py
+baseCommand: ["python", "/opt/codex_stitching/stitch.py"]
 
 
 inputs:
-  pipeline_config_path:
+  data_dir:
+    type: Directory
+    inputBinding:
+      prefix: "--data_dir"
+      
+
+  pipeline_config:
     type: File
-  inputBinding:
-    prefix: "--pipeline_config_path"
+    inputBinding:
+      prefix: "--pipeline_config_path"
   
 outputs:
   image_tiles:
     type: Directory
     outputBinding:
-      glob: output
+      glob: "/output/processed_images"
    
-   modified_pipeline_config
+  modified_pipeline_config:
     type: File
     outputBinding:
-        glob: ./output/pipelineConfig.json
+      glob: "/output/pipeline_conf/pipelineConfig.json"
+       

@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 import tifffile as tif
 import cv2 as cv
+import dask
 
 Image = np.ndarray
 
@@ -35,6 +36,16 @@ def _load_images(path_list: List[Path]) -> List[Image]:
 def get_best_z_plane_id(path_list: List[Path]) -> int:
     img_list = _load_images(path_list)
     return _find_best_z_plane_id(img_list) + 1
+
+
+def get_best_z_plane_id_parallelized(plane_paths_per_tile: dict) -> List[int]:
+    task = []
+    for tile, plane_paths in plane_paths_per_tile.items():
+        plane_path_list = list(plane_paths.values())
+        task.append(dask.delayed(get_best_z_plane_id)(plane_path_list))
+    best_z_plane_id_list = dask.compute(*task)
+    best_z_plane_id_list = list(best_z_plane_id_list)
+    return best_z_plane_id_list
 
 
 def median_error_cor(array: np.array, mode: str) -> np.array:
@@ -70,7 +81,7 @@ def change_tile_location_according_to_tiling_mode(array: np.ndarray, tiling_mode
     return array
 
 
-def validate_best_z(best_z_plane_id_list: List[int], x_ntiles: int, y_ntiles: int, tiling_mode: str):
+def best_z_correction(best_z_plane_id_list: List[int], x_ntiles: int, y_ntiles: int, tiling_mode: str):
     best_z_per_tile_array = np.array(best_z_plane_id_list, dtype=np.int32).reshape(y_ntiles, x_ntiles)
 
     rearranged_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(best_z_per_tile_array, tiling_mode)
@@ -94,27 +105,23 @@ def pick_z_planes_below_and_above(best_z: int, max_z: int, above: int, below: in
     if max_z == 1:
         return [best_z]
     elif best_z == max_z:
-        below_planes = [best_z - i for i in range(1, below + 1)]
+        below_planes = list(reversed([best_z - i for i in range(1, below + 1)]))
         above_planes = []
     elif best_z == 1:
         below_planes = []
         above_planes = [best_z + i for i in range(1, above + 1)]
     else:
-        below_planes = [best_z - i for i in range(1, below + 1)]
+        below_planes = list(reversed([best_z - i for i in range(1, below + 1)]))
         above_planes = [best_z + i for i in range(1, above + 1)]
 
     return below_planes + [best_z] + above_planes
 
 
 def get_best_z_plane_ids_per_tile(plane_paths_per_tile: dict, x_ntiles: int, y_ntiles: int, max_z: int, tiling_mode: str):
-    best_z_plane_id_list = []
-    for tile, plane_paths in plane_paths_per_tile.items():
-        plane_path_list = list(plane_paths.values())
-        best_z_plane_id = get_best_z_plane_id(plane_path_list)
-        best_z_plane_id_list.append(best_z_plane_id)
-    valid_best_z_plane_id_list = validate_best_z(best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode)
+    best_z_plane_id_list = get_best_z_plane_id_parallelized(plane_paths_per_tile)
+    corrected_best_z_plane_id_list = best_z_correction(best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode)
 
     best_z_plane_per_tile = dict()
     for i, tile in enumerate(plane_paths_per_tile.keys()):
-        best_z_plane_per_tile[tile] = pick_z_planes_below_and_above(valid_best_z_plane_id_list[i], max_z, 1, 1)
+        best_z_plane_per_tile[tile] = pick_z_planes_below_and_above(corrected_best_z_plane_id_list[i], max_z, 1, 1)
     return best_z_plane_per_tile

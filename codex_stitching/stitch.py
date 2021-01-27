@@ -13,7 +13,7 @@ from math import ceil
 
 from generate_bigstitcher_macro import BigStitcherMacro, FuseMacro
 from file_manipulation import copy_best_z_planes_to_channel_dirs
-from slicer_runner import split_channels_into_tiles, get_image_path_in_dir
+from slicer.slicer_runner import split_channels_into_tiles, get_image_path_in_dir
 from modify_pipeline_config import modify_pipeline_config
 
 
@@ -66,12 +66,16 @@ def get_values_from_pipeline_config(pipeline_config: dict) -> dict:
 
 
 def generate_bigstitcher_macro_for_reference_channel(reference_channel_dir: Path, out_dir: Path, info_for_bigstitcher: dict, region: int) -> Path:
+    tile_shape = (info_for_bigstitcher['tile_height'] + info_for_bigstitcher['overlap_y'],
+                  info_for_bigstitcher['tile_width'] + info_for_bigstitcher['overlap_x'])
+
     macro = BigStitcherMacro()
     macro.img_dir = reference_channel_dir
     macro.out_dir = out_dir
     macro.num_tiles = info_for_bigstitcher['num_tiles']
     macro.num_tiles_x = info_for_bigstitcher['num_tiles_x']
     macro.num_tiles_y = info_for_bigstitcher['num_tiles_y']
+    macro.tile_shape = tile_shape
     macro.overlap_x = info_for_bigstitcher['overlap_x']
     macro.overlap_y = info_for_bigstitcher['overlap_y']
     macro.overlap_z = info_for_bigstitcher['overlap_z']
@@ -187,7 +191,7 @@ def get_ref_channel_dir_per_region(channel_dirs: dict, stitched_channel_dirs: di
 
 
 def create_dirs_for_new_tiles_per_cycle_region(stitched_channel_dirs: dict, out_dir: Path):
-    dir_naming_template = 'cyc{cycle:03d}_reg{region:03d}'
+    dir_naming_template = 'Cyc{cycle:d}_reg{region:d}'
     new_tiles_dirs = dict()
     for cycle in stitched_channel_dirs:
         new_tiles_dirs[cycle] = {}
@@ -231,20 +235,60 @@ def remove_temp_dirs(best_focus_dir: Path, stitched_channel_dirs: dict):
                 shutil.rmtree(str(dir_path))
 
 
-def main(pipeline_config_path: Path):
+def check_if_images_in_dir(dir_path: Path):
+    allowed_extensions = ('.tif', '.tiff')
+    listing = list(dir_path.iterdir())
+    img_listing = [f for f in listing if f.suffix in allowed_extensions]
+    if img_listing:
+        return True
+    else:
+        return False
+
+
+def check_stitched_dirs(stitched_channel_dirs: dict):
+    for cycle in stitched_channel_dirs:
+        for region in stitched_channel_dirs[cycle]:
+            for channel, dir_path in stitched_channel_dirs[cycle][region].items():
+                print(dir_path, check_if_images_in_dir(dir_path))
+
+
+def find_raw_data_dir(directory: Path) -> Path:
+    NONRAW_DIRECTORY_NAME_PIECES = ['processed', 'drv', 'metadata']
+
+    raw_data_dir_possibilities = []
+
+    for child in directory.iterdir():
+        if not child.is_dir():
+            continue
+        if not any(piece in child.name for piece in NONRAW_DIRECTORY_NAME_PIECES):
+            raw_data_dir_possibilities.append(child)
+
+    if len(raw_data_dir_possibilities) > 1:
+        message_pieces = ['Found multiple raw data directory possibilities:']
+        message_pieces.extend("\t" + str(path) for path in raw_data_dir_possibilities)
+        raise ValueError("\n".join(message_pieces))
+
+    return raw_data_dir_possibilities[0]
+
+
+def main(data_dir: Path, pipeline_config_path: Path):
     start = datetime.now()
     print('\nStarted', start)
 
     pipeline_config = load_pipeline_config(pipeline_config_path)
     dataset_meta = get_values_from_pipeline_config(pipeline_config)
-    dataset_dir = dataset_meta['dataset_dir']
-    img_dirs = get_img_dirs(dataset_dir)
+    dataset_dir = find_raw_data_dir(data_dir)
 
-    best_focus_dir = Path('./best_focus').absolute()
-    out_dir = Path('./output').absolute()
+    img_dirs = get_img_dirs(dataset_dir)
+    print('Image directories:', [str(dir_path) for dir_path in img_dirs])
+
+    best_focus_dir = Path('/output/best_focus')
+    out_dir = Path('/output/processed_images')
+    pipeline_conf_dir = Path('/output/pipeline_conf/')
 
     make_dir_if_not_exists(best_focus_dir)
     make_dir_if_not_exists(out_dir)
+    make_dir_if_not_exists(pipeline_conf_dir)
 
     ref_channel_id = int(dataset_meta['reference_channel'])
     num_channels_per_cycle = dataset_meta['num_channels']
@@ -263,7 +307,7 @@ def main(pipeline_config_path: Path):
     print('\nStitching channels')
     copy_bigsticher_files_to_dirs(channel_dirs, stitched_channel_dirs, ref_channel_dir_per_region)
     run_stitching_for_all_channels(channel_dirs)
-
+    check_stitched_dirs(stitched_channel_dirs)
     stitched_img_shape = get_stitched_image_shape(ref_channel_stitched_dir_per_region)
     new_dirs_tiles_per_cycle_region = create_dirs_for_new_tiles_per_cycle_region(stitched_channel_dirs, out_dir)
 
@@ -274,18 +318,18 @@ def main(pipeline_config_path: Path):
     split_channels_into_tiles(stitched_channel_dirs, new_dirs_tiles_per_cycle_region, block_size, overlap)
     modified_experiment = modify_pipeline_config(pipeline_config_path, block_shape, overlap, stitched_img_shape)
 
-    save_modified_pipeline_config(modified_experiment, out_dir)
+    save_modified_pipeline_config(modified_experiment, pipeline_conf_dir)
 
     remove_temp_dirs(best_focus_dir, stitched_channel_dirs)
 
-    #TODO add OME metadata
     print('\nTime elapsed', datetime.now() - start)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', type=Path, help='path to directory with dataset directory')
     parser.add_argument('--pipeline_config_path', type=Path, help='path to pipelineConfig.json file')
 
     args = parser.parse_args()
 
-    main(args.pipeline_config_path)
+    main(args.data_dir, args.pipeline_config_path)

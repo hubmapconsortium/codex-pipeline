@@ -1,0 +1,29 @@
+FROM ubuntu:bionic
+
+RUN apt-get -qq update \
+    && apt-get -qq install --no-install-recommends --yes \
+    wget \
+    bzip2 \
+    ca-certificates \
+    curl \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+#Get imagej
+RUN wget --quiet https://downloads.imagej.net/fiji/latest/fiji-linux64.zip -P /tmp/ \
+    && unzip /tmp/fiji-linux64.zip -d /opt/ \
+    && rm /tmp/fiji-linux64.zip
+
+ENV PATH /opt/Fiji.app:$PATH
+
+# Update imagej
+RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
+&& ImageJ-linux64 --headless --update update
+
+#MIST stitcher
+#libfftw3-dev\
+#RUN ImageJ-linux64 --headless --update add-update-site MIST https://sites.imagej.net/NIST-ISG-MIST/ \
+#&& ImageJ-linux64 --headless --update update
+

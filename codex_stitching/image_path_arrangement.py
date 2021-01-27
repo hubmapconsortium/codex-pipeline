@@ -102,7 +102,6 @@ def arrange_dirs_by_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict[int, Pa
 def create_listing_for_each_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]:
     """ Returns {cycle: {region: {channel: {tile: {zplane: path}}}}} """
     listing_per_cycle = dict()
-
     cycle_region_dict = arrange_dirs_by_cycle_region(img_dirs)
     for cycle, regions in cycle_region_dict.items():
         for region, dir_path in regions.items():

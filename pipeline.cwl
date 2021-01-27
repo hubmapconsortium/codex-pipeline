@@ -20,21 +20,21 @@ outputs:
     type: File
     label: "Cytokit configuration format"
   data_json:
-    outputSource: cytokit_processor/data_json
+    outputSource: run_cytokit/data_json
     type: File
     label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection"
-  ome_tiff_output:
-    outputSource: ome_tiff_creation/ome_tiffs
+  stitched_images:
+    outputSource: second_stitching/stitched_images
     type: Directory
-    label: "Segmentation masks in OME-TIFF format"
-  sprm_output_dir:
-    outputSource: run_sprm/sprm_output_dir
-    type: Directory
-    label: "Directory containing all SPRM outputs"
-  for_viz_dir:
-    outputSource: create_dir_for_viz/for_viz_dir
-    type: File
-    label: "Archive of symbolic links to files for visualization team"
+    label: "Segmentation masks and expressions in OME-TIFF format"
+#  sprm_output_dir:
+#    outputSource: run_sprm/sprm_output_dir
+#    type: Directory
+#    label: "Directory containing all SPRM outputs"
+#  for_viz_dir:
+#    outputSource: create_dir_for_viz/for_viz_dir
+#    type: File
+#    label: "Archive of symbolic links to files for visualization team"
 
 steps:
   - id: collect_dataset_info
@@ -48,6 +48,8 @@ steps:
     
   - id: first_stitching
     in:
+      - id: data_dir
+        source: data_dir
       - id: pipeline_config
         source: collect_dataset_info/pipeline_config
     out:
@@ -66,39 +68,23 @@ steps:
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
     
-  - id: cytokit_processor
+  - id: run_cytokit
     in:
       - id: data_dir
-        source: data_dir
-      - id: pipeline_config
-        source: first_stitching/modified_pipeline_config
+        source: first_stitching/image_tiles
       - id: yaml_config
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
       - data_json
-    run: steps/cytokit_processor.cwl
-    label: "CODEX analysis via Cytokit 'processor'"
+    run: steps/run_cytokit.cwl
+    label: "CODEX analysis via Cytokit processor and operator"
 
-  - id: cytokit_operator
-    in:
-      - id: data_dir
-        source: cytokit_processor/cytokit_output
-      - id: pipeline_config
-        source: first_stitching/modified_pipeline_config
-      - id: yaml_config
-        source: create_yaml_config/cytokit_config
-    out:
-      - cytokit_output
-    run: steps/cytokit_operator.cwl
-    label: "CODEX analysis via Cytokit 'operator'"
 
   - id: ome_tiff_creation
     in:
-      - id: cytokit_processor_output
-        source: cytokit_processor/cytokit_output
-      - id: cytokit_operator_output
-        source: cytokit_operator/cytokit_output
+      - id: cytokit_output
+        source: run_cytokit/cytokit_output
       - id: cytokit_config
         source: create_yaml_config/cytokit_config
     out:
@@ -116,25 +102,25 @@ steps:
        - stitched_images
     run: steps/second_stitching.cwl
     
-    
-  - id: run_sprm
-    in:
-      - id: ometiff_dir
-        source: second_stitching/stitched_images
-    out:
-      - sprm_output_dir
-    run: steps/run_sprm.cwl
-    label: "Run SPRM analysis of OME-TIFF files"
-
-  - id: create_dir_for_viz
-    in:
-      - id: cytokit_config_file
-        source: create_yaml_config/cytokit_config
-      - id: ometiff_dir
-        source: ome_tiff_creation/ome_tiffs
-      - id: sprm_output
-        source: run_sprm/sprm_output_dir
-    out:
-      - for_viz_dir
-    run: steps/create_dir_for_viz.cwl
-    label: "Create directory containing symlinks to relevant files for visualization team"
+#
+#  - id: run_sprm
+#    in:
+#      - id: ometiff_dir
+#        source: second_stitching/stitched_images
+#    out:
+#      - sprm_output_dir
+#    run: steps/run_sprm.cwl
+#    label: "Run SPRM analysis of OME-TIFF files"
+#
+#  - id: create_dir_for_viz
+#    in:
+#      - id: cytokit_config_file
+#        source: create_yaml_config/cytokit_config
+#      - id: ometiff_dir
+#        source: second_stitching/stitched_images
+#      - id: sprm_output
+#        source: run_sprm/sprm_output_dir
+#    out:
+#      - for_viz_dir
+#    run: steps/create_dir_for_viz.cwl
+#    label: "Create directory containing symlinks to relevant files for visualization team"

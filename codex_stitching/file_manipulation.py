@@ -3,6 +3,7 @@ from typing import List, Dict, Set, Union
 
 import numpy as np
 import tifffile as tif
+import dask
 
 from best_z_paths import get_output_dirs_and_paths
 
@@ -24,14 +25,23 @@ def convert(img, target_type_min, target_type_max, target_type):
 
 def project_stack(path_list: List[Path]):
     path_strs = [str(path) for path in path_list]
-    return convert(np.mean(np.stack(list(map(tif.imread, path_strs)), axis=0), axis=0), 0, 65535, np.uint16)
+    stack = np.stack(list(map(tif.imread, path_strs)), axis=0)
+    stack_dt = stack.dtype
+    stack_mean = np.round(np.mean(stack, axis=0)).astype(stack_dt)
+    return stack_mean
 
 
-def copy_to_destination(best_z_plane_paths: List[tuple]):
+def read_and_write(src, dst):
+    img = project_stack(src)
+    tif.imwrite(str(dst), img)
+
+
+def write_to_destination(best_z_plane_paths: List[tuple]):
+    task = []
     for src, dst in best_z_plane_paths:
-        img = project_stack(src)
-        tif.imwrite(str(dst), img)
-        #shutil.copy(src[0], dst)
+        task.append(dask.delayed(read_and_write)(src, dst))
+        # shutil.copy(src[0], dst)
+    dask.compute(*task, scheduler='processes')
 
 
 def get_channel_names_per_cycle(dataset_meta: dict):
@@ -73,6 +83,6 @@ def copy_best_z_planes_to_channel_dirs(img_dirs: List[Path], out_dir: Path, data
     for cycle in best_z_plane_paths:
         for region in best_z_plane_paths[cycle]:
             for channel, paths in best_z_plane_paths[cycle][region].items():
-                copy_to_destination(paths)
+                write_to_destination(paths)
 
     return channel_dirs
