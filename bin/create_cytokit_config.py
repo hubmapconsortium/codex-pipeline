@@ -70,7 +70,6 @@ if __name__ == "__main__":
                 "run_best_focus": True,
                 "run_deconvolution": True,
             },
-
             "deconvolution": {"n_iter": 25, "scale_factor": 0.5},
             "tile_generator": {"raw_file_type": "keyence_mixed"},
             "best_focus": {"channel": pipelineConfigInfo["best_focus"]},
@@ -84,7 +83,6 @@ if __name__ == "__main__":
                     "memb_gamma": 0.25,
                     "marker_dilation": 3,
                     "marker_min_size": 2,
-    
                 },
                 "quantification_params": {"nucleus_intensity": True, "cell_graph": True},
             },

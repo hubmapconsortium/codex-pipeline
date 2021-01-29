@@ -1,13 +1,15 @@
 from pathlib import Path
-#from datetime import datetime
+
+# from datetime import datetime
 from bigstitcher_dataset_meta import generate_dataset_xml
+
 
 class BigStitcherMacro:
     def __init__(self):
-        self.img_dir = Path('.')
-        self.out_dir = Path('.')
-        self.xml_file_name = 'dataset.xml'
-        self.pattern = '1_{xxxxx}_Z001.tif'
+        self.img_dir = Path(".")
+        self.out_dir = Path(".")
+        self.xml_file_name = "dataset.xml"
+        self.pattern = "1_{xxxxx}_Z001.tif"
 
         # range: 1-5 or list: 1,2,3,4,5
         self.num_tiles = 1
@@ -27,11 +29,11 @@ class BigStitcherMacro:
         self.pixel_distance_y = 1
         self.pixel_distance_z = 1
 
-        self.tiling_mode = 'snake'
+        self.tiling_mode = "snake"
         self.is_snake = True
         self.region = 1
 
-        self.path_to_xml_file = Path('.')
+        self.path_to_xml_file = Path(".")
 
         self.__location = Path(__file__).parent.resolve()
 
@@ -43,8 +45,16 @@ class BigStitcherMacro:
         formatted_macro = self.replace_values_in_macro()
         macro_file_path = self.write_to_temp_macro_file(formatted_macro)
 
-        generate_dataset_xml(self.num_tiles_x, self.num_tiles_y, self.tile_shape, self.overlap_x, self.overlap_y,
-                             self.pattern, self.path_to_xml_file, self.is_snake)
+        generate_dataset_xml(
+            self.num_tiles_x,
+            self.num_tiles_y,
+            self.tile_shape,
+            self.overlap_x,
+            self.overlap_y,
+            self.pattern,
+            self.path_to_xml_file,
+            self.is_snake,
+        )
 
         return macro_file_path
 
@@ -56,49 +66,47 @@ class BigStitcherMacro:
         self.path_to_xml_file = self.img_dir.joinpath(self.xml_file_name)
 
     def check_if_tiling_mode_is_snake(self):
-        if self.tiling_mode == 'snake':
+        if self.tiling_mode == "snake":
             self.is_snake = True
         else:
             self.is_snake = False
 
-
     def convert_tiling_mode(self, tiling_mode):
-        if tiling_mode == 'snake':
-            bigstitcher_tiling_mode = '[Snake: Right & Down      ]'
-        elif tiling_mode == 'grid':
-            bigstitcher_tiling_mode = '[Grid: Right & Down      ]'
+        if tiling_mode == "snake":
+            bigstitcher_tiling_mode = "[Snake: Right & Down      ]"
+        elif tiling_mode == "grid":
+            bigstitcher_tiling_mode = "[Grid: Right & Down      ]"
         return bigstitcher_tiling_mode
-
 
     def replace_values_in_macro(self):
         macro_template = self.estimate_stitch_param_macro_template
-        formatted_macro = macro_template.format(img_dir=self.path_to_str(self.img_dir),
-                                                out_dir=self.path_to_str(self.out_dir),
-                                                path_to_xml_file=self.path_to_str(self.path_to_xml_file),
-                                                pattern=self.path_to_str(self.img_dir.joinpath(self.pattern)),
-                                                num_tiles=self.make_range(self.num_tiles),
-                                                num_tiles_x=self.num_tiles_x,
-                                                num_tiles_y=self.num_tiles_y,
-                                                overlap_x=self.overlap_x,
-                                                overlap_y=self.overlap_y,
-                                                overlap_z=self.overlap_z,
-                                                pixel_distance_x=self.pixel_distance_x,
-                                                pixel_distance_y=self.pixel_distance_y,
-                                                pixel_distance_z=self.pixel_distance_z,
-                                                tiling_mode=self.convert_tiling_mode(self.tiling_mode)
-                                                )
+        formatted_macro = macro_template.format(
+            img_dir=self.path_to_str(self.img_dir),
+            out_dir=self.path_to_str(self.out_dir),
+            path_to_xml_file=self.path_to_str(self.path_to_xml_file),
+            pattern=self.path_to_str(self.img_dir.joinpath(self.pattern)),
+            num_tiles=self.make_range(self.num_tiles),
+            num_tiles_x=self.num_tiles_x,
+            num_tiles_y=self.num_tiles_y,
+            overlap_x=self.overlap_x,
+            overlap_y=self.overlap_y,
+            overlap_z=self.overlap_z,
+            pixel_distance_x=self.pixel_distance_x,
+            pixel_distance_y=self.pixel_distance_y,
+            pixel_distance_z=self.pixel_distance_z,
+            tiling_mode=self.convert_tiling_mode(self.tiling_mode),
+        )
         return formatted_macro
 
-
     def write_to_temp_macro_file(self, formatted_macro):
-        file_name = 'reg' + str(self.region) + '_bigstitcher_macro.ijm'
+        file_name = "reg" + str(self.region) + "_bigstitcher_macro.ijm"
         macro_file_path = self.img_dir.joinpath(file_name)
-        with open(macro_file_path, 'w') as f:
+        with open(macro_file_path, "w") as f:
             f.write(formatted_macro)
         return macro_file_path
 
     def make_range(self, number):
-        return ','.join([str(n) for n in range(1, number+1)])
+        return ",".join([str(n) for n in range(1, number + 1)])
 
     def path_to_str(self, path: Path):
         return str(path.absolute().as_posix())
@@ -152,28 +160,27 @@ class BigStitcherMacro:
 
 class FuseMacro:
     def __init__(self):
-        self.img_dir = Path('.')
-        self.xml_file_name = 'dataset.xml'
-        self.out_dir = Path('.')
+        self.img_dir = Path(".")
+        self.xml_file_name = "dataset.xml"
+        self.out_dir = Path(".")
         self.__location = Path(__file__).parent.absolute()
 
     def generate(self):
         formatted_macro = self.replace_values_in_macro()
         macro_file_path = self.write_to_macro_file_in_channel_dir(self.img_dir, formatted_macro)
 
-
     def replace_values_in_macro(self):
         macro_template = self.fuse_macro_template
-        formatted_macro = macro_template.format(img_dir=self.path_to_str(self.img_dir),
-                                                path_to_xml_file=self.path_to_str(self.img_dir.joinpath(self.xml_file_name)),
-                                                out_dir=self.path_to_str(self.out_dir)
-                                                )
+        formatted_macro = macro_template.format(
+            img_dir=self.path_to_str(self.img_dir),
+            path_to_xml_file=self.path_to_str(self.img_dir.joinpath(self.xml_file_name)),
+            out_dir=self.path_to_str(self.out_dir),
+        )
         return formatted_macro
 
-
     def write_to_macro_file_in_channel_dir(self, img_dir: Path, formatted_macro: str):
-        macro_file_path = img_dir.joinpath('fuse_only_macro.ijm')
-        with open(macro_file_path, 'w') as f:
+        macro_file_path = img_dir.joinpath("fuse_only_macro.ijm")
+        with open(macro_file_path, "w") as f:
             f.write(formatted_macro)
         return macro_file_path
 

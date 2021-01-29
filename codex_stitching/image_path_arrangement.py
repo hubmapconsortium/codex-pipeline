@@ -1,6 +1,6 @@
-from pathlib import Path
-from typing import List, Dict, Set, Union, Tuple, Any
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Set, Tuple, Union
 
 
 def sort_each_level(dictionary: dict):
@@ -18,25 +18,31 @@ def sort_each_level(dictionary: dict):
                 sorted_tile_keys = sorted(dictionary[cycle_key][region_key][channel_key].keys())
                 for tile_key in sorted_tile_keys:
                     sorted_dictionary[cycle_key][region_key][channel_key][tile_key] = {}
-                    sorted_plane_keys = sorted(dictionary[cycle_key][region_key][channel_key][tile_key].keys())
+                    sorted_plane_keys = sorted(
+                        dictionary[cycle_key][region_key][channel_key][tile_key].keys()
+                    )
                     for plane_key in sorted_plane_keys:
-                        plane_path = dictionary[cycle_key][region_key][channel_key][tile_key][plane_key]
-                        sorted_dictionary[cycle_key][region_key][channel_key][tile_key][plane_key] = plane_path
+                        plane_path = dictionary[cycle_key][region_key][channel_key][tile_key][
+                            plane_key
+                        ]
+                        sorted_dictionary[cycle_key][region_key][channel_key][tile_key][
+                            plane_key
+                        ] = plane_path
 
     return sorted_dictionary
 
 
-
 def alpha_num_order(string: str) -> str:
-    """ Returns all numbers on 5 digits to let sort the string with numeric order.
+    """Returns all numbers on 5 digits to let sort the string with numeric order.
     Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
     """
-    return ''.join([format(int(x), '05d') if x.isdigit()
-                    else x for x in re.split(r'(\d+)', string)])
+    return "".join(
+        [format(int(x), "05d") if x.isdigit() else x for x in re.split(r"(\d+)", string)]
+    )
 
 
 def get_img_listing(in_dir: Path) -> List[Path]:
-    allowed_extensions = ('.tif', '.tiff')
+    allowed_extensions = (".tif", ".tiff")
     listing = list(in_dir.iterdir())
     img_listing = [f for f in listing if f.suffix in allowed_extensions]
     img_listing = sorted(img_listing, key=lambda x: alpha_num_order(x.name))
@@ -44,11 +50,15 @@ def get_img_listing(in_dir: Path) -> List[Path]:
 
 
 def extract_digits_from_string(string: str) -> List[int]:
-    digits = [int(x) for x in re.split(r'(\d+)', string) if x.isdigit()]  # '1_00001_Z02_CH3' -> '1', '00001', '02', '3' -> [1,1,2,3]
+    digits = [
+        int(x) for x in re.split(r"(\d+)", string) if x.isdigit()
+    ]  # '1_00001_Z02_CH3' -> '1', '00001', '02', '3' -> [1,1,2,3]
     return digits
 
 
-def arrange_listing_by_channel_tile_zplane(listing: List[Path]) -> Dict[int, Dict[int, Dict[int, Path]]]:
+def arrange_listing_by_channel_tile_zplane(
+    listing: List[Path],
+) -> Dict[int, Dict[int, Dict[int, Path]]]:
     tile_arrangement = dict()
     for file_path in listing:
         digits = extract_digits_from_string(file_path.name)
@@ -76,11 +86,11 @@ def get_image_paths_arranged_in_dict(img_dir: Path) -> Dict[int, Dict[int, Dict[
 
 def extract_cycle_and_region_from_name(dir_name: str) -> Tuple[int, int]:
     region = 1
-    if 'reg' in dir_name:
-        match = re.search(r'reg(\d+)', dir_name, re.IGNORECASE)
+    if "reg" in dir_name:
+        match = re.search(r"reg(\d+)", dir_name, re.IGNORECASE)
         if match is not None:
             region = int(match.groups()[0])
-    cycle = int(re.search(r'cyc(\d+)', dir_name, re.IGNORECASE).groups()[0])
+    cycle = int(re.search(r"cyc(\d+)", dir_name, re.IGNORECASE).groups()[0])
 
     return cycle, region
 
@@ -99,7 +109,9 @@ def arrange_dirs_by_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict[int, Pa
     return cycle_region_dict
 
 
-def create_listing_for_each_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]:
+def create_listing_for_each_cycle_region(
+    img_dirs: List[Path],
+) -> Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]:
     """ Returns {cycle: {region: {channel: {tile: {zplane: path}}}}} """
     listing_per_cycle = dict()
     cycle_region_dict = arrange_dirs_by_cycle_region(img_dirs)
@@ -112,4 +124,3 @@ def create_listing_for_each_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict
                 listing_per_cycle[cycle] = {region: arranged_listing}
     sorted_listing = sort_each_level(listing_per_cycle)
     return sorted_listing
-

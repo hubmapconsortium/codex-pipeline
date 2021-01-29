@@ -1,16 +1,18 @@
-from pathlib import Path
-import re
 import argparse
-import numpy as np
-import tifffile as tif
-import pandas as pd
+import re
+from pathlib import Path
 from typing import List, Tuple, Union
+
 import dask
+import numpy as np
+import pandas as pd
+import tifffile as tif
+
 Image = np.ndarray
 
 
 def generate_ome_meta_for_mask(size_x: int, size_y: int, dtype):
-        template = """<?xml version="1.0" encoding="utf-8"?>
+    template = """<?xml version="1.0" encoding="utf-8"?>
             <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
               <Image ID="Image:0" Name="segmentation_mask_stitched.ome.tiff">
                 
@@ -29,20 +31,21 @@ def generate_ome_meta_for_mask(size_x: int, size_y: int, dtype):
               </Image>
             </OME>
         """
-        ome_meta = template.format(size_x=size_x, size_y=size_y, dtype=np.dtype(dtype).name)
-        return ome_meta
+    ome_meta = template.format(size_x=size_x, size_y=size_y, dtype=np.dtype(dtype).name)
+    return ome_meta
 
 
 def alpha_num_order(string: str) -> str:
-    """ Returns all numbers on 5 digits to let sort the string with numeric order.
+    """Returns all numbers on 5 digits to let sort the string with numeric order.
     Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
     """
-    return ''.join([format(int(x), '05d') if x.isdigit()
-                    else x for x in re.split(r'(\d+)', string)])
+    return "".join(
+        [format(int(x), "05d") if x.isdigit() else x for x in re.split(r"(\d+)", string)]
+    )
 
 
 def get_img_listing(in_dir: Path) -> List[Path]:
-    allowed_extensions = ('.tif', '.tiff')
+    allowed_extensions = (".tif", ".tiff")
     listing = list(in_dir.iterdir())
     img_listing = [f for f in listing if f.suffix in allowed_extensions]
     img_listing = sorted(img_listing, key=lambda x: alpha_num_order(x.name))
@@ -58,18 +61,20 @@ def path_to_dict(path: Path):
     Extract region, x position, y position and put into the dictionary
     {R:region, X: position, Y: position, path: path}
     """
-    value_list = re.split(r'(\d+)(?:_?)', path.name)[:-1]
-    d = dict(zip(*[iter(value_list)]*2))
+    value_list = re.split(r"(\d+)(?:_?)", path.name)[:-1]
+    d = dict(zip(*[iter(value_list)] * 2))
     d = {k: int(v) for k, v in d.items()}
     d.update({"path": path})
     return d
 
 
-def get_slices(arr: np.ndarray, hor_f: int, hor_t: int, ver_f: int, ver_t: int, padding: dict, overlap=0):
-    left_check  = hor_f - padding['left']
-    top_check   = ver_f - padding['top']
+def get_slices(
+    arr: np.ndarray, hor_f: int, hor_t: int, ver_f: int, ver_t: int, padding: dict, overlap=0
+):
+    left_check = hor_f - padding["left"]
+    top_check = ver_f - padding["top"]
     right_check = hor_t - arr.shape[-1]
-    bot_check   = ver_t - arr.shape[-2]
+    bot_check = ver_t - arr.shape[-2]
 
     left_pad_size = 0
     top_pad_size = 0
@@ -90,16 +95,25 @@ def get_slices(arr: np.ndarray, hor_f: int, hor_t: int, ver_f: int, ver_t: int, 
 
     big_image_slice = (slice(ver_f, ver_t), slice(hor_f, hor_t))
     tile_shape = (ver_t - ver_f, hor_t - hor_f)
-    tile_slice = (slice(top_pad_size + overlap, tile_shape[0] + overlap),
-                   slice(left_pad_size + overlap, tile_shape[1] + overlap))
+    tile_slice = (
+        slice(top_pad_size + overlap, tile_shape[0] + overlap),
+        slice(left_pad_size + overlap, tile_shape[1] + overlap),
+    )
 
     return big_image_slice, tile_slice
 
 
-def stitch_plane(path_list: List[Path], page: int,
-                 x_ntiles: int, y_ntiles: int,
-                 tile_shape: list, dtype,
-                 overlap: int, padding: dict, remap_dict: dict = None) -> Tuple[Image, Union[np.ndarray, None]]:
+def stitch_plane(
+    path_list: List[Path],
+    page: int,
+    x_ntiles: int,
+    y_ntiles: int,
+    tile_shape: list,
+    dtype,
+    overlap: int,
+    padding: dict,
+    remap_dict: dict = None,
+) -> Tuple[Image, Union[np.ndarray, None]]:
 
     x_axis = -1
     y_axis = -2
@@ -115,8 +129,8 @@ def stitch_plane(path_list: List[Path], page: int,
 
     previous_tile_max = 0
     tile_additions = np.zeros((y_ntiles, x_ntiles), dtype=dtype)
-    print('n tiles x,y:', (x_ntiles, y_ntiles))
-    print('plane shape x,y:', big_image_shape[::-1])
+    print("n tiles x,y:", (x_ntiles, y_ntiles))
+    print("plane shape x,y:", big_image_shape[::-1])
     n = 0
     for i in range(0, y_ntiles):
         ver_f = i * tile_y_size
@@ -126,7 +140,9 @@ def stitch_plane(path_list: List[Path], page: int,
             hor_f = j * tile_x_size
             hor_t = hor_f + tile_x_size
 
-            big_image_slice, tile_slice = get_slices(big_image, hor_f, hor_t, ver_f, ver_t, padding, overlap)
+            big_image_slice, tile_slice = get_slices(
+                big_image, hor_f, hor_t, ver_f, ver_t, padding, overlap
+            )
             tile = tif.imread(path_to_str(path_list[n]), key=page).astype(dtype)
 
             if remap_dict is not None:
@@ -149,11 +165,11 @@ def stitch_plane(path_list: List[Path], page: int,
 
 
 def _find_overlapping_border_labels(img1: Image, img2: Image, overlap: int, mode: str) -> dict:
-    if mode == 'horizontal':
-        img1_ov = img1[:, -overlap * 2: -overlap]
+    if mode == "horizontal":
+        img1_ov = img1[:, -overlap * 2 : -overlap]
         img2_ov = img2[:, :overlap]
-    elif mode == 'vertical':
-        img1_ov = img1[-overlap * 2: -overlap, :]
+    elif mode == "vertical":
+        img1_ov = img1[-overlap * 2 : -overlap, :]
         img2_ov = img2[:overlap, :]
 
     nrows, ncols = img2_ov.shape
@@ -173,7 +189,9 @@ def _find_overlapping_border_labels(img1: Image, img2: Image, overlap: int, mode
     return remap_dict
 
 
-def _get_map_of_overlapping_labels(path_list: List[Path], img1_id: int, img2_id: int, overlap: int, mode: str):
+def _get_map_of_overlapping_labels(
+    path_list: List[Path], img1_id: int, img2_id: int, overlap: int, mode: str
+):
     # take only first channel
     img1 = tif.imread(path_to_str(path_list[img1_id]), key=0)
     img2 = tif.imread(path_to_str(path_list[img2_id]), key=0)
@@ -181,27 +199,31 @@ def _get_map_of_overlapping_labels(path_list: List[Path], img1_id: int, img2_id:
     return (img2_id, remapping)
 
 
-def get_remapping_of_border_labels(path_list: List[Path],
-                                    x_ntiles: int, y_ntiles: int,
-                                    overlap: int) -> dict:
+def get_remapping_of_border_labels(
+    path_list: List[Path], x_ntiles: int, y_ntiles: int, overlap: int
+) -> dict:
     remap_dict = dict()
     htask = []
     # initialize remap_dict for all img ids
     for i in range(0, y_ntiles):
         for j in range(0, x_ntiles):
             img_id = i * x_ntiles + j
-            remap_dict[img_id] = {'horizontal': {}, 'vertical': {}}
+            remap_dict[img_id] = {"horizontal": {}, "vertical": {}}
 
     for i in range(0, y_ntiles):
         for j in range(0, x_ntiles - 1):
             img1_id = i * x_ntiles + j
             img2h_id = i * x_ntiles + (j + 1)
-            htask.append(dask.delayed(_get_map_of_overlapping_labels)(path_list, img1_id, img2h_id, overlap, 'horizontal'))
+            htask.append(
+                dask.delayed(_get_map_of_overlapping_labels)(
+                    path_list, img1_id, img2h_id, overlap, "horizontal"
+                )
+            )
 
-    hor_values = dask.compute(*htask, scheduler='processes')
+    hor_values = dask.compute(*htask, scheduler="processes")
     hor_values = list(hor_values)
     for remap in hor_values:
-        remap_dict[remap[0]]['horizontal'] = remap[1]
+        remap_dict[remap[0]]["horizontal"] = remap[1]
     del hor_values
 
     vtask = []
@@ -209,21 +231,31 @@ def get_remapping_of_border_labels(path_list: List[Path],
         for j in range(0, x_ntiles):
             img1_id = i * x_ntiles + j
             img2v_id = (i + 1) * x_ntiles + j
-            vtask.append(dask.delayed(_get_map_of_overlapping_labels)(path_list, img1_id, img2v_id, overlap, 'vertical'))
+            vtask.append(
+                dask.delayed(_get_map_of_overlapping_labels)(
+                    path_list, img1_id, img2v_id, overlap, "vertical"
+                )
+            )
 
-    ver_values = dask.compute(*vtask, scheduler='processes')
+    ver_values = dask.compute(*vtask, scheduler="processes")
     ver_values = list(ver_values)
 
     for remap in ver_values:
-        remap_dict[remap[0]]['vertical'] = remap[1]
+        remap_dict[remap[0]]["vertical"] = remap[1]
 
     return remap_dict
 
 
-def remap_values(big_image: Image, remap_dict: dict,
-                 tile_additions: np.ndarray, tile_shape: list,
-                 overlap: int, x_ntiles: int, y_ntiles: int) -> Image:
-    print('remapping values')
+def remap_values(
+    big_image: Image,
+    remap_dict: dict,
+    tile_additions: np.ndarray,
+    tile_shape: list,
+    overlap: int,
+    x_ntiles: int,
+    y_ntiles: int,
+) -> Image:
+    print("remapping values")
     x_axis = -1
     y_axis = -2
     x_tile_size = tile_shape[x_axis] - overlap * 2
@@ -246,11 +278,11 @@ def remap_values(big_image: Image, remap_dict: dict,
 
             this_tile = big_image[tuple(this_tile_slice)]
             try:
-                hor_remap = remap_dict[n]['horizontal']
+                hor_remap = remap_dict[n]["horizontal"]
             except KeyError:
                 hor_remap = {}
             try:
-                ver_remap = remap_dict[n]['vertical']
+                ver_remap = remap_dict[n]["vertical"]
             except KeyError:
                 ver_remap = {}
 
@@ -261,14 +293,18 @@ def remap_values(big_image: Image, remap_dict: dict,
                 left_tile_addition = tile_additions[i, j - 1]
                 this_tile_addition = tile_additions[i, j]
                 for old_value, new_value in hor_remap.items():
-                    this_tile[this_tile == old_value + this_tile_addition] = new_value + left_tile_addition
+                    this_tile[this_tile == old_value + this_tile_addition] = (
+                        new_value + left_tile_addition
+                    )
                 modified_x = True
 
             if ver_remap != {}:
                 top_tile_addition = tile_additions[i - 1, j]
                 this_tile_addition = tile_additions[i, j]
                 for old_value, new_value in ver_remap.items():
-                    this_tile[this_tile == old_value + this_tile_addition] = new_value + top_tile_addition
+                    this_tile[this_tile == old_value + this_tile_addition] = (
+                        new_value + top_tile_addition
+                    )
                 modified_y = True
 
             if modified_x or modified_y:
@@ -282,18 +318,18 @@ def get_dataset_info(img_dir: Path):
     img_paths = get_img_listing(img_dir)
     positions = [path_to_dict(p) for p in img_paths]
     df = pd.DataFrame(positions)
-    df.sort_values(['R', 'Y', 'X'], inplace=True)
+    df.sort_values(["R", "Y", "X"], inplace=True)
     df.reset_index(inplace=True)
 
-    region_ids = list(df['R'].unique())
-    x_ntiles = df['X'].max()
-    y_ntiles = df['Y'].max()
+    region_ids = list(df["R"].unique())
+    x_ntiles = df["X"].max()
+    y_ntiles = df["Y"].max()
 
     path_list_per_region = []
 
     for r in region_ids:
-        region_selection = df[df['R'] == r].index
-        path_list = list(df.loc[region_selection, 'path'])
+        region_selection = df[df["R"] == r].index
+        path_list = list(df.loc[region_selection, "path"])
         path_list_per_region.append(path_list)
 
     return path_list_per_region, x_ntiles, y_ntiles
@@ -301,8 +337,13 @@ def get_dataset_info(img_dir: Path):
 
 def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask: bool):
 
-    padding_int = [int(i) for i in padding_str.split(',')]
-    padding = {"left": padding_int[0], "right": padding_int[1], "top": padding_int[2], "bottom": padding_int[3]}
+    padding_int = [int(i) for i in padding_str.split(",")]
+    padding = {
+        "left": padding_int[0],
+        "right": padding_int[1],
+        "top": padding_int[2],
+        "bottom": padding_int[3],
+    }
 
     path_list_per_region, x_ntiles, y_ntiles = get_dataset_info(img_dir)
 
@@ -312,11 +353,15 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         dtype = TF.series[0].dtype
         ome_meta = TF.ome_metadata
 
-    big_image_x_size = (x_ntiles * (tile_shape[-1] - overlap * 2)) - padding["left"] - padding["right"]
-    big_image_y_size = (y_ntiles * (tile_shape[-2] - overlap * 2)) - padding["top"] - padding["bottom"]
+    big_image_x_size = (
+        (x_ntiles * (tile_shape[-1] - overlap * 2)) - padding["left"] - padding["right"]
+    )
+    big_image_y_size = (
+        (y_ntiles * (tile_shape[-2] - overlap * 2)) - padding["top"] - padding["bottom"]
+    )
 
     if is_mask:
-        print('\nGetting values for remapping')
+        print("\nGetting values for remapping")
         dtype = np.uint32
         ome_meta = generate_ome_meta_for_mask(big_image_x_size, big_image_y_size, dtype)
 
@@ -329,31 +374,50 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
 
-    reg_prefix = 'reg{r:d}_'
+    reg_prefix = "reg{r:d}_"
     for r, path_list in enumerate(path_list_per_region):
-        new_path = out_path.parent.joinpath(reg_prefix.format(r=r+1) + out_path.name)
+        new_path = out_path.parent.joinpath(reg_prefix.format(r=r + 1) + out_path.name)
         with tif.TiffWriter(path_to_str(new_path), bigtiff=True) as TW:
             for p in range(0, npages):
-                print('\npage', p)
-                print('stitching')
-                plane, tile_additions = stitch_plane(path_list, p, x_ntiles, y_ntiles, tile_shape, dtype, overlap,
-                                                     padding, remap_dict)
+                print("\npage", p)
+                print("stitching")
+                plane, tile_additions = stitch_plane(
+                    path_list,
+                    p,
+                    x_ntiles,
+                    y_ntiles,
+                    tile_shape,
+                    dtype,
+                    overlap,
+                    padding,
+                    remap_dict,
+                )
 
                 if is_mask:
                     border_map = border_map_per_region[r]
-                    plane = remap_values(plane, border_map, tile_additions, tile_shape, overlap, x_ntiles, y_ntiles)
+                    plane = remap_values(
+                        plane, border_map, tile_additions, tile_shape, overlap, x_ntiles, y_ntiles
+                    )
                 TW.save(plane, photometric="minisblack", description=ome_meta)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', type=Path, required=True, help='path to directory with images')
-    parser.add_argument('-o', type=Path, required=True, help='path to output file')
-    parser.add_argument('-v', type=int, required=True, default=0, help='overlap size in pixels, default 0')
-    parser.add_argument('-p', type=str, default='0,0,0,0',
-                        help='image padding that should be removed, 4 comma separated numbers: left, right, top, bottom.' +
-                             'Default: 0,0,0,0')
-    parser.add_argument('--mask', action='store_true', help='use this flag if image is a binary mask')
+    parser.add_argument("-i", type=Path, required=True, help="path to directory with images")
+    parser.add_argument("-o", type=Path, required=True, help="path to output file")
+    parser.add_argument(
+        "-v", type=int, required=True, default=0, help="overlap size in pixels, default 0"
+    )
+    parser.add_argument(
+        "-p",
+        type=str,
+        default="0,0,0,0",
+        help="image padding that should be removed, 4 comma separated numbers: left, right, top, bottom."
+        + "Default: 0,0,0,0",
+    )
+    parser.add_argument(
+        "--mask", action="store_true", help="use this flag if image is a binary mask"
+    )
 
     args = parser.parse_args()
 

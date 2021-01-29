@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import List
 
-import numpy as np
-import tifffile as tif
 import cv2 as cv
 import dask
+import numpy as np
+import tifffile as tif
 
 Image = np.ndarray
 
@@ -51,14 +51,16 @@ def get_best_z_plane_id_parallelized(plane_paths_per_tile: dict) -> List[int]:
 def median_error_cor(array: np.array, mode: str) -> np.array:
     """ Replace all values in rows or cols with respective medians"""
     arr = array.copy()
-    if mode == 'row':
+    if mode == "row":
         nrows = arr.shape[0]
         row_medians = np.nanmedian(arr, axis=1)
         total_row_median = np.nanmedian(row_medians)  # median of medians
-        row_medians = list(np.nan_to_num(row_medians, nan=total_row_median))  # replace NaNs with median of medians
+        row_medians = list(
+            np.nan_to_num(row_medians, nan=total_row_median)
+        )  # replace NaNs with median of medians
         for i in range(0, nrows):
             arr[i, :] = int(round(row_medians[i]))
-    elif mode == 'col':
+    elif mode == "col":
         ncols = arr.shape[1]
         col_medians = np.nanmedian(arr, axis=0)
         total_col_median = np.nanmedian(col_medians)
@@ -70,9 +72,9 @@ def median_error_cor(array: np.array, mode: str) -> np.array:
 
 
 def change_tile_location_according_to_tiling_mode(array: np.ndarray, tiling_mode: str):
-    if tiling_mode == 'grid':
+    if tiling_mode == "grid":
         pass
-    elif tiling_mode == 'snake':
+    elif tiling_mode == "snake":
         nrows = array.shape[0]
         for i in range(0, nrows):
             if i % 2 != 0:
@@ -81,12 +83,20 @@ def change_tile_location_according_to_tiling_mode(array: np.ndarray, tiling_mode
     return array
 
 
-def best_z_correction(best_z_plane_id_list: List[int], x_ntiles: int, y_ntiles: int, tiling_mode: str):
-    best_z_per_tile_array = np.array(best_z_plane_id_list, dtype=np.int32).reshape(y_ntiles, x_ntiles)
+def best_z_correction(
+    best_z_plane_id_list: List[int], x_ntiles: int, y_ntiles: int, tiling_mode: str
+):
+    best_z_per_tile_array = np.array(best_z_plane_id_list, dtype=np.int32).reshape(
+        y_ntiles, x_ntiles
+    )
 
-    rearranged_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(best_z_per_tile_array, tiling_mode)
-    corrected_best_z_per_tile_array = median_error_cor(rearranged_best_z_per_tile_array, 'col')
-    restored_arrangement_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(corrected_best_z_per_tile_array, tiling_mode)
+    rearranged_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
+        best_z_per_tile_array, tiling_mode
+    )
+    corrected_best_z_per_tile_array = median_error_cor(rearranged_best_z_per_tile_array, "col")
+    restored_arrangement_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
+        corrected_best_z_per_tile_array, tiling_mode
+    )
 
     result = restored_arrangement_best_z_per_tile_array.ravel().tolist()
 
@@ -117,11 +127,17 @@ def pick_z_planes_below_and_above(best_z: int, max_z: int, above: int, below: in
     return below_planes + [best_z] + above_planes
 
 
-def get_best_z_plane_ids_per_tile(plane_paths_per_tile: dict, x_ntiles: int, y_ntiles: int, max_z: int, tiling_mode: str):
+def get_best_z_plane_ids_per_tile(
+    plane_paths_per_tile: dict, x_ntiles: int, y_ntiles: int, max_z: int, tiling_mode: str
+):
     best_z_plane_id_list = get_best_z_plane_id_parallelized(plane_paths_per_tile)
-    corrected_best_z_plane_id_list = best_z_correction(best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode)
+    corrected_best_z_plane_id_list = best_z_correction(
+        best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode
+    )
 
     best_z_plane_per_tile = dict()
     for i, tile in enumerate(plane_paths_per_tile.keys()):
-        best_z_plane_per_tile[tile] = pick_z_planes_below_and_above(corrected_best_z_plane_id_list[i], max_z, 1, 1)
+        best_z_plane_per_tile[tile] = pick_z_planes_below_and_above(
+            corrected_best_z_plane_id_list[i], max_z, 1, 1
+        )
     return best_z_plane_per_tile
