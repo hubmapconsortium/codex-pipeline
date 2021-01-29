@@ -58,8 +58,8 @@ def create_relative_symlink_target(
     return relative_output_path_piece / relative_input_path
 
 def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
-    cytometry_ometiff_dir = ometiff_dir / 'stitched/mask'
-    expressions_ometiff_dir = ometiff_dir / 'stitched/expressions'
+    cytometry_ometiff_dir = ometiff_dir / 'mask'
+    expressions_ometiff_dir = ometiff_dir / 'expressions'
 
     # TODO: use logging for this
     logger.debug(f'{ometiff_dir=}')
