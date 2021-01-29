@@ -12,6 +12,14 @@ A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.a
 * Generate [OME-TIFF](https://docs.openmicroscopy.org/ome-model/6.0.1/ome-tiff/specification.html) versions of TIFFs created by Cytokit.
 * Perform downstream analysis using [SPRM](https://github.com/hubmapconsortium/sprm).
 
+## Development
+Code in this repository is formatted with [black](https://github.com/psf/black) and
+[isort](https://pypi.org/project/isort/), and this is checked via Travis CI.
+
+A [pre-commit](https://pre-commit.com/) hook configuration is provided, which runs `black` and `isort` before committing.
+Run `pre-commit install` in each clone of this repository which you will use for development (after `pip install pre-commit`
+into an appropriate Python environment, if necessary).
+
 ## Building containers
 Two `Dockerfile`s are included in this repository. A `docker_images.txt` manifest is included, which is intended
 for use in the `build_docker_containers` script provided by the
