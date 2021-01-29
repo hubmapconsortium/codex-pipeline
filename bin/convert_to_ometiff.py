@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import json
 import logging
@@ -204,13 +202,8 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "cytokit_processor_output",
+        "cytokit_output",
         help="Path to output of `cytokit processor`",
-        type=Path,
-    )
-    parser.add_argument(
-        "cytokit_operator_output",
-        help="Path to output of `cytokit operator`",
         type=Path,
     )
     parser.add_argument(
@@ -234,27 +227,26 @@ if __name__ == "__main__":
     """
 
     args = parser.parse_args()
-
-    print("Cytokit processor output:")
-    print_directory_tree(args.cytokit_processor_output)
-    print("Cytokit operator output:")
-    print_directory_tree(args.cytokit_operator_output)
-
+    
+    print('Cytokit output:')
+    print_directory_tree(args.cytokit_output)
+    
     output_dir = Path("output")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cytometry_tile_dir_piece = Path("cytometry/tile")
     extract_expressions_piece = Path("extract/expressions")
     processor_data_json_piece = Path("processor/data.json")
-
-    cytometryTileDir = args.cytokit_processor_output / cytometry_tile_dir_piece
-    print("Cytometry tile directory:", cytometryTileDir)
-    extractDir = args.cytokit_operator_output / extract_expressions_piece
-    print("Extract expressions directory:", extractDir)
+    
+    
+    cytometryTileDir = args.cytokit_output / cytometry_tile_dir_piece
+    print('Cytometry tile directory:', cytometryTileDir)
+    extractDir = args.cytokit_output / extract_expressions_piece
+    print('Extract expressions directory:', extractDir)
 
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)
     extractFileList = collect_tiff_file_list(extractDir, TIFF_FILE_NAMING_PATTERN)
-
+    
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
 
     # Create segmentation mask OME-TIFFs

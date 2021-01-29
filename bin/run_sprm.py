@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import logging
 from pathlib import Path
@@ -21,9 +19,10 @@ if __name__ == "__main__":
         type=Path,
     )
     args = parser.parse_args()
+    
+    expressions_ometiff_dir = args.ometiff_dir / 'expressions'
+    cytometry_ometiff_dir = args.ometiff_dir / 'mask'
 
-    expressions_ometiff_dir = args.ometiff_dir / "extract/expressions/ome-tiff"
-    cytometry_ometiff_dir = args.ometiff_dir / "cytometry/tile/ome-tiff"
 
     logger.debug("Expressions OME-TIFF directory:")
     logger.debug(list_directory_tree(expressions_ometiff_dir))

@@ -6,7 +6,7 @@ hints:
     dockerPull: hubmap/codex-scripts
   NetworkAccess:
     networkAccess: true
-baseCommand: /opt/run_sprm.py
+baseCommand: ["python", "/opt/run_sprm.py"]
 
 inputs:
   ometiff_dir:

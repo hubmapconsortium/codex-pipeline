@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import json
 import logging
@@ -65,13 +63,14 @@ if __name__ == "__main__":
             "args": {
                 "gpus": args.gpus,
                 "memory_limit": memory_limit,
-                "run_crop": True,
+                "run_crop": False,
                 "run_tile_generator": True,
                 "run_drift_comp": True,
                 "run_cytometry": True,
                 "run_best_focus": True,
                 "run_deconvolution": True,
             },
+
             "deconvolution": {"n_iter": 25, "scale_factor": 0.5},
             "tile_generator": {"raw_file_type": "keyence_mixed"},
             "best_focus": {"channel": pipelineConfigInfo["best_focus"]},
@@ -85,6 +84,7 @@ if __name__ == "__main__":
                     "memb_gamma": 0.25,
                     "marker_dilation": 3,
                     "marker_min_size": 2,
+    
                 },
                 "quantification_params": {"nucleus_intensity": True, "cell_graph": True},
             },
