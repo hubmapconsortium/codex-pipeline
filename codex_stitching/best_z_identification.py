@@ -57,7 +57,7 @@ def find_lowest_var_axis(arr: np.ndarray) -> str:
         return "row"
 
 
-def median_error_cor(array: np.array, mode: str) -> np.array:
+def median_error_cor(array: np.ndarray, mode: str) -> np.ndarray:
     """ Replace all values in rows or cols with respective medians"""
     arr = array.copy()
     if mode == "row":
@@ -80,7 +80,7 @@ def median_error_cor(array: np.array, mode: str) -> np.array:
     return arr
 
 
-def change_tile_location_according_to_tiling_mode(array: np.ndarray, tiling_mode: str):
+def change_tile_layout(array: np.ndarray, tiling_mode: str) -> np.ndarray:
     if tiling_mode == "grid":
         pass
     elif tiling_mode == "snake":
@@ -94,19 +94,17 @@ def change_tile_location_according_to_tiling_mode(array: np.ndarray, tiling_mode
 
 def best_z_correction(
     best_z_plane_id_list: List[int], x_ntiles: int, y_ntiles: int, tiling_mode: str
-):
+) -> np.ndarray:
     best_z_per_tile_array = np.array(best_z_plane_id_list, dtype=np.int32).reshape(
         y_ntiles, x_ntiles
     )
 
-    rearranged_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
-        best_z_per_tile_array, tiling_mode
-    )
+    rearranged_best_z_per_tile_array = change_tile_layout(best_z_per_tile_array, tiling_mode)
     lowest_var_axis = find_lowest_var_axis(rearranged_best_z_per_tile_array)
     corrected_best_z_per_tile_array = median_error_cor(
         rearranged_best_z_per_tile_array, lowest_var_axis
     )
-    restored_arrangement_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
+    restored_arrangement_best_z_per_tile_array = change_tile_layout(
         corrected_best_z_per_tile_array, tiling_mode
     )
 
@@ -141,7 +139,7 @@ def pick_z_planes_below_and_above(best_z: int, max_z: int, above: int, below: in
 
 def get_best_z_plane_ids_per_tile(
     plane_paths_per_tile: dict, x_ntiles: int, y_ntiles: int, max_z: int, tiling_mode: str
-):
+) -> dict:
     best_z_plane_id_list = get_best_z_plane_id_parallelized(plane_paths_per_tile)
     corrected_best_z_plane_id_list = best_z_correction(
         best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode
