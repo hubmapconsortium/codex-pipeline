@@ -313,7 +313,7 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     print('\nSplitting channels into tiles')
     block_size = 1000
-    overlap = 50
+    overlap = 100
     block_shape = (block_size, block_size)
     split_channels_into_tiles(stitched_channel_dirs, new_dirs_tiles_per_cycle_region, block_size, overlap)
     modified_experiment = modify_pipeline_config(pipeline_config_path, block_shape, overlap, stitched_img_shape)
