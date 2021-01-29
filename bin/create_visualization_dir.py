@@ -1,8 +1,13 @@
 import argparse
 import logging
-from pathlib import Path
+import os
 import re
 import tarfile
+from collections import defaultdict
+from os import walk
+from pathlib import Path
+from typing import Dict, List, Tuple
+
 import yaml
 from typing import Dict, List, Tuple
 
@@ -10,9 +15,10 @@ from utils import collect_files_by_tile, infer_tile_names, list_directory_tree
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(levelname)-7s - %(message)s',
+    format="%(levelname)-7s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
 
 def alpha_num_order(string: str) -> str:
     """ Returns all numbers on 5 digits to let sort the string with numeric order.
@@ -78,6 +84,7 @@ def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
     expressions_ometiffs = get_file_paths_by_region(get_img_listing(expressions_ometiff_dir))
     sprm_outputs = get_file_paths_by_region(list(sprm_output_dir.iterdir()))
 
+
     symlinks_to_archive: List[Tuple[Path, Path]] = []
 
     # TODO: Perhaps a proper function to do this in a less repetitive way would be nicer.
@@ -106,10 +113,10 @@ def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
             link_target = create_relative_symlink_target(sprm_file_path, sprm_output_dir, symlink)
             symlinks_to_archive.append((symlink, link_target))
 
-    with tarfile.open('symlinks.tar', 'w') as t:
+    with tarfile.open("symlinks.tar", "w") as t:
         for symlink, link_target in symlinks_to_archive:
             symlink.symlink_to(link_target)
-            logger.info(f'Archiving symlink {symlink} -> {link_target}')
+            logger.info(f"Archiving symlink {symlink} -> {link_target}")
             t.add(symlink)
 
     for symlink, link_target in symlinks_to_archive:

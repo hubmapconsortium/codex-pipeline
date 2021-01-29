@@ -5,39 +5,38 @@ submission formats.
 """
 
 import argparse
-from collections import Counter, defaultdict
 import csv
 import datetime
 import json
 import logging
 import math
+import re
+from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
-import re
 from typing import Dict, List, Tuple
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)-7s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 NONRAW_DIRECTORY_NAME_PIECES = [
-    'processed',
-    'drv',
-    'metadata',
+    "processed",
+    "drv",
+    "metadata",
+    "extras",
 ]
 
 
 # TODO: don't duplicate this in ../cytokit-docker/setup_data_directory.py.
 #   Can't share code easily because these files go to different containers
-RAW_DIR_NAMING_PATTERN = re.compile(r'^cyc(\d+)_(?P<region>reg\d+).*', re.IGNORECASE)
+RAW_DIR_NAMING_PATTERN = re.compile(r"^cyc(\d+)_(?P<region>reg\d+).*", re.IGNORECASE)
+
 
 def find_files(
-        base_directory: Path,
-        filename: str,
-        ignore_processed_derived_metadata_dirs: bool = False,
+    base_directory: Path,
+    filename: str,
+    ignore_processed_derived_metadata_dirs: bool = False,
 ) -> List[Path]:
     """
     This returns a full list instead of a generator function because we very
@@ -74,7 +73,7 @@ def find_files(
     return file_paths
 
 
-def collect_attribute( fieldNames, configDict: Dict ) :
+def collect_attribute(fieldNames, configDict: Dict):
     """
     Returns the contents of the field matching the name(s) passed in the
     fieldNames argument.
@@ -103,29 +102,29 @@ def collect_attribute( fieldNames, configDict: Dict ) :
 
 
 def infer_channel_name_from_index(
-        cycleIndex: int,
-        channelIndex: int,
-        channelNames,
-        channelsPerCycle: int,
+    cycleIndex: int,
+    channelIndex: int,
+    channelNames,
+    channelsPerCycle: int,
 ):
 
     # If there is no cycle+channel set for a particular measurement, then the
     # cycle (or channel?) index is set to "-1". E.g. if no membrane stain
     # channel exists, the membraneStainCycle can be set to "-1". Just return
     # None in this case.
-    if any( x == -1 for x in [ cycleIndex, channelIndex ] ) :
+    if any(x == -1 for x in [cycleIndex, channelIndex]):
         return None
 
     cycleLastChannelIdx = cycleIndex * channelsPerCycle
 
-    cycleChannelIndices = range( cycleLastChannelIdx - channelsPerCycle, cycleLastChannelIdx )
+    cycleChannelIndices = range(cycleLastChannelIdx - channelsPerCycle, cycleLastChannelIdx)
 
-    channelNameIdx = cycleChannelIndices[ channelIndex - 1 ]
+    channelNameIdx = cycleChannelIndices[channelIndex - 1]
 
-    return channelNames[ channelNameIdx ]
+    return channelNames[channelNameIdx]
 
 
-def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int ) :
+def calculate_target_shape(magnification: int, tileHeight: int, tileWidth: int):
     """
     Cytokit's nuclei detection U-Net (from CellProfiler) works best at 20x magnification.
     The CellProfiler U-Net requires the height and width of the images to be
@@ -134,25 +133,25 @@ def calculate_target_shape( magnification: int, tileHeight: int, tileWidth: int 
     https://github.com/CellProfiler/CellProfiler-plugins/issues/65
     """
     scaleFactor = 1
-    if magnification != 20 :
+    if magnification != 20:
         scaleFactor = 20 / magnification
 
     dims = {
-        "height" : tileHeight,
-        "width" : tileWidth,
+        "height": tileHeight,
+        "width": tileWidth,
     }
 
     # Width and height must be evenly divisible by 8, so we round them up to them
     # closest factor of 8 if they aren't.
     for dimension in dims:
-        if dims[ dimension ] % 8 :
-            newDim = int( 8 * math.ceil( float( dims[ dimension ] )/8 ) )
-            dims[ dimension ] = newDim
+        if dims[dimension] % 8:
+            newDim = int(8 * math.ceil(float(dims[dimension]) / 8))
+            dims[dimension] = newDim
 
-    return [ dims[ "height" ], dims[ "width" ] ]
+    return [dims["height"], dims["width"]]
 
 
-def make_DAPI_channel_names_unique( channelNames ) :
+def make_DAPI_channel_names_unique(channelNames):
     """
     Sometimes DAPI channel names are not unique, e.g. if DAPI was used in every
     cycle, sometimes each DAPI channel is just named "DAPI", other times they
@@ -169,15 +168,15 @@ def make_DAPI_channel_names_unique( channelNames ) :
 
     dapiCount = 1
 
-    for channel in channelNames :
-        if channel == 'DAPI' :
-            if uniqueNames[ channel ] > 1 :
-                newNames.append( channel + "_" + str( dapiCount ) )
+    for channel in channelNames:
+        if channel == "DAPI":
+            if uniqueNames[channel] > 1:
+                newNames.append(channel + "_" + str(dapiCount))
                 dapiCount += 1
-            else :
-                newNames.append( channel )
-        else :
-            newNames.append( channel )
+            else:
+                newNames.append(channel)
+        else:
+            newNames.append(channel)
     return newNames
 
 
@@ -210,7 +209,7 @@ def find_raw_data_dir(directory: Path) -> Path:
             raw_data_dir_possibilities.append(child)
 
     if len(raw_data_dir_possibilities) > 1:
-        message_pieces = ['Found multiple raw data directory possibilities:']
+        message_pieces = ["Found multiple raw data directory possibilities:"]
         message_pieces.extend(f"\t{path}" for path in raw_data_dir_possibilities)
         raise ValueError("\n".join(message_pieces))
 
@@ -223,56 +222,62 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
         if not child.is_dir():
             continue
         if m := RAW_DIR_NAMING_PATTERN.match(child.name):
-            regions.add(m.group('region'))
+            regions.add(m.group("region"))
     return sorted(regions)
 
-def calculate_pixel_overlaps_from_proportional( target_key: str, exptConfigDict: Dict ) -> str :
-    
-    if target_key != "tile_overlap_x" and target_key != "tile_overlap_y" :
-        raise ValueError( f"Invalid target_key for looking up tile overlap: {target_key}" )
 
-    components = target_key.split( '_' )
+def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: Dict) -> str:
 
-    overlap_proportion_key = components[0] + ''.join(x.title() for x in components[1:])
+    if target_key != "tile_overlap_x" and target_key != "tile_overlap_y":
+        raise ValueError(f"Invalid target_key for looking up tile overlap: {target_key}")
 
-    overlap_proportion = collect_attribute( [ overlap_proportion_key ], exptConfigDict )
+    components = target_key.split("_")
+
+    overlap_proportion_key = components[0] + "".join(x.title() for x in components[1:])
+
+    overlap_proportion = collect_attribute([overlap_proportion_key], exptConfigDict)
 
     # Fail if we find something >1 here, proportions can't be >1.
-    if overlap_proportion > 1 :
-        raise ValueError( f"Tile overlap proportion at key {overlap_proportion_key} is greater than 1; this doesn't make sense." )
-    
+    if overlap_proportion > 1:
+        raise ValueError(
+            f"Tile overlap proportion at key {overlap_proportion_key} is greater than 1; this doesn't make sense."
+        )
+
     # If we're still here then we need to get the size of the appropriate
     # dimension in pixels, so that we can calculate the overlap in pixels.
-    dimension_mapping = { "x" : "tileWidth", "y" : "tileHeight" }
-    target_dimension = dimension_mapping[ components[ 2 ] ]
-    
-    pixel_overlap = collect_attribute( [ target_dimension ], exptConfigDict ) * overlap_proportion 
-    
-    if float( pixel_overlap ).is_integer() :
-        return int( pixel_overlap )
-    else :
-        raise ValueError( f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}." )
+    dimension_mapping = {"x": "tileWidth", "y": "tileHeight"}
+    target_dimension = dimension_mapping[components[2]]
+
+    pixel_overlap = collect_attribute([target_dimension], exptConfigDict) * overlap_proportion
+
+    if float(pixel_overlap).is_integer():
+        return int(pixel_overlap)
+    else:
+        raise ValueError(
+            f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}."
+        )
 
 
-def collect_tiling_mode( exptConfigDict: Dict ) -> str :
+def collect_tiling_mode(exptConfigDict: Dict) -> str:
 
-    tiling_mode = collect_attribute( [ "tilingMode" ], exptConfigDict ) 
-    
-    if re.search( "snake", tiling_mode, re.IGNORECASE ) :
+    tiling_mode = collect_attribute(["tilingMode"], exptConfigDict)
+
+    if re.search("snake", tiling_mode, re.IGNORECASE):
         return "snake"
-    elif re.search( "grid", tiling_mode, re.IGNORECASE ) :
+    elif re.search("grid", tiling_mode, re.IGNORECASE):
         return "grid"
-    else :
-        raise ValueError( f"Unknown tiling mode found: {tiling_mode}" )
+    else:
+        raise ValueError(f"Unknown tiling mode found: {tiling_mode}")
 
-def create_cycle_channel_names( exptConfigDict: Dict ) -> List :
 
-    num_channels = collect_attribute( [ "numChannels" ], exptConfigDict )
+def create_cycle_channel_names(exptConfigDict: Dict) -> List:
+
+    num_channels = collect_attribute(["numChannels"], exptConfigDict)
 
     cycle_channel_names = []
-    
-    for i in range( 1, num_channels + 1 ) :
-        cycle_channel_names.append( f"CH{ str( i ) }" )
+
+    for i in range(1, num_channels + 1):
+        cycle_channel_names.append(f"CH{ str( i ) }")
 
     return cycle_channel_names
 
@@ -280,27 +285,22 @@ def create_cycle_channel_names( exptConfigDict: Dict ) -> List :
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
-        'experiment.json',
+        "experiment.json",
         ignore_processed_derived_metadata_dirs=True,
     )
     segmentation_json_files = find_files(
         directory,
-        'segmentation.json',
+        "segmentation.json",
         ignore_processed_derived_metadata_dirs=True,
     )
-    segmentation_text_files = find_files(
-        directory,
-        'config.txt'
-    )
+    segmentation_text_files = find_files(directory, "config.txt")
     channel_names_files = find_files(
         directory,
-        'channelNames.txt',
+        "channelNames.txt",
         ignore_processed_derived_metadata_dirs=True,
     )
     channel_names_report_files = find_files(
-        directory,
-        'channelnames_report.csv',
-        ignore_processed_derived_metadata_dirs=True
+        directory, "channelnames_report.csv", ignore_processed_derived_metadata_dirs=True
     )
 
     warn_if_multiple_files(segmentation_json_files, "segmentation JSON")
@@ -312,10 +312,7 @@ def standardize_metadata(directory: Path):
         raise ValueError("Segmentation parameters files not found. Cannot continue.")
 
     if segmentation_json_files and segmentation_text_files:
-        message_pieces = [
-            "Found segmentation JSON and text files. Using JSON.",
-            "\tJSON:"
-        ]
+        message_pieces = ["Found segmentation JSON and text files. Using JSON.", "\tJSON:"]
         message_pieces.extend(f"\t\t{json_file}" for json_file in segmentation_json_files)
         message_pieces.append("\tText:")
         message_pieces.extend(f"\t\t{text_file}" for text_file in segmentation_text_files)
@@ -329,7 +326,7 @@ def standardize_metadata(directory: Path):
 
     # Read in the experiment JSON config.
     experiment_json_file = experiment_json_files[0]
-    with open(experiment_json_file, 'r') as exptJsonFile:
+    with open(experiment_json_file, "r") as exptJsonFile:
         exptConfigDict = json.load(exptJsonFile)
     logger.info(f"Finished reading file {experiment_json_file}")
 
@@ -337,7 +334,7 @@ def standardize_metadata(directory: Path):
     if segmentation_json_files:
         segmentation_json_file = segmentation_json_files[0]
         logger.info(f"Reading segmentation parameters from {segmentation_json_file}")
-        with open(segmentation_json_file, 'r') as segmJsonFile:
+        with open(segmentation_json_file, "r") as segmJsonFile:
             segmParams = json.load(segmJsonFile)
     else:
         segmentation_text_file = min(
@@ -345,7 +342,7 @@ def standardize_metadata(directory: Path):
             key=highest_file_sort_key,
         )
         logger.info(f"Reading segmentation parameters from {segmentation_text_file}")
-        with open(segmentation_text_file, 'r') as segmTextFile:
+        with open(segmentation_text_file, "r") as segmTextFile:
             segmParams = {}
             for line in segmTextFile:
                 # Haven't seen any whitespace around '=', but be safe
@@ -355,33 +352,35 @@ def standardize_metadata(directory: Path):
                 segmParams[fieldName] = fieldContents
 
     logger.info("Finished reading segmentation parameters.")
-    
-    channel_names_qc_pass: Dict[ str, List[ str ] ] = defaultdict( list )
-    if channel_names_report_files :
-        channel_names_report_file = channel_names_report_files[ 0 ]
-        with open( channel_names_report_file, newline = '' ) as csvfile :
-            csvreader = csv.reader( csvfile, delimiter=',' )
-            for row in csvreader :
-                channel_names_qc_pass[ row[ 0 ] ].append( row[ 1 ].lstrip() )
-    else :
-        logger.warning( "No channelnames_report.csv file found. Including all channels in final output." )
-        
+
+    channel_names_qc_pass: Dict[str, List[str]] = defaultdict(list)
+    if channel_names_report_files:
+        channel_names_report_file = channel_names_report_files[0]
+        with open(channel_names_report_file, newline="") as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=",")
+            for row in csvreader:
+                channel_names_qc_pass[row[0]].append(row[1].lstrip())
+    else:
+        logger.warning(
+            "No channelnames_report.csv file found. Including all channels in final output."
+        )
+
     raw_data_location = find_raw_data_dir(directory)
-    logger.info(f'Raw data location: {raw_data_location}')
+    logger.info(f"Raw data location: {raw_data_location}")
 
     datasetInfo = {}
 
     datasetInfo["name"] = directory.name
-    datasetInfo["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    datasetInfo["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     datasetInfo["raw_data_location"] = fspath(raw_data_location.absolute())
-    datasetInfo["channel_names_qc_pass"] = dict( channel_names_qc_pass )
+    datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
         ("axial_resolution", ["zPitch", "z_pitch"]),
         ("lateral_resolution", ["xyResolution", "per_pixel_XY_resolution"]),
         ("magnification", ["magnification"]),
-        ("num_z_planes", [ "numZPlanes", "num_z_planes"]),
+        ("num_z_planes", ["numZPlanes", "num_z_planes"]),
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height"]),
@@ -396,39 +395,41 @@ def standardize_metadata(directory: Path):
 
     # Get tile overlaps.
     tile_overlap_mappings = [
-        ( "tile_overlap_x", "tile_overlap_X" ),
-        ( "tile_overlap_y", "tile_overlap_Y" )
+        ("tile_overlap_x", "tile_overlap_X"),
+        ("tile_overlap_y", "tile_overlap_Y"),
     ]
-    for target_key, possibleMatch in tile_overlap_mappings :
+    for target_key, possibleMatch in tile_overlap_mappings:
         try:
-            datasetInfo[ target_key ] = collect_attribute([ possibleMatch ], exptConfigDict)
+            datasetInfo[target_key] = collect_attribute([possibleMatch], exptConfigDict)
         except KeyError:
-            datasetInfo[ target_key ] = calculate_pixel_overlaps_from_proportional( target_key, exptConfigDict )
+            datasetInfo[target_key] = calculate_pixel_overlaps_from_proportional(
+                target_key, exptConfigDict
+            )
 
     # Get tiling mode.
     try:
-        datasetInfo[ "tiling_mode" ] = collect_attribute( [ "tiling_mode" ], exptConfigDict )
+        datasetInfo["tiling_mode"] = collect_attribute(["tiling_mode"], exptConfigDict)
     except KeyError:
-        datasetInfo[ "tiling_mode" ] = collect_tiling_mode( exptConfigDict )
-    
-    
+        datasetInfo["tiling_mode"] = collect_tiling_mode(exptConfigDict)
+
     # Get per-cycle channel names.
     try:
-        datasetInfo[ "per_cycle_channel_names" ] = collect_attribute( [ "channel_names" ], exptConfigDict )
+        datasetInfo["per_cycle_channel_names"] = collect_attribute(
+            ["channel_names"], exptConfigDict
+        )
     except KeyError:
-        datasetInfo[ "per_cycle_channel_names" ] = create_cycle_channel_names( exptConfigDict )
-
+        datasetInfo["per_cycle_channel_names"] = create_cycle_channel_names(exptConfigDict)
 
     if channel_names_files:
         channel_names_file = min(
             channel_names_files,
             key=highest_file_sort_key,
         )
-        logger.info(f'Reading channel names from {channel_names_file}')
-        with open(channel_names_file, 'r') as channelNamesFile:
+        logger.info(f"Reading channel names from {channel_names_file}")
+        with open(channel_names_file, "r") as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
     elif "channelNames" in exptConfigDict:
-        logger.info('Obtaining channel names from configuration data')
+        logger.info("Obtaining channel names from configuration data")
         channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
     else:
         raise ValueError("Cannot find data for channel_names field.")
@@ -442,9 +443,13 @@ def standardize_metadata(directory: Path):
     datasetInfo["num_cycles"] = int(
         len(channelNames) / len(datasetInfo["per_cycle_channel_names"])
     )
-    
-    bestFocusChannel = collect_attribute(["bestFocusReferenceChannel", "best_focus_channel", "referenceChannel"], exptConfigDict)
-    bestFocusCycle = collect_attribute(["bestFocusReferenceCycle", "referenceCycle"], exptConfigDict)
+
+    bestFocusChannel = collect_attribute(
+        ["bestFocusReferenceChannel", "best_focus_channel", "referenceChannel"], exptConfigDict
+    )
+    bestFocusCycle = collect_attribute(
+        ["bestFocusReferenceCycle", "referenceCycle"], exptConfigDict
+    )
     bestFocusChannelName = infer_channel_name_from_index(
         int(bestFocusCycle),
         int(bestFocusChannel),
@@ -452,8 +457,12 @@ def standardize_metadata(directory: Path):
         len(datasetInfo["per_cycle_channel_names"]),
     )
 
-    driftCompChannel = collect_attribute(["driftCompReferenceChannel", "drift_comp_channel", "referenceChannel"], exptConfigDict)
-    driftCompCycle = collect_attribute(["driftCompReferenceCycle", "referenceCycle"], exptConfigDict)
+    driftCompChannel = collect_attribute(
+        ["driftCompReferenceChannel", "drift_comp_channel", "referenceChannel"], exptConfigDict
+    )
+    driftCompCycle = collect_attribute(
+        ["driftCompReferenceCycle", "referenceCycle"], exptConfigDict
+    )
     driftCompChannelName = infer_channel_name_from_index(
         int(driftCompCycle),
         int(driftCompChannel),
@@ -505,10 +514,10 @@ def standardize_metadata(directory: Path):
 ########
 # MAIN #
 ########
-if __name__ == "__main__" :
+if __name__ == "__main__":
     # Set up argument parser and parse the command line arguments.
     parser = argparse.ArgumentParser(
-        description = "Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
+        description="Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
     )
     parser.add_argument(
         "rawDataLocation",
@@ -516,7 +525,7 @@ if __name__ == "__main__" :
         type=Path,
     )
     parser.add_argument(
-        '--outfile',
+        "--outfile",
         type=Path,
     )
 
@@ -531,7 +540,7 @@ if __name__ == "__main__" :
     # Write JSON pipeline config #
     ##############################
     logger.info("Writing pipeline config")
-    with open(args.outfile, 'w') as outfile:
+    with open(args.outfile, "w") as outfile:
         json.dump(data, outfile, indent=4)
 
     logger.info(f"Written pipeline config to {args.outfile}")
