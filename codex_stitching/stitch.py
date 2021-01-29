@@ -72,6 +72,7 @@ def generate_bigstitcher_macro_for_reference_channel(reference_channel_dir: Path
     macro = BigStitcherMacro()
     macro.img_dir = reference_channel_dir
     macro.out_dir = out_dir
+    macro.pattern = '1_{xxxxx}_Z001.tif'
     macro.num_tiles = info_for_bigstitcher['num_tiles']
     macro.num_tiles_x = info_for_bigstitcher['num_tiles_x']
     macro.num_tiles_y = info_for_bigstitcher['num_tiles_y']
