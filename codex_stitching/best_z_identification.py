@@ -48,6 +48,15 @@ def get_best_z_plane_id_parallelized(plane_paths_per_tile: dict) -> List[int]:
     return best_z_plane_id_list
 
 
+def find_lowest_var_axis(arr: np.ndarray) -> str:
+    sum_var_in_each_col = np.sum(np.var(arr, axis=0))
+    sum_var_in_each_row = np.sum(np.var(arr, axis=1))
+    if sum_var_in_each_col < sum_var_in_each_row:
+        return "col"
+    else:
+        return "row"
+
+
 def median_error_cor(array: np.array, mode: str) -> np.array:
     """ Replace all values in rows or cols with respective medians"""
     arr = array.copy()
@@ -93,7 +102,10 @@ def best_z_correction(
     rearranged_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
         best_z_per_tile_array, tiling_mode
     )
-    corrected_best_z_per_tile_array = median_error_cor(rearranged_best_z_per_tile_array, "col")
+    lowest_var_axis = find_lowest_var_axis(rearranged_best_z_per_tile_array)
+    corrected_best_z_per_tile_array = median_error_cor(
+        rearranged_best_z_per_tile_array, lowest_var_axis
+    )
     restored_arrangement_best_z_per_tile_array = change_tile_location_according_to_tiling_mode(
         corrected_best_z_per_tile_array, tiling_mode
     )
