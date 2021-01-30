@@ -114,25 +114,25 @@ def best_z_correction(
 
 
 def pick_z_planes_below_and_above(best_z: int, max_z: int, above: int, below: int) -> List[int]:
-    above_check = best_z + above - max_z
-    if above_check > 0:
-        above -= above_check
+    range_end = best_z + above
+    if range_end > max_z:
+        range_end = max_z
 
-    below_check = best_z - below
-    if below_check < 0:
-        below += below_check
+    range_start = best_z - below
+    if range_start < 1:
+        range_start = 1
 
     if max_z == 1:
         return [best_z]
     elif best_z == max_z:
-        below_planes = list(reversed([best_z - i for i in range(1, below + 1)]))
+        below_planes = list(range(range_start, best_z))
         above_planes = []
     elif best_z == 1:
         below_planes = []
-        above_planes = [best_z + i for i in range(1, above + 1)]
+        above_planes = list(range(best_z + 1, range_end + 1))
     else:
-        below_planes = list(reversed([best_z - i for i in range(1, below + 1)]))
-        above_planes = [best_z + i for i in range(1, above + 1)]
+        below_planes = list(range(range_start, best_z))
+        above_planes = list(range(best_z + 1, range_end + 1))
 
     return below_planes + [best_z] + above_planes
 
