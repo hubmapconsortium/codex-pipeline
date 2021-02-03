@@ -39,7 +39,7 @@ RUN mkdir /output && chmod -R a+rwx /output
 
 
 #Copy fiji from container
-COPY --from=vaskivskyi/fiji_bigstitcher:latest /opt/Fiji.app /opt/Fiji.app
+COPY --from=hubmap/fiji_bigstitcher:latest /opt/Fiji.app /opt/Fiji.app
 
 ENV PATH /opt/Fiji.app:$PATH
 
