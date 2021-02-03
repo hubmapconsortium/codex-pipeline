@@ -21,9 +21,3 @@ ENV PATH /opt/Fiji.app:$PATH
 # Update imagej
 RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
 && ImageJ-linux64 --headless --update update
-
-#MIST stitcher
-#libfftw3-dev\
-#RUN ImageJ-linux64 --headless --update add-update-site MIST https://sites.imagej.net/NIST-ISG-MIST/ \
-#&& ImageJ-linux64 --headless --update update
-
