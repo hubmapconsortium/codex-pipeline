@@ -7,7 +7,7 @@ hints:
     dockerOutputDirectory: /output
   NetworkAccess:
     networkAccess: true
-baseCommand: ["python", "/opt/codex_stitching/secondary_sticher/secondary_stitcher_runner.py"]
+baseCommand: ["python", "/opt/codex_stitching/secondary_stitcher/secondary_stitcher_runner.py"]
 
 
 inputs: 
