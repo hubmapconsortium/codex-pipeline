@@ -110,7 +110,7 @@ def run_bigstitcher(bigstitcher_macro_path: Path):
         command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     if res.returncode == 0:
-        print("Successfully finished")
+        print("Finished")
     else:
         raise Exception(
             "There was an error while running the BigStitcher: \n" + res.stderr.decode("utf-8")
@@ -268,10 +268,19 @@ def check_if_images_in_dir(dir_path: Path):
 
 
 def check_stitched_dirs(stitched_channel_dirs: dict):
+    print("Checking if BigStitcher produced image:")
     for cycle in stitched_channel_dirs:
         for region in stitched_channel_dirs[cycle]:
             for channel, dir_path in stitched_channel_dirs[cycle][region].items():
-                print(dir_path, check_if_images_in_dir(dir_path))
+                if check_if_images_in_dir(dir_path):
+                    print(dir_path, "passed")
+                else:
+                    print(dir_path, "no image in dir")
+                    raise ValueError(
+                        "Probably there was an error while running BigStithcer. "
+                        + "There is no image in the directory "
+                        + str(dir_path)
+                    )
 
 
 def find_raw_data_dir(directory: Path) -> Path:
@@ -293,6 +302,12 @@ def find_raw_data_dir(directory: Path) -> Path:
     return raw_data_dir_possibilities[0]
 
 
+def print_img_dirs(img_dirs: List[Path]):
+    print("Image directories:")
+    for dir_path in img_dirs:
+        print(str(dir_path))
+
+
 def main(data_dir: Path, pipeline_config_path: Path):
     start = datetime.now()
     print("\nStarted", start)
@@ -302,7 +317,7 @@ def main(data_dir: Path, pipeline_config_path: Path):
     dataset_dir = find_raw_data_dir(data_dir)
 
     img_dirs = get_img_dirs(dataset_dir)
-    print("Image directories:", [str(dir_path) for dir_path in img_dirs])
+    print_img_dirs(img_dirs)
 
     best_focus_dir = Path("/output/best_focus")
     out_dir = Path("/output/processed_images")
