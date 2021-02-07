@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(
-        description="Wrapper script for SPRM analysis code.",
-    )
+    parser = argparse.ArgumentParser(description="Wrapper script for SPRM analysis code.")
     parser.add_argument(
         "ometiff_dir",
         help="Path to directory containing OME-TIFF files.",
