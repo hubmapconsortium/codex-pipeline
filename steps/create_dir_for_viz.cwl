@@ -4,7 +4,7 @@ label: Create directory containing symlinks to relevant files for visualization 
 hints:
   DockerRequirement:
     dockerPull: hubmap/codex-scripts
-baseCommand: /opt/create_visualization_dir.py
+baseCommand: ["python", "/opt/create_visualization_dir.py"]
 
 inputs:
   cytokit_config_file:
