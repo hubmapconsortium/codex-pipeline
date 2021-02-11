@@ -1,22 +1,20 @@
 import argparse
 import logging
-import os
 import re
 import tarfile
 from collections import defaultdict
-from os import walk
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import yaml
-
-from utils import collect_files_by_tile, infer_tile_names, list_directory_tree
+from utils import list_directory_tree
 
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(levelname)-7s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+region_pattern = re.compile(r"^reg(\d+)_*")
 
 
 def alpha_num_order(string: str) -> str:
@@ -42,14 +40,12 @@ def make_dir_if_not_exists(dir_path: Path):
 
 
 def get_file_paths_by_region(dir_listing: List[Path]) -> Dict[int, List[Path]]:
-    file_path_by_reg = {}
+    file_path_by_reg = defaultdict(list)
 
-    for i, path in enumerate(dir_listing):
-        region_id = int(re.search(r"^reg(\d+)_*", path.name).groups()[0])
-        if region_id in file_path_by_reg:
-            file_path_by_reg[region_id] += [path]
-        else:
-            file_path_by_reg[region_id] = [path]
+    for path in dir_listing:
+        if s := region_pattern.search(path.name):
+            region_id = int(s.groups()[0])
+            file_path_by_reg[region_id].append(path)
 
     return file_path_by_reg
 
@@ -86,25 +82,25 @@ def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
 
     # TODO: Perhaps a proper function to do this in a less repetitive way would be nicer.
     for region in segmentation_mask_ometiffs:
-        reg_dir = output_dir / Path("reg" + str(region))
+        reg_dir = output_dir / f"reg{region}"
         make_dir_if_not_exists(reg_dir)
 
     for region in segmentation_mask_ometiffs:
-        reg_dir = output_dir / Path("reg" + str(region))
+        reg_dir = output_dir / f"reg{region}"
         symlink = reg_dir / "segmentation.ome.tiff"
         for img_path in segmentation_mask_ometiffs[region]:
             link_target = create_relative_symlink_target(img_path, ometiff_dir, symlink)
             symlinks_to_archive.append((symlink, link_target))
 
     for region in expressions_ometiffs:
-        reg_dir = output_dir / Path("reg" + str(region))
+        reg_dir = output_dir / f"reg{region}"
         symlink = reg_dir / "antigen_exprs.ome.tiff"
         for img_path in expressions_ometiffs[region]:
             link_target = create_relative_symlink_target(img_path, ometiff_dir, symlink)
             symlinks_to_archive.append((symlink, link_target))
 
     for region in sprm_outputs:
-        reg_dir = output_dir / Path("reg" + str(region))
+        reg_dir = output_dir / f"reg{region}"
         for sprm_file_path in sprm_outputs[region]:
             symlink = reg_dir / sprm_file_path.name
             link_target = create_relative_symlink_target(sprm_file_path, sprm_output_dir, symlink)
@@ -123,7 +119,7 @@ def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description=("Set up a directory containing the files for the visualization team.")
+        description="Set up a directory containing the files for the visualization team."
     )
     parser.add_argument(
         "cytokit_yaml_config",
