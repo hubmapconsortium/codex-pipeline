@@ -4,7 +4,7 @@ import re
 import tarfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 from utils import list_directory_tree
 
@@ -19,7 +19,9 @@ region_pattern = re.compile(r"^reg(\d+)_*")
 
 def alpha_num_order(string: str) -> str:
     """Returns all numbers on 5 digits to let sort the string with numeric order.
-    Ex: alpha_num_order("a6b12.125")  ==> "a00006b00012.00125"
+
+    >>> alpha_num_order("a6b12.125")
+    'a00006b00012.00125'
     """
     return "".join(
         [format(int(x), "05d") if x.isdigit() else x for x in re.split(r"(\d+)", string)]
@@ -39,7 +41,7 @@ def make_dir_if_not_exists(dir_path: Path):
         dir_path.mkdir(parents=True, exist_ok=True)
 
 
-def get_file_paths_by_region(dir_listing: List[Path]) -> Dict[int, List[Path]]:
+def get_file_paths_by_region(dir_listing: Iterable[Path]) -> Dict[int, List[Path]]:
     file_path_by_reg = defaultdict(list)
 
     for path in dir_listing:
@@ -74,7 +76,7 @@ def main(ometiff_dir, sprm_output_dir):
 
     segmentation_mask_ometiffs = get_file_paths_by_region(get_img_listing(cytometry_ometiff_dir))
     expressions_ometiffs = get_file_paths_by_region(get_img_listing(expressions_ometiff_dir))
-    sprm_outputs = get_file_paths_by_region(list(sprm_output_dir.iterdir()))
+    sprm_outputs = get_file_paths_by_region(sprm_output_dir.iterdir())
 
     symlinks_to_archive: List[Tuple[Path, Path]] = []
 
@@ -100,7 +102,8 @@ def main(ometiff_dir, sprm_output_dir):
     for region in sprm_outputs:
         reg_dir = output_dir / f"reg{region}"
         for sprm_file_path in sprm_outputs[region]:
-            symlink = reg_dir / sprm_file_path.name
+            # kind of hacky, but works well enough
+            symlink = reg_dir / sprm_file_path.name.split(".ome.tiff", 1)[1].lstrip("-")
             link_target = create_relative_symlink_target(sprm_file_path, sprm_output_dir, symlink)
             symlinks_to_archive.append((symlink, link_target))
 
