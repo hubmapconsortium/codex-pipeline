@@ -7,18 +7,14 @@ hints:
 baseCommand: ["python", "/opt/create_visualization_dir.py"]
 
 inputs:
-  cytokit_config_file:
-    type: File
-    inputBinding:
-      position: 1
   ometiff_dir:
     type: Directory
     inputBinding:
-      position: 2
+      position: 1
   sprm_output:
     type: Directory
     inputBinding:
-      position: 3
+      position: 2
 outputs:
   for_viz_dir:
     type: File

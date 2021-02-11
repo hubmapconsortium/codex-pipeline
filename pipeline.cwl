@@ -114,8 +114,6 @@ steps:
 
   - id: create_dir_for_viz
     in:
-      - id: cytokit_config_file
-        source: create_yaml_config/cytokit_config
       - id: ometiff_dir
         source: second_stitching/stitched_images
       - id: sprm_output

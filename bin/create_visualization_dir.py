@@ -51,17 +51,15 @@ def get_file_paths_by_region(dir_listing: List[Path]) -> Dict[int, List[Path]]:
 
 
 def create_relative_symlink_target(file_path: Path, file_dir: Path, file_symlink: Path) -> Path:
-
     relative_input_path = file_dir.name / file_path.relative_to(file_dir)
     relative_output_path_piece = Path(*[".."] * (len(file_symlink.parts) - 1))
     return relative_output_path_piece / relative_input_path
 
 
-def main(cytokit_yaml_config, ometiff_dir, sprm_output_dir):
+def main(ometiff_dir, sprm_output_dir):
     cytometry_ometiff_dir = ometiff_dir / "mask"
     expressions_ometiff_dir = ometiff_dir / "expressions"
 
-    # TODO: use logging for this
     logger.debug(f"{ometiff_dir=}")
     logger.debug("Cytometry OME-TIFF directory listing:")
     logger.debug("\n" + list_directory_tree(cytometry_ometiff_dir))
@@ -122,11 +120,6 @@ if __name__ == "__main__":
         description="Set up a directory containing the files for the visualization team."
     )
     parser.add_argument(
-        "cytokit_yaml_config",
-        help="Path to Cytokit YAML config file.",
-        type=Path,
-    )
-    parser.add_argument(
         "ometiff_dir",
         help="Path to Cytokit output directory from OME-TIFF creation pipeline step.",
         type=Path,
@@ -138,4 +131,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.cytokit_yaml_config, args.ometiff_dir, args.sprm_output_dir)
+    main(args.ometiff_dir, args.sprm_output_dir)
