@@ -27,14 +27,6 @@ outputs:
     outputSource: second_stitching/stitched_images
     type: Directory
     label: "Segmentation masks and expressions in OME-TIFF format"
-  sprm_output_dir:
-    outputSource: run_sprm/sprm_output_dir
-    type: Directory
-    label: "Directory containing all SPRM outputs"
-  for_viz_dir:
-    outputSource: create_dir_for_viz/for_viz_dir
-    type: File
-    label: "Archive of symbolic links to files for visualization team"
 
 steps:
   - id: collect_dataset_info
@@ -101,24 +93,3 @@ steps:
     out: 
        - stitched_images
     run: steps/second_stitching.cwl
-    
-
-  - id: run_sprm
-    in:
-      - id: ometiff_dir
-        source: second_stitching/stitched_images
-    out:
-      - sprm_output_dir
-    run: steps/run_sprm.cwl
-    label: "Run SPRM analysis of OME-TIFF files"
-
-  - id: create_dir_for_viz
-    in:
-      - id: ometiff_dir
-        source: second_stitching/stitched_images
-      - id: sprm_output
-        source: run_sprm/sprm_output_dir
-    out:
-      - for_viz_dir
-    run: steps/create_dir_for_viz.cwl
-    label: "Create directory containing symlinks to relevant files for visualization team"
