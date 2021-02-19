@@ -29,42 +29,42 @@ outputs:
     label: "Segmentation masks and expressions in OME-TIFF format"
 
 steps:
-  - id: collect_dataset_info
+  collect_dataset_info:
     in:
-      - id: base_directory
+      base_directory:
         source: data_dir
     out:
       - pipeline_config
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
     
-  - id: first_stitching
+  first_stitching:
     in:
-      - id: data_dir
+      data_dir:
         source: data_dir
-      - id: pipeline_config
+      pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
        - modified_pipeline_config
        - image_tiles
     run: steps/first_stitching.cwl
 
-  - id: create_yaml_config
+  create_yaml_config:
     in:
-      - id: pipeline_config
+      pipeline_config:
         source: first_stitching/modified_pipeline_config
-      - id: gpus
+      gpus:
         source: gpus
     out:
       - cytokit_config
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
     
-  - id: run_cytokit
+  run_cytokit:
     in:
-      - id: data_dir
+      data_dir:
         source: first_stitching/image_tiles
-      - id: yaml_config
+      yaml_config:
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
@@ -73,22 +73,22 @@ steps:
     label: "CODEX analysis via Cytokit processor and operator"
 
 
-  - id: ome_tiff_creation
+  ome_tiff_creation:
     in:
-      - id: cytokit_output
+      cytokit_output:
         source: run_cytokit/cytokit_output
-      - id: cytokit_config
+      cytokit_config:
         source: create_yaml_config/cytokit_config
     out:
       - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
     
-  - id: second_stitching
+  second_stitching:
     in:
-      - id: pipeline_config
+      pipeline_config:
         source: first_stitching/modified_pipeline_config
-      - id: ometiff_dir
+      ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
     out: 
        - stitched_images
