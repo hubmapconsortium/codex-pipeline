@@ -37,7 +37,7 @@ steps:
       - pipeline_config
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
-    
+
   first_stitching:
     in:
       data_dir:
@@ -59,7 +59,7 @@ steps:
       - cytokit_config
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
-    
+
   run_cytokit:
     in:
       data_dir:
@@ -83,13 +83,13 @@ steps:
       - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
-    
+
   second_stitching:
     in:
       pipeline_config:
         source: first_stitching/modified_pipeline_config
       ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
-    out: 
+    out:
        - stitched_images
     run: steps/second_stitching.cwl

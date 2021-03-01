@@ -10,20 +10,20 @@ hints:
 baseCommand: ["python", "/opt/codex_stitching/secondary_stitcher/secondary_stitcher_runner.py"]
 
 
-inputs: 
+inputs:
   pipeline_config:
     type: File
     inputBinding:
       prefix: "--pipeline_config_path"
-  
+
   ometiff_dir:
     type: Directory
     inputBinding:
       prefix: "--ometiff_dir"
-  
+
 outputs:
   stitched_images:
     type: Directory
     outputBinding:
       glob: /output/stitched
-   
+

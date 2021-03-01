@@ -25,11 +25,11 @@ hints:
              fi
           fi
           unset __conda_setup
-          
+
           export PYTHONPATH=/lab/repos/cytokit/python/pipeline
           conda activate cytokit
-          
-          
+
+
           cytokit processor run_all --data-dir $(inputs.data_dir.path) --config-path $(inputs.yaml_config.path) --output-dir /lab/cytokit_output && \
           cytokit operator run_all --data-dir /lab/cytokit_output --config-path $(inputs.yaml_config.path) --output-dir /lab/cytokit_output
 
@@ -47,7 +47,7 @@ outputs:
     type: Directory
     outputBinding:
       glob: /lab/cytokit_output
-  
+
   data_json:
     type: File
     outputBinding:
