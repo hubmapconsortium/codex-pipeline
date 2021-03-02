@@ -27,16 +27,9 @@ ENV PATH /opt/conda/envs/hubmap/bin:$PATH
 
 WORKDIR /opt
 
-COPY sprm /opt/sprm
-RUN cd sprm \
- && pip install . \
- && cd .. \
- && rm -rf sprm
-
 COPY bin /opt
 COPY codex_stitching /opt/codex_stitching
 RUN mkdir /output && chmod -R a+rwx /output
-
 
 #Copy fiji from container
 COPY --from=hubmap/fiji_bigstitcher:latest /opt/Fiji.app /opt/Fiji.app
