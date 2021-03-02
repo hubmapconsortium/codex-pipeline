@@ -1,35 +1,10 @@
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Dict, List, Tuple
 
 
-def sort_each_level(dictionary: dict):
-    sorted_dictionary = dict()
-
-    sorted_cycle_keys = sorted(dictionary.keys())
-    for cycle_key in sorted_cycle_keys:
-        sorted_dictionary[cycle_key] = {}
-        sorted_region_keys = sorted(dictionary[cycle_key].keys())
-        for region_key in sorted_region_keys:
-            sorted_dictionary[cycle_key][region_key] = {}
-            sorted_channel_keys = sorted(dictionary[cycle_key][region_key].keys())
-            for channel_key in sorted_channel_keys:
-                sorted_dictionary[cycle_key][region_key][channel_key] = {}
-                sorted_tile_keys = sorted(dictionary[cycle_key][region_key][channel_key].keys())
-                for tile_key in sorted_tile_keys:
-                    sorted_dictionary[cycle_key][region_key][channel_key][tile_key] = {}
-                    sorted_plane_keys = sorted(
-                        dictionary[cycle_key][region_key][channel_key][tile_key].keys()
-                    )
-                    for plane_key in sorted_plane_keys:
-                        plane_path = dictionary[cycle_key][region_key][channel_key][tile_key][
-                            plane_key
-                        ]
-                        sorted_dictionary[cycle_key][region_key][channel_key][tile_key][
-                            plane_key
-                        ] = plane_path
-
-    return sorted_dictionary
+def sort_dict(item: dict):
+    return {k: sort_dict(v) if isinstance(v, dict) else v for k, v in sorted(item.items())}
 
 
 def alpha_num_order(string: str) -> str:
@@ -122,5 +97,5 @@ def create_listing_for_each_cycle_region(
                 listing_per_cycle[cycle][region] = arranged_listing
             else:
                 listing_per_cycle[cycle] = {region: arranged_listing}
-    sorted_listing = sort_each_level(listing_per_cycle)
+    sorted_listing = sort_dict(listing_per_cycle)
     return sorted_listing
