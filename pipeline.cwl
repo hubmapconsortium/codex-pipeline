@@ -20,101 +20,76 @@ outputs:
     type: File
     label: "Cytokit configuration format"
   data_json:
-    outputSource: cytokit_processor/data_json
+    outputSource: run_cytokit/data_json
     type: File
     label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection"
-  ome_tiff_output:
-    outputSource: ome_tiff_creation/ome_tiffs
+  stitched_images:
+    outputSource: second_stitching/stitched_images
     type: Directory
-    label: "Segmentation masks in OME-TIFF format"
-  sprm_output_dir:
-    outputSource: run_sprm/sprm_output_dir
-    type: Directory
-    label: "Directory containing all SPRM outputs"
-  for_viz_dir:
-    outputSource: create_dir_for_viz/for_viz_dir
-    type: File
-    label: "Archive of symbolic links to files for visualization team"
+    label: "Segmentation masks and expressions in OME-TIFF format"
 
 steps:
-  - id: collect_dataset_info
+  collect_dataset_info:
     in:
-      - id: base_directory
+      base_directory:
         source: data_dir
     out:
       - pipeline_config
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
 
-  - id: create_yaml_config
+  first_stitching:
     in:
-      - id: pipeline_config
+      data_dir:
+        source: data_dir
+      pipeline_config:
         source: collect_dataset_info/pipeline_config
-      - id: gpus
+    out:
+       - modified_pipeline_config
+       - image_tiles
+    run: steps/first_stitching.cwl
+
+  create_yaml_config:
+    in:
+      pipeline_config:
+        source: first_stitching/modified_pipeline_config
+      gpus:
         source: gpus
     out:
       - cytokit_config
     run: steps/create_yaml_config.cwl
     label: "Create Cytokit experiment config"
 
-  - id: cytokit_processor
+  run_cytokit:
     in:
-      - id: data_dir
-        source: data_dir
-      - id: pipeline_config
-        source: collect_dataset_info/pipeline_config
-      - id: yaml_config
+      data_dir:
+        source: first_stitching/image_tiles
+      yaml_config:
         source: create_yaml_config/cytokit_config
     out:
       - cytokit_output
       - data_json
-    run: steps/cytokit_processor.cwl
-    label: "CODEX analysis via Cytokit 'processor'"
+    run: steps/run_cytokit.cwl
+    label: "CODEX analysis via Cytokit processor and operator"
 
-  - id: cytokit_operator
-    in:
-      - id: data_dir
-        source: cytokit_processor/cytokit_output
-      - id: pipeline_config
-        source: collect_dataset_info/pipeline_config
-      - id: yaml_config
-        source: create_yaml_config/cytokit_config
-    out:
-      - cytokit_output
-    run: steps/cytokit_operator.cwl
-    label: "CODEX analysis via Cytokit 'operator'"
 
-  - id: ome_tiff_creation
+  ome_tiff_creation:
     in:
-      - id: cytokit_processor_output
-        source: cytokit_processor/cytokit_output
-      - id: cytokit_operator_output
-        source: cytokit_operator/cytokit_output
-      - id: cytokit_config
+      cytokit_output:
+        source: run_cytokit/cytokit_output
+      cytokit_config:
         source: create_yaml_config/cytokit_config
     out:
       - ome_tiffs
     run: steps/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
 
-  - id: run_sprm
+  second_stitching:
     in:
-      - id: ometiff_dir
+      pipeline_config:
+        source: first_stitching/modified_pipeline_config
+      ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
     out:
-      - sprm_output_dir
-    run: steps/run_sprm.cwl
-    label: "Run SPRM analysis of OME-TIFF files"
-
-  - id: create_dir_for_viz
-    in:
-      - id: cytokit_config_file
-        source: create_yaml_config/cytokit_config
-      - id: ometiff_dir
-        source: ome_tiff_creation/ome_tiffs
-      - id: sprm_output
-        source: run_sprm/sprm_output_dir
-    out:
-      - for_viz_dir
-    run: steps/create_dir_for_viz.cwl
-    label: "Create directory containing symlinks to relevant files for visualization team"
+       - stitched_images
+    run: steps/second_stitching.cwl

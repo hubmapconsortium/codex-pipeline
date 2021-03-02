@@ -1,0 +1,23 @@
+name: base
+channels:
+    - defaults
+    - conda-forge
+dependencies:
+    - python>=3.8,<4
+    - pip
+    - numpy-base>=1.18
+    - numpy>=1.18
+    - scipy>=1.4.0
+    - pandas>=0.25
+    - dask>=2.6.0
+    - imagecodecs>=2020.5.30
+    - pip:
+        - tifffile==2020.2.16
+        - PyYAML>=5.3.0
+        - aicsimageio<3.2
+        - lxml~=4.5.1
+        - matplotlib~=3.2.1
+        - scikit-image~=0.17.2
+        - scikit-learn~=0.23.1
+        - shapely~=1.7.0
+        - opencv-contrib-python-headless>=4.0

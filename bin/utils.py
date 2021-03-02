@@ -1,8 +1,8 @@
+import re
 from collections import defaultdict
 from os import walk
 from pathlib import Path
 from pprint import pformat
-import re
 from typing import Dict, List
 
 import yaml

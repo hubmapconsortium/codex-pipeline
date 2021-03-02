@@ -12,6 +12,14 @@ A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.a
 * Generate [OME-TIFF](https://docs.openmicroscopy.org/ome-model/6.0.1/ome-tiff/specification.html) versions of TIFFs created by Cytokit.
 * Perform downstream analysis using [SPRM](https://github.com/hubmapconsortium/sprm).
 
+## Development
+Code in this repository is formatted with [black](https://github.com/psf/black) and
+[isort](https://pypi.org/project/isort/), and this is checked via Travis CI.
+
+A [pre-commit](https://pre-commit.com/) hook configuration is provided, which runs `black` and `isort` before committing.
+Run `pre-commit install` in each clone of this repository which you will use for development (after `pip install pre-commit`
+into an appropriate Python environment, if necessary).
+
 ## Building containers
 Two `Dockerfile`s are included in this repository. A `docker_images.txt` manifest is included, which is intended
 for use in the `build_docker_containers` script provided by the
@@ -26,22 +34,11 @@ python -m pip install multi-docker-build
 The `master` branch is intended to be production-ready at all times, and should always reference Docker containers
 with the `latest` tag.
 
-The `release` branch is used to publish a tagged version of this pipeline, referring to timestamp-tagged Docker
-containers. To do this, given that `master` is up-to-date:
-```shell script
-git checkout release
-git merge master
-build_docker_containers --tag-latest --push
+Publication of tagged "release" versions of the pipeline is handled with the
+[HuBMAP pipeline release management](https://github.com/hubmapconsortium/pipeline-release-mgmt) Python package. To
+release a new pipeline version, *ensure that the `master` branch contains all commits that you want to include in the release,*
+then run
+```shell
+tag_releae_pipeline v0.whatever
 ```
-Update all timestamped tags in the CWL files in `steps` to refer to the new timestamped containers you just built.
-*TODO*: automate this.
-
-Then, tag a new version of the repository and push the tag and `release` branch. If you have a GPG key you can use
-to sign tags, replace the `-a` option with `-s` below.
-```shell script
-git add steps
-git commit -m 'Update container timestamps for version v0.whatever'
-git tag -a v0.whatever
-git push
-git push --tags
-```
+See the pipeline release managment script usage notes for additional options, such as GPG signing.
