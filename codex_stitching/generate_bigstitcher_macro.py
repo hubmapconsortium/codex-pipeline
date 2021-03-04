@@ -9,7 +9,7 @@ class BigStitcherMacro:
         self.img_dir = Path(".")
         self.out_dir = Path(".")
         self.xml_file_name = "dataset.xml"
-        self.pattern = "1_{xxxxx}_Z001.tif"
+        self.pattern = "{xxxxx}.tif"
 
         # range: 1-5 or list: 1,2,3,4,5
         self.num_tiles = 1
@@ -99,7 +99,7 @@ class BigStitcherMacro:
         return formatted_macro
 
     def write_to_temp_macro_file(self, formatted_macro):
-        file_name = "reg" + str(self.region) + "_bigstitcher_macro.ijm"
+        file_name = "reg" + str(self.region) + "_stitch_macro.ijm"
         macro_file_path = self.img_dir.joinpath(file_name)
         with open(macro_file_path, "w") as f:
             f.write(formatted_macro)
@@ -179,7 +179,7 @@ class FuseMacro:
         return formatted_macro
 
     def write_to_macro_file_in_channel_dir(self, img_dir: Path, formatted_macro: str):
-        macro_file_path = img_dir.joinpath("fuse_only_macro.ijm")
+        macro_file_path = img_dir.joinpath("fuse_macro.ijm")
         with open(macro_file_path, "w") as f:
             f.write(formatted_macro)
         return macro_file_path
