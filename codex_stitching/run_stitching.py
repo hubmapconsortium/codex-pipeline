@@ -101,14 +101,14 @@ def main(data_dir: Path, pipeline_config_path: Path):
     )
 
     print("\nSplitting channels into tiles")
-    block_size = 1000
+    tile_size = 1000
     overlap = 100
-    block_shape = (block_size, block_size)
+    tile_shape = (tile_size, tile_size)
     split_channels_into_tiles(
-        stitched_channel_dirs, dirs_for_new_tiles_per_cycle_region, block_size, overlap
+        stitched_channel_dirs, dirs_for_new_tiles_per_cycle_region, tile_size, overlap
     )
     modified_experiment = modify_pipeline_config(
-        pipeline_config_path, block_shape, overlap, stitched_img_shape
+        pipeline_config_path, tile_shape, overlap, stitched_img_shape
     )
 
     save_modified_pipeline_config(modified_experiment, pipeline_conf_dir)
