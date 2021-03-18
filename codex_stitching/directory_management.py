@@ -73,7 +73,9 @@ def get_ref_channel_dir_per_region(
     return reference_channel_dir, stitched_ref_channel_dir
 
 
-def create_output_dirs_for_tiles(stitched_channel_dirs: dict, out_dir: Path, dir_naming_template: str):
+def create_output_dirs_for_tiles(
+    stitched_channel_dirs: dict, out_dir: Path, dir_naming_template: str
+):
     new_tiles_dirs = dict()
     for cycle in stitched_channel_dirs:
         new_tiles_dirs[cycle] = {}
@@ -119,7 +121,7 @@ def check_stitched_dirs(stitched_channel_dirs: dict):
                     checked_str.append(str(dir_path) + " no image in dir")
                     checked_bool.append(False)
 
-    print('\n'.join(checked_str))
+    print("\n".join(checked_str))
 
     if sum(checked_bool) < len(checked_bool):
         raise ValueError(

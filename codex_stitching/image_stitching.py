@@ -6,9 +6,11 @@ from typing import List
 
 import dask
 import tifffile as tif
-
-from directory_management import create_dirs_for_stitched_channels, get_ref_channel_dir_per_region, \
-    check_stitched_dirs
+from directory_management import (
+    check_stitched_dirs,
+    create_dirs_for_stitched_channels,
+    get_ref_channel_dir_per_region,
+)
 from generate_bigstitcher_macro import BigStitcherMacro, FuseMacro
 from slicer.slicer_runner import get_image_path_in_dir
 
