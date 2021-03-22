@@ -3,11 +3,11 @@ class: CommandLineTool
 
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.0b1
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
   NetworkAccess:
     networkAccess: true
-baseCommand: ["python", "/opt/codex_stitching/stitch.py"]
+baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
 
 
 inputs:

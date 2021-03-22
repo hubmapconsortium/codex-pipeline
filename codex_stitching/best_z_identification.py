@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import cv2 as cv
 import dask
@@ -139,7 +139,7 @@ def pick_z_planes_below_and_above(best_z: int, max_z: int, above: int, below: in
 
 def get_best_z_plane_ids_per_tile(
     plane_paths_per_tile: dict, x_ntiles: int, y_ntiles: int, max_z: int, tiling_mode: str
-) -> dict:
+) -> Dict[int, List[int]]:
     best_z_plane_id_list = get_best_z_plane_id_parallelized(plane_paths_per_tile)
     corrected_best_z_plane_id_list = best_z_correction(
         best_z_plane_id_list, x_ntiles, y_ntiles, tiling_mode

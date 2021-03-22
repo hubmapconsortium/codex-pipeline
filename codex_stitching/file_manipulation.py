@@ -12,16 +12,6 @@ def make_dir_if_not_exists(dir_path: Path):
         dir_path.mkdir(parents=True)
 
 
-def convert(img, target_type_min, target_type_max, target_type):
-    imin = img.min()
-    imax = img.max()
-
-    a = (target_type_max - target_type_min) / (imax - imin)
-    b = target_type_max - a * imax
-    new_img = (a * img + b).astype(target_type)
-    return new_img
-
-
 def project_stack(path_list: List[Path]):
     path_strs = [str(path) for path in path_list]
     stack = np.stack(list(map(tif.imread, path_strs)), axis=0)

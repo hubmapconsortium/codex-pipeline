@@ -1,17 +1,19 @@
-import re
 from math import ceil
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 from best_z_identification import get_best_z_plane_ids_per_tile
-from image_path_arrangement import create_listing_for_each_cycle_region
+from image_path_arrangement import (
+    create_listing_for_each_cycle_region,
+    extract_digits_from_string,
+)
 
 
 def _change_image_file_name(original_name: str) -> str:
-    sub_z = re.sub(r"Z\d{3}", "Z001", original_name)  # replace z plane id (Z) in all tiles to Z001
-    sub_ch = re.sub(r"_CH\d+\.", ".", sub_z)  # remove channel (CH) from name
-
-    return sub_ch
+    """ Output tiles will have names 00001.tif, 00002.tif ..."""
+    digits = extract_digits_from_string(original_name)
+    tile = digits[1]
+    return "{tile:05d}.tif".format(tile=tile)
 
 
 def _get_reference_channel_paths(
@@ -19,12 +21,12 @@ def _get_reference_channel_paths(
 ) -> Dict[int, Path]:
     ref_cycle_id = ceil(reference_channel_id / num_channels_per_cycle) - 1
     ref_cycle = sorted(listing_per_cycle.keys())[ref_cycle_id]
-    in_cycle_ref_channel_id = reference_channel_id - ref_cycle_id * num_channels_per_cycle
+    ref_cycle_ref_channel_id = reference_channel_id - ref_cycle_id * num_channels_per_cycle
 
     reference_channel_tile_paths = dict()
     for region in listing_per_cycle[ref_cycle]:
         reference_channel_tile_paths.update({region: {}})
-        this_channel_tile_paths = listing_per_cycle[ref_cycle][region][in_cycle_ref_channel_id]
+        this_channel_tile_paths = listing_per_cycle[ref_cycle][region][ref_cycle_ref_channel_id]
         reference_channel_tile_paths[region] = this_channel_tile_paths
 
     return reference_channel_tile_paths
@@ -52,21 +54,29 @@ def _create_dirs_for_each_channel(
     return channel_dirs
 
 
+def find_best_z_plane_ids_per_tile(
+    tile_paths, max_z: int, x_ntiles: int, y_ntiles: int, tiling_mode: str
+) -> Dict[int, List[int]]:
+    best_z_planes_per_tile = get_best_z_plane_ids_per_tile(
+        tile_paths, x_ntiles, y_ntiles, max_z, tiling_mode
+    )
+    return best_z_planes_per_tile
+
+
 def _find_best_z_planes_per_region_tile(
     reference_channel_tile_paths: dict, max_z: int, x_ntiles: int, y_ntiles: int, tiling_mode: str
-) -> Dict[int, Dict[int, List[Path]]]:
+) -> Dict[int, Dict[int, List[int]]]:
     best_z_plane_per_region = dict()
 
     for region in reference_channel_tile_paths:
-        best_z_plane_per_tile = get_best_z_plane_ids_per_tile(
-            reference_channel_tile_paths[region], x_ntiles, y_ntiles, max_z, tiling_mode
+        best_z_plane_per_region[region] = find_best_z_plane_ids_per_tile(
+            reference_channel_tile_paths[region], max_z, x_ntiles, y_ntiles, tiling_mode
         )
-        best_z_plane_per_region[region] = best_z_plane_per_tile
 
     return best_z_plane_per_region
 
 
-def _select_best_z_planes_in_this_channel(
+def _map_best_z_planes_in_channel_to_output_plane(
     channel_paths: dict, out_dir: Path, best_z_plane_per_tile: dict
 ) -> List[Tuple[List[Path], Path]]:
     best_z_plane_paths = list()
@@ -94,15 +104,16 @@ def _select_best_z_plane_paths(
 
     for cycle in listing_per_cycle:
         this_cycle_listing = listing_per_cycle[cycle]
-        best_z_plane_paths_per_cycle.update({cycle: {}})
+        best_z_plane_paths_per_cycle[cycle] = dict()
         for region in this_cycle_listing:
             this_region_listing = this_cycle_listing[region]
-            best_z_plane_paths_per_cycle[cycle].update({region: {}})
+            best_z_plane_paths_per_cycle[cycle][region] = dict()
             for channel in this_region_listing:
                 this_channel_paths = this_region_listing[channel]
                 this_channel_out_dir = channel_dirs[cycle][region][channel]
+
                 this_region_best_z_planes = best_z_plane_per_region[region]
-                best_z_plane_paths = _select_best_z_planes_in_this_channel(
+                best_z_plane_paths = _map_best_z_planes_in_channel_to_output_plane(
                     this_channel_paths, this_channel_out_dir, this_region_best_z_planes
                 )
 

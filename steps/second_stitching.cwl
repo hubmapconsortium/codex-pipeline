@@ -3,7 +3,7 @@ class: CommandLineTool
 
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.0b1
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: /output
   NetworkAccess:
     networkAccess: true
