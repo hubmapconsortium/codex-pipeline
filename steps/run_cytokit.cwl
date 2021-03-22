@@ -6,7 +6,7 @@ baseCommand: ["sh", "run_cytokit.sh"]
 
 hints:
   DockerRequirement:
-    dockerPull: hubmap/cytokit:latest
+    dockerPull: hubmap/cytokit:2.0b2
     dockerOutputDirectory: "/lab/cytokit_output"
   DockerGpuRequirement: {}
 
