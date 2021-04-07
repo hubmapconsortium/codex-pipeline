@@ -383,15 +383,20 @@ def standardize_metadata(directory: Path):
         ("num_z_planes", ["numZPlanes", "num_z_planes"]),
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
-        ("region_height", ["region_height"]),
-        ("region_width", ["region_width"]),
-        ("tile_height", ["tile_height"]),
-        ("tile_width", ["tile_width"]),
-        ("region_names", ["region_names", "regIdx"]),
+        ("region_height", ["region_height", "regionHeight"]),
+        ("region_width", ["region_width", "regionWidth"]),
+        ("tile_height", ["tile_height", "tileHeight"]),
+        ("tile_width", ["tile_width", "tileWidth"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
         datasetInfo[target_key] = collect_attribute(possibilities, exptConfigDict)
+
+    try:
+        datasetInfo["region_names"] = collect_attribute(["region_names", "regIdx"], exptConfigDict)
+    except KeyError:
+        # Not present in experiment configuration. Get from filesystem
+        datasetInfo["region_names"] = get_region_names_from_directories(raw_data_location)
 
     # Get tile overlaps.
     tile_overlap_mappings = [
