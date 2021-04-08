@@ -11,7 +11,7 @@ def make_dir_if_not_exists(dir_path: Path):
 
 
 def find_raw_data_dir(directory: Path) -> Path:
-    NONRAW_DIRECTORY_NAME_PIECES = ["processed", "drv", "metadata"]
+    NONRAW_DIRECTORY_NAME_PIECES = ["processed", "drv", "metadata", "extras"]
 
     raw_data_dir_possibilities = []
 
