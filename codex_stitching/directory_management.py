@@ -10,25 +10,6 @@ def make_dir_if_not_exists(dir_path: Path):
         dir_path.mkdir(parents=True)
 
 
-def find_raw_data_dir(directory: Path) -> Path:
-    NONRAW_DIRECTORY_NAME_PIECES = ["processed", "drv", "metadata", "extras"]
-
-    raw_data_dir_possibilities = []
-
-    for child in directory.iterdir():
-        if not child.is_dir():
-            continue
-        if not any(piece in child.name for piece in NONRAW_DIRECTORY_NAME_PIECES):
-            raw_data_dir_possibilities.append(child)
-
-    if len(raw_data_dir_possibilities) > 1:
-        message_pieces = ["Found multiple raw data directory possibilities:"]
-        message_pieces.extend("\t" + str(path) for path in raw_data_dir_possibilities)
-        raise ValueError("\n".join(message_pieces))
-
-    return raw_data_dir_possibilities[0]
-
-
 def get_img_dirs(dataset_dir: Path) -> List[Path]:
     img_dir_names = next(os.walk(dataset_dir))[1]
     img_dir_paths = [dataset_dir.joinpath(dir_name) for dir_name in img_dir_names]

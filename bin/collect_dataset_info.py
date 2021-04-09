@@ -372,7 +372,7 @@ def standardize_metadata(directory: Path):
 
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    datasetInfo["raw_data_location"] = fspath(raw_data_location.absolute())
+    datasetInfo["raw_data_location"] = fspath(raw_data_location.relative_to(args.rawDataLocation))
     datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     info_key_mapping = [

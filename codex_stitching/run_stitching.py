@@ -6,7 +6,6 @@ from typing import List
 
 from directory_management import (
     create_output_dirs_for_tiles,
-    find_raw_data_dir,
     get_img_dirs,
     make_dir_if_not_exists,
     remove_temp_dirs,
@@ -78,7 +77,10 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     pipeline_config = load_pipeline_config(pipeline_config_path)
     dataset_meta = get_values_from_pipeline_config(pipeline_config)
-    dataset_dir = find_raw_data_dir(data_dir)
+
+    local_path_to_raw_data = pipeline_config["raw_data_location"]
+    dataset_dir = data_dir / local_path_to_raw_data
+
     img_dirs = get_img_dirs(dataset_dir)
     print_img_dirs(img_dirs)
 
