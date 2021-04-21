@@ -282,6 +282,20 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List:
     return cycle_channel_names
 
 
+def get_tile_size_no_overlap(exptConfigDict: Dict, overlap_y: int, overlap_x: int) -> Tuple[int, int]:
+    tile_height = 0
+    tile_width = 0
+    if "tileHeight" in exptConfigDict:
+        tile_height = exptConfigDict["tileHeight"] - overlap_y
+    if "tileWidth" in exptConfigDict:
+        tile_width = exptConfigDict["tileWidth"] - overlap_x
+    if "tile_height" in exptConfigDict:
+        tile_height = exptConfigDict["tile_height"]
+    if "tile_width" in exptConfigDict:
+        tile_width = exptConfigDict["tile_width"]
+    return tile_height, tile_width
+
+
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
@@ -384,9 +398,7 @@ def standardize_metadata(directory: Path):
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height", "regionHeight"]),
-        ("region_width", ["region_width", "regionWidth"]),
-        ("tile_height", ["tile_height", "tileHeight"]),
-        ("tile_width", ["tile_width", "tileWidth"]),
+        ("region_width", ["region_width", "regionWidth"])
     ]
 
     for target_key, possibilities in info_key_mapping:
@@ -410,6 +422,14 @@ def standardize_metadata(directory: Path):
             datasetInfo[target_key] = calculate_pixel_overlaps_from_proportional(
                 target_key, exptConfigDict
             )
+
+    tile_size = get_tile_size_no_overlap(
+        exptConfigDict,
+        datasetInfo["tile_overlap_y"],
+        datasetInfo["tile_overlap_x"]
+    )
+    datasetInfo["tile_height"] = tile_size[0]
+    datasetInfo["tile_width"] = tile_size[1]
 
     # Get tiling mode.
     try:
