@@ -98,16 +98,20 @@ def best_z_correction(
     best_z_per_tile_array = np.array(best_z_plane_id_list, dtype=np.int32).reshape(
         y_ntiles, x_ntiles
     )
-
+    print("Best z-plane per tile")
+    print("original arrangement\n", best_z_per_tile_array)
     rearranged_best_z_per_tile_array = change_tile_layout(best_z_per_tile_array, tiling_mode)
+    print("rearranged to grid\n", rearranged_best_z_per_tile_array)
     lowest_var_axis = find_lowest_var_axis(rearranged_best_z_per_tile_array)
+    print("correcting along axis:", lowest_var_axis)
     corrected_best_z_per_tile_array = median_error_cor(
         rearranged_best_z_per_tile_array, lowest_var_axis
     )
+    print("corrected along lowes var axis\n", corrected_best_z_per_tile_array)
     restored_arrangement_best_z_per_tile_array = change_tile_layout(
         corrected_best_z_per_tile_array, tiling_mode
     )
-
+    print("restored arrangement\n", restored_arrangement_best_z_per_tile_array)
     result = restored_arrangement_best_z_per_tile_array.ravel().tolist()
 
     return result
