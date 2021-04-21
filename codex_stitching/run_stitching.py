@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
+import dask
 from directory_management import (
     create_output_dirs_for_tiles,
     get_img_dirs,
@@ -92,6 +93,8 @@ def main(data_dir: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(out_dir)
     make_dir_if_not_exists(pipeline_conf_dir)
     print("\nSelecting best z-planes")
+
+    dask.config.set({"num_workers": 5, "scheduler": "processes"})
 
     channel_dirs = copy_best_z_planes_to_channel_dirs(img_dirs, best_focus_dir, dataset_meta)
 
