@@ -107,7 +107,7 @@ def best_z_correction(
     corrected_best_z_per_tile_array = median_error_cor(
         rearranged_best_z_per_tile_array, lowest_var_axis
     )
-    print("corrected along lowes var axis\n", corrected_best_z_per_tile_array)
+    print("corrected along lowest var axis\n", corrected_best_z_per_tile_array)
     restored_arrangement_best_z_per_tile_array = change_tile_layout(
         corrected_best_z_per_tile_array, tiling_mode
     )
