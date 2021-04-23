@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 
 def sort_dict(item: dict):
@@ -40,7 +40,6 @@ def arrange_listing_by_channel_tile_zplane(
         tile = digits[1]
         zplane = digits[2]
         channel = digits[3]
-
         if channel in tile_arrangement:
             if tile in tile_arrangement[channel]:
                 tile_arrangement[channel][tile].update({zplane: file_path})
@@ -48,40 +47,51 @@ def arrange_listing_by_channel_tile_zplane(
                 tile_arrangement[channel][tile] = {zplane: file_path}
         else:
             tile_arrangement[channel] = {tile: {zplane: file_path}}
-
     return tile_arrangement
 
 
 def get_image_paths_arranged_in_dict(img_dir: Path) -> Dict[int, Dict[int, Dict[int, Path]]]:
     img_listing = get_img_listing(img_dir)
     arranged_listing = arrange_listing_by_channel_tile_zplane(img_listing)
-
     return arranged_listing
 
 
-def extract_cycle_and_region_from_name(dir_name: str) -> Tuple[int, int]:
-    region = 1
-    if "reg" in dir_name:
-        match = re.search(r"reg(\d+)", dir_name, re.IGNORECASE)
-        if match is not None:
-            region = int(match.groups()[0])
-    cycle = int(re.search(r"cyc(\d+)", dir_name, re.IGNORECASE).groups()[0])
-
+def extract_cycle_and_region_from_name(
+    dir_name: str, cycle_prefix: str, region_prefix: str
+) -> Tuple[Union[None, int], Union[None, int]]:
+    matched_region = re.search(region_prefix, dir_name, re.IGNORECASE) is not None
+    matched_cycle = re.search(cycle_prefix, dir_name, re.IGNORECASE) is not None
+    if matched_region:
+        region_pattern = region_prefix + r"(\d+)"
+        region = int(re.search(region_pattern, dir_name, re.IGNORECASE).groups()[0])
+    else:
+        return None, None
+    if matched_cycle:
+        cycle_pattern = cycle_prefix + r"(\d+)"
+        cycle = int(re.search(cycle_pattern, dir_name, re.IGNORECASE).groups()[0])
+    else:
+        return None, None
     return cycle, region
 
 
-def arrange_dirs_by_cycle_region(img_dirs: List[Path]) -> Dict[int, Dict[int, Path]]:
+def arrange_dirs_by_cycle_region(
+    img_dirs: List[Path], cycle_prefix: str, region_prefix: str
+) -> Dict[int, Dict[int, Path]]:
     cycle_region_dict = dict()
     for dir_path in img_dirs:
         dir_name = dir_path.name
-        cycle, region = extract_cycle_and_region_from_name(str(dir_name))
-
-        if cycle in cycle_region_dict:
-            cycle_region_dict[cycle][region] = dir_path
-        else:
-            cycle_region_dict[cycle] = {region: dir_path}
-
-    return cycle_region_dict
+        cycle, region = extract_cycle_and_region_from_name(
+            str(dir_name), cycle_prefix, region_prefix
+        )
+        if cycle is not None:
+            if cycle in cycle_region_dict:
+                cycle_region_dict[cycle][region] = dir_path
+            else:
+                cycle_region_dict[cycle] = {region: dir_path}
+    if cycle_region_dict != {}:
+        return cycle_region_dict
+    else:
+        raise ValueError("Could not find cycle and region directories")
 
 
 def create_listing_for_each_cycle_region(
@@ -89,13 +99,14 @@ def create_listing_for_each_cycle_region(
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]:
     """ Returns {cycle: {region: {channel: {tile: {zplane: path}}}}} """
     listing_per_cycle = dict()
-    cycle_region_dict = arrange_dirs_by_cycle_region(img_dirs)
+    # Expected dir names Cyc1_reg1 or Cyc01_reg01
+    cycle_prefix = "cyc"
+    region_prefix = "reg"
+    cycle_region_dict = arrange_dirs_by_cycle_region(img_dirs, cycle_prefix, region_prefix)
     for cycle, regions in cycle_region_dict.items():
+        listing_per_cycle[cycle] = dict()
         for region, dir_path in regions.items():
             arranged_listing = get_image_paths_arranged_in_dict(dir_path)
-            if cycle in listing_per_cycle:
-                listing_per_cycle[cycle][region] = arranged_listing
-            else:
-                listing_per_cycle[cycle] = {region: arranged_listing}
+            listing_per_cycle[cycle][region] = arranged_listing
     sorted_listing = sort_dict(listing_per_cycle)
     return sorted_listing
