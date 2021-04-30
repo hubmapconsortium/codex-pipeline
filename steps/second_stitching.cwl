@@ -3,7 +3,7 @@ class: CommandLineTool
 
 hints:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.0b4
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: /output
   NetworkAccess:
     networkAccess: true
@@ -27,3 +27,7 @@ outputs:
     outputBinding:
       glob: /output/stitched
 
+  final_pipeline_config:
+    type: File
+    outputBinding:
+      glob: /output/pipelineConfig.json

@@ -43,6 +43,8 @@ class BigStitcherMacro:
         self.check_if_tiling_mode_is_snake()
 
         formatted_macro = self.replace_values_in_macro()
+        print("fiji macro script for estimation of stitching parameters")
+        print(formatted_macro)
         macro_file_path = self.write_to_temp_macro_file(formatted_macro)
 
         generate_dataset_xml(

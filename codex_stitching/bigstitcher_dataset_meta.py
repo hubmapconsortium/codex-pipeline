@@ -1,3 +1,4 @@
+import xml.dom.minidom
 import xml.etree.ElementTree as ET
 from copy import deepcopy
 from pathlib import Path
@@ -172,5 +173,9 @@ def generate_dataset_xml(
     tile_locations = list(zip(list(np.ravel(img_positions_x)), list(np.ravel(img_positions_y))))
 
     bs_xml = create_meta(pattern_str, num_tiles, tile_shape, tile_locations)
+
+    dom = xml.dom.minidom.parseString(bs_xml)
+    pretty_xml_as_string = dom.toprettyxml()
+
     with open(out_path, "w") as s:
-        s.write(bs_xml)
+        s.write(pretty_xml_as_string)

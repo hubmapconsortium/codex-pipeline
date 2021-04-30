@@ -1,6 +1,13 @@
 import re
+from os import walk
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
+
+import tifffile as tif
+
+
+def path_to_str(path: Path):
+    return str(path.absolute().as_posix())
 
 
 def sort_dict(item: dict):
@@ -110,3 +117,21 @@ def create_listing_for_each_cycle_region(
             listing_per_cycle[cycle][region] = arranged_listing
     sorted_listing = sort_dict(listing_per_cycle)
     return sorted_listing
+
+
+def get_img_dirs(dataset_dir: Path) -> List[Path]:
+    img_dir_names = next(walk(dataset_dir))[1]
+    img_dir_paths = [dataset_dir.joinpath(dir_name) for dir_name in img_dir_names]
+    return img_dir_paths
+
+
+def get_tile_shape(dataset_dir: Path):
+    img_dirs = get_img_dirs(dataset_dir)
+    dataset_listing = create_listing_for_each_cycle_region(img_dirs)
+    for cycle in dataset_listing:
+        for region in dataset_listing[cycle]:
+            for channel in dataset_listing[cycle][region]:
+                for tile, zplanes in dataset_listing[cycle][region][channel].items():
+                    first_plane = list(zplanes.values())[0]
+                    plane = tif.imread(path_to_str(first_plane))
+                    return plane.shape

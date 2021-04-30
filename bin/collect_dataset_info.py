@@ -1,9 +1,3 @@
-"""
-This script is not part of the automatic pipeline. It should be run manually
-and is hopefully just a temporary necessity until we have standardised
-submission formats.
-"""
-
 import argparse
 import csv
 import datetime
@@ -15,6 +9,8 @@ from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+from dataset_listing import get_tile_shape
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -282,6 +278,17 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List:
     return cycle_channel_names
 
 
+def get_tile_shape_no_overlap(
+    raw_data_location: Path,
+    overlap_y: int,
+    overlap_x: int,
+) -> Tuple[int, int]:
+    tile_shape_with_overlap = get_tile_shape(raw_data_location)
+    tile_height = tile_shape_with_overlap[0] - overlap_y
+    tile_width = tile_shape_with_overlap[1] - overlap_x
+    return tile_height, tile_width
+
+
 def standardize_metadata(directory: Path):
     experiment_json_files = find_files(
         directory,
@@ -372,7 +379,7 @@ def standardize_metadata(directory: Path):
 
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    datasetInfo["raw_data_location"] = fspath(raw_data_location.absolute())
+    datasetInfo["raw_data_location"] = fspath(raw_data_location.relative_to(args.rawDataLocation))
     datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     info_key_mapping = [
@@ -385,8 +392,6 @@ def standardize_metadata(directory: Path):
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height", "regionHeight"]),
         ("region_width", ["region_width", "regionWidth"]),
-        ("tile_height", ["tile_height", "tileHeight"]),
-        ("tile_width", ["tile_width", "tileWidth"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
@@ -410,6 +415,14 @@ def standardize_metadata(directory: Path):
             datasetInfo[target_key] = calculate_pixel_overlaps_from_proportional(
                 target_key, exptConfigDict
             )
+
+    tile_shape = get_tile_shape_no_overlap(
+        raw_data_location,
+        datasetInfo["tile_overlap_y"],
+        datasetInfo["tile_overlap_x"],
+    )
+    datasetInfo["tile_height"] = tile_shape[0]
+    datasetInfo["tile_width"] = tile_shape[1]
 
     # Get tiling mode.
     try:

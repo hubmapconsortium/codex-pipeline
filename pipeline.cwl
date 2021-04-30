@@ -27,6 +27,10 @@ outputs:
     outputSource: second_stitching/stitched_images
     type: Directory
     label: "Segmentation masks and expressions in OME-TIFF format"
+  pipeline_config:
+    outputSource: second_stitching/final_pipeline_config
+    type: File
+    label: "Pipeline config with all the modifications"
 
 steps:
   collect_dataset_info:
@@ -92,4 +96,5 @@ steps:
         source: ome_tiff_creation/ome_tiffs
     out:
        - stitched_images
+       - final_pipeline_config
     run: steps/second_stitching.cwl
