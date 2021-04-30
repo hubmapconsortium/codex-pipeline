@@ -27,3 +27,7 @@ outputs:
     outputBinding:
       glob: /output/stitched
 
+  final_pipeline_config:
+    type: File
+    outputBinding:
+      glob: /output/pipelineConfig.json

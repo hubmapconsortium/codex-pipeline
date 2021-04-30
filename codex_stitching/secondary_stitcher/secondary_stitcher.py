@@ -190,6 +190,9 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
 
+    # proper report is generated only during mask stitching
+    report = dict(num_cell=0, img_width=0, img_height=0, num_channels=0)
+
     reg_prefix = "reg{r:d}_"
     for r, path_list in enumerate(path_list_per_region):
         new_path = out_path.parent.joinpath(reg_prefix.format(r=r + 1) + out_path.name)
@@ -218,6 +221,11 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                     mod_tiles, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
                 )
                 plane = reset_label_ids(plane)
+                if p == 0:
+                    report['num_cell'] = int(plane.max())
+                    report['img_height'] = int(plane.shape[0])
+                    report['img_width'] = int(plane.shape[1])
+                    report['num_channels'] = int(npages)
             else:
                 print("\nstitching expressions page", p + 1, "/", npages)
                 plane = stitch_plane(
@@ -226,6 +234,7 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
 
             TW.save(plane, photometric="minisblack", description=ome_meta)
         TW.close()
+    return report
 
 
 if __name__ == "__main__":
