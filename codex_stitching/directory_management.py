@@ -89,7 +89,7 @@ def check_if_images_in_dir(dir_path: Path):
 
 
 def check_stitched_dirs(stitched_channel_dirs: dict):
-    print("Checking if BigStitcher produced image:")
+    print("\nChecking if BigStitcher produced image:")
     checked_str = []
     checked_bool = []
     for cycle in stitched_channel_dirs:
