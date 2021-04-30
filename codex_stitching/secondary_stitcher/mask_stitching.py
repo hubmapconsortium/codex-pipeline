@@ -96,13 +96,14 @@ def remove_overlapping_labels(img: Image, overlap: int, mode: str) -> Tuple[Imag
 
 
 def reset_label_ids(img: Image) -> Image:
+    dtype = img.dtype
     unique_vals, indices = np.unique(img, return_inverse=True)
 
     unique_val_list = unique_vals.tolist()
 
     new_vals = list(range(0, len(unique_val_list)))
 
-    new_unique_vals = np.array(new_vals)
+    new_unique_vals = np.array(new_vals, dtype=dtype)
     reset_img = new_unique_vals[indices].reshape(img.shape)
     return reset_img
 

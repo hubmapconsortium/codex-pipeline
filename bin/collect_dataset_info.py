@@ -1,9 +1,3 @@
-"""
-This script is not part of the automatic pipeline. It should be run manually
-and is hopefully just a temporary necessity until we have standardised
-submission formats.
-"""
-
 import argparse
 import csv
 import datetime
@@ -15,6 +9,8 @@ from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+from dataset_listing import get_tile_shape
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -282,17 +278,14 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List:
     return cycle_channel_names
 
 
-def get_tile_size_no_overlap(exptConfigDict: Dict, overlap_y: int, overlap_x: int) -> Tuple[int, int]:
-    tile_height = 0
-    tile_width = 0
-    if "tileHeight" in exptConfigDict:
-        tile_height = exptConfigDict["tileHeight"] - overlap_y
-    if "tileWidth" in exptConfigDict:
-        tile_width = exptConfigDict["tileWidth"] - overlap_x
-    if "tile_height" in exptConfigDict:
-        tile_height = exptConfigDict["tile_height"]
-    if "tile_width" in exptConfigDict:
-        tile_width = exptConfigDict["tile_width"]
+def get_tile_shape_no_overlap(
+    raw_data_location: Path,
+    overlap_y: int,
+    overlap_x: int,
+) -> Tuple[int, int]:
+    tile_shape_with_overlap = get_tile_shape(raw_data_location)
+    tile_height = tile_shape_with_overlap[0] - overlap_y
+    tile_width = tile_shape_with_overlap[1] - overlap_x
     return tile_height, tile_width
 
 
@@ -398,7 +391,7 @@ def standardize_metadata(directory: Path):
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height", "regionHeight"]),
-        ("region_width", ["region_width", "regionWidth"])
+        ("region_width", ["region_width", "regionWidth"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
@@ -423,13 +416,13 @@ def standardize_metadata(directory: Path):
                 target_key, exptConfigDict
             )
 
-    tile_size = get_tile_size_no_overlap(
-        exptConfigDict,
+    tile_shape = get_tile_shape_no_overlap(
+        raw_data_location,
         datasetInfo["tile_overlap_y"],
-        datasetInfo["tile_overlap_x"]
+        datasetInfo["tile_overlap_x"],
     )
-    datasetInfo["tile_height"] = tile_size[0]
-    datasetInfo["tile_width"] = tile_size[1]
+    datasetInfo["tile_height"] = tile_shape[0]
+    datasetInfo["tile_width"] = tile_shape[1]
 
     # Get tiling mode.
     try:

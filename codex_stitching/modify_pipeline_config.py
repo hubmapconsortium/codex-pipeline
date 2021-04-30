@@ -44,6 +44,19 @@ def generate_slicer_info(
 
 def replace_values_in_config(exp, slicer_info):
 
+    original_measurements = {
+        "original_measurements": {
+            "tiling_mode": exp["tiling_mode"],
+            "region_width": exp["region_width"],
+            "region_height": exp["region_height"],
+            "num_z_planes": exp["num_z_planes"],
+            "tile_width": exp["tile_width"],
+            "tile_height": exp["tile_height"],
+            "tile_overlap_x": exp["tile_overlap_x"],
+            "tile_overlap_y": exp["tile_overlap_y"],
+            "target_shape": exp["target_shape"],
+        }
+    }
     values_to_replace = {
         "tiling_mode": "grid",
         "region_width": slicer_info["slicer"]["num_tiles"]["x"],
@@ -60,6 +73,7 @@ def replace_values_in_config(exp, slicer_info):
     }
 
     exp.update(values_to_replace)
+    exp.update(original_measurements)
     return exp
 
 
