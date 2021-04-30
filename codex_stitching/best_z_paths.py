@@ -10,7 +10,7 @@ from image_path_arrangement import (
 
 
 def _change_image_file_name(original_name: str) -> str:
-    """ Output tiles will have names 00001.tif, 00002.tif ..."""
+    """Output tiles will have names 00001.tif, 00002.tif ..."""
     digits = extract_digits_from_string(original_name)
     tile = digits[1]
     return "{tile:05d}.tif".format(tile=tile)

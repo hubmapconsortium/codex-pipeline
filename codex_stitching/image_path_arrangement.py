@@ -97,7 +97,7 @@ def arrange_dirs_by_cycle_region(
 def create_listing_for_each_cycle_region(
     img_dirs: List[Path],
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]:
-    """ Returns {cycle: {region: {channel: {tile: {zplane: path}}}}} """
+    """Returns {cycle: {region: {channel: {tile: {zplane: path}}}}}"""
     listing_per_cycle = dict()
     # Expected dir names Cyc1_reg1 or Cyc01_reg01
     cycle_prefix = "cyc"

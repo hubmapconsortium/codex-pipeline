@@ -58,7 +58,7 @@ def find_lowest_var_axis(arr: np.ndarray) -> str:
 
 
 def median_error_cor(array: np.ndarray, mode: str) -> np.ndarray:
-    """ Replace all values in rows or cols with respective medians"""
+    """Replace all values in rows or cols with respective medians"""
     arr = array.copy()
     if mode == "row":
         nrows = arr.shape[0]
