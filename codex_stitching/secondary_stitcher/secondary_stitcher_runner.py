@@ -12,13 +12,13 @@ def make_dir_if_not_exists(dir_path: Path):
 
 
 def read_pipeline_config(path_to_config: Path):
-    with open(path_to_config, 'r') as s:
+    with open(path_to_config, "r") as s:
         config = json.load(s)
     return config
 
 
 def write_pipeline_config(out_path: Path, config):
-    with open(out_path, 'w') as s:
+    with open(out_path, "w") as s:
         json.dump(config, s, sort_keys=False, indent=4)
 
 
@@ -52,24 +52,16 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     )
 
     report = run_stitcher(
-        path_to_mask_tiles,
-        stitched_mask_out_path,
-        overlap,
-        padding,
-        is_mask=True
-        )
+        path_to_mask_tiles, stitched_mask_out_path, overlap, padding, is_mask=True
+    )
 
     _ = run_stitcher(
-        path_to_image_tiles,
-        stitched_expressions_out_path,
-        overlap,
-        padding,
-        is_mask=False
+        path_to_image_tiles, stitched_expressions_out_path, overlap, padding, is_mask=False
     )
 
     final_pipeline_config = pipeline_config
-    final_pipeline_config.update({'report': report})
-    print('\nfinal_pipeline_config')
+    final_pipeline_config.update({"report": report})
+    print("\nfinal_pipeline_config")
     pprint(final_pipeline_config)
     write_pipeline_config(final_pipeline_config_path, final_pipeline_config)
 

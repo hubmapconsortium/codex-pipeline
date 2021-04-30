@@ -222,10 +222,10 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                 )
                 plane = reset_label_ids(plane)
                 if p == 0:
-                    report['num_cell'] = int(plane.max())
-                    report['img_height'] = int(plane.shape[0])
-                    report['img_width'] = int(plane.shape[1])
-                    report['num_channels'] = int(npages)
+                    report["num_cell"] = int(plane.max())
+                    report["img_height"] = int(plane.shape[0])
+                    report["img_width"] = int(plane.shape[1])
+                    report["num_channels"] = int(npages)
             else:
                 print("\nstitching expressions page", p + 1, "/", npages)
                 plane = stitch_plane(

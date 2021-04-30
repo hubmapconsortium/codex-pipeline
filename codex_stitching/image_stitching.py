@@ -63,10 +63,10 @@ def run_bigstitcher(bigstitcher_macro_path: Path):
         print("Finished", str(bigstitcher_macro_path))
     else:
         raise Exception(
-            "There was an error while running the BigStitcher for " +
-            str(bigstitcher_macro_path) +
-            "\n" +
-            res.stderr.decode("utf-8")
+            "There was an error while running the BigStitcher for "
+            + str(bigstitcher_macro_path)
+            + "\n"
+            + res.stderr.decode("utf-8")
         )
 
 

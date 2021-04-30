@@ -1,7 +1,7 @@
 import re
 from os import walk
 from pathlib import Path
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Tuple, Union
 
 import tifffile as tif
 
@@ -38,7 +38,9 @@ def extract_digits_from_string(string: str) -> List[int]:
     return digits
 
 
-def arrange_listing_by_channel_tile_zplane(listing: List[Path]) -> Dict[int, Dict[int, Dict[int, Path]]]:
+def arrange_listing_by_channel_tile_zplane(
+    listing: List[Path],
+) -> Dict[int, Dict[int, Dict[int, Path]]]:
     tile_arrangement = dict()
     for file_path in listing:
         digits = extract_digits_from_string(file_path.name)
@@ -61,33 +63,33 @@ def get_image_paths_arranged_in_dict(img_dir: Path) -> Dict[int, Dict[int, Dict[
     return arranged_listing
 
 
-def extract_cycle_and_region_from_name(dir_name: str,
-                                       cycle_prefix: str,
-                                       region_prefix: str
-                                       ) -> Tuple[Union[None, int], Union[None, int]]:
+def extract_cycle_and_region_from_name(
+    dir_name: str, cycle_prefix: str, region_prefix: str
+) -> Tuple[Union[None, int], Union[None, int]]:
     matched_region = re.search(region_prefix, dir_name, re.IGNORECASE) is not None
     matched_cycle = re.search(cycle_prefix, dir_name, re.IGNORECASE) is not None
     if matched_region:
-        region_pattern = region_prefix + r'(\d+)'
+        region_pattern = region_prefix + r"(\d+)"
         region = int(re.search(region_pattern, dir_name, re.IGNORECASE).groups()[0])
     else:
         return None, None
     if matched_cycle:
-        cycle_pattern = cycle_prefix + r'(\d+)'
+        cycle_pattern = cycle_prefix + r"(\d+)"
         cycle = int(re.search(cycle_pattern, dir_name, re.IGNORECASE).groups()[0])
     else:
         return None, None
     return cycle, region
 
 
-def arrange_dirs_by_cycle_region(img_dirs: List[Path],
-                                 cycle_prefix: str,
-                                 region_prefix: str
-                                 ) -> Dict[int, Dict[int, Path]]:
+def arrange_dirs_by_cycle_region(
+    img_dirs: List[Path], cycle_prefix: str, region_prefix: str
+) -> Dict[int, Dict[int, Path]]:
     cycle_region_dict = dict()
     for dir_path in img_dirs:
         dir_name = dir_path.name
-        cycle, region = extract_cycle_and_region_from_name(str(dir_name), cycle_prefix, region_prefix)
+        cycle, region = extract_cycle_and_region_from_name(
+            str(dir_name), cycle_prefix, region_prefix
+        )
         if cycle is not None:
             if cycle in cycle_region_dict:
                 cycle_region_dict[cycle][region] = dir_path
@@ -96,7 +98,7 @@ def arrange_dirs_by_cycle_region(img_dirs: List[Path],
     if cycle_region_dict != {}:
         return cycle_region_dict
     else:
-        raise ValueError('Could not find cycle and region directories')
+        raise ValueError("Could not find cycle and region directories")
 
 
 def create_listing_for_each_cycle_region(
@@ -105,8 +107,8 @@ def create_listing_for_each_cycle_region(
     """ Returns {cycle: {region: {channel: {tile: {zplane: path}}}}} """
     listing_per_cycle = dict()
     # Expected dir names Cyc1_reg1 or Cyc01_reg01
-    cycle_prefix = 'cyc'
-    region_prefix = 'reg'
+    cycle_prefix = "cyc"
+    region_prefix = "reg"
     cycle_region_dict = arrange_dirs_by_cycle_region(img_dirs, cycle_prefix, region_prefix)
     for cycle, regions in cycle_region_dict.items():
         listing_per_cycle[cycle] = dict()
