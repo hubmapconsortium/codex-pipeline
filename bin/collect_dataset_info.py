@@ -1,9 +1,3 @@
-"""
-This script is not part of the automatic pipeline. It should be run manually
-and is hopefully just a temporary necessity until we have standardised
-submission formats.
-"""
-
 import argparse
 import csv
 import datetime
@@ -284,7 +278,11 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List:
     return cycle_channel_names
 
 
-def get_tile_shape_no_overlap(raw_data_location: Path, overlap_y: int, overlap_x: int) -> Tuple[int, int]:
+def get_tile_shape_no_overlap(
+    raw_data_location: Path,
+    overlap_y: int,
+    overlap_x: int,
+) -> Tuple[int, int]:
     tile_shape_with_overlap = get_tile_shape(raw_data_location)
     tile_height = tile_shape_with_overlap[0] - overlap_y
     tile_width = tile_shape_with_overlap[1] - overlap_x
@@ -393,7 +391,7 @@ def standardize_metadata(directory: Path):
         ("numerical_aperture", ["aperture", "numerical_aperture"]),
         ("objective_type", ["objectiveType"]),
         ("region_height", ["region_height", "regionHeight"]),
-        ("region_width", ["region_width", "regionWidth"])
+        ("region_width", ["region_width", "regionWidth"]),
     ]
 
     for target_key, possibilities in info_key_mapping:
@@ -421,7 +419,7 @@ def standardize_metadata(directory: Path):
     tile_shape = get_tile_shape_no_overlap(
         raw_data_location,
         datasetInfo["tile_overlap_y"],
-        datasetInfo["tile_overlap_x"]
+        datasetInfo["tile_overlap_x"],
     )
     datasetInfo["tile_height"] = tile_shape[0]
     datasetInfo["tile_width"] = tile_shape[1]
