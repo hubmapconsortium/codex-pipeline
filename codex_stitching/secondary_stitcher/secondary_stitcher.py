@@ -8,10 +8,7 @@ import pandas as pd
 import tifffile as tif
 from mask_stitching import (
     generate_ome_meta_for_mask,
-    modify_tiles_another_channel,
-    modify_tiles_first_channel,
-    reset_label_ids,
-    stitch_mask,
+    process_all_masks
 )
 
 Image = np.ndarray
@@ -106,10 +103,14 @@ def get_dataset_info(img_dir: Path):
     return path_list_per_region, y_ntiles, x_ntiles
 
 
-def load_tiles(path_list: List[Path], key: int):
+def load_tiles(path_list: List[Path], key: Union[None, int]):
     tiles = []
-    for path in path_list:
-        tiles.append(tif.imread(path_to_str(path), key=key))
+    if key is None:
+        for path in path_list:
+            tiles.append(tif.imread(path_to_str(path)))
+    else:
+        for path in path_list:
+            tiles.append(tif.imread(path_to_str(path), key=key))
 
     return tiles
 
@@ -191,48 +192,31 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
 
     # proper report is generated only during mask stitching
-    report = dict(num_cell=0, img_width=0, img_height=0, num_channels=0)
+    report = dict(num_cells=0, img_width=0, img_height=0, num_channels=0)
 
     reg_prefix = "reg{r:d}_"
     for r, path_list in enumerate(path_list_per_region):
         new_path = out_path.parent.joinpath(reg_prefix.format(r=r + 1) + out_path.name)
-        excluded_labels = dict()
-        border_maps = dict()
-        tile_additions = []
+
         TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True)
-        for p in range(0, npages):
-            tiles = load_tiles(path_list, p)
-            if is_mask:
-                print("\nstitching masks page", p + 1, "/", npages)
-                if p == 0:
-                    (
-                        mod_tiles,
-                        excluded_labels,
-                        border_maps,
-                        tile_additions,
-                    ) = modify_tiles_first_channel(tiles, y_ntiles, x_ntiles, overlap, dtype)
-                    del tiles
-                else:
-                    mod_tiles = modify_tiles_another_channel(
-                        tiles, excluded_labels, border_maps, tile_additions, dtype
-                    )
-                    del tiles
-                plane = stitch_mask(
-                    mod_tiles, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
-                )
-                plane = reset_label_ids(plane)
-                if p == 0:
-                    report["num_cell"] = int(plane.max())
-                    report["img_height"] = int(plane.shape[0])
-                    report["img_width"] = int(plane.shape[1])
-                    report["num_channels"] = int(npages)
-            else:
+        if is_mask:
+            tiles = load_tiles(path_list, key=None)
+            masks = process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype)
+            for mask in masks:
+                TW.save(mask, photometric="minisblack", description=ome_meta)
+            report["num_cells"] = int(masks[0].max())
+        else:
+            for p in range(0, npages):
+                tiles = load_tiles(path_list, key=p)
                 print("\nstitching expressions page", p + 1, "/", npages)
                 plane = stitch_plane(
                     tiles, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
                 )
-
-            TW.save(plane, photometric="minisblack", description=ome_meta)
+                if p == 0:
+                    report["num_channels"] = int(npages)
+                    report["img_height"] = int(plane.shape[0])
+                    report["img_width"] = int(plane.shape[1])
+                TW.save(plane, photometric="minisblack", description=ome_meta)
         TW.close()
     return report
 

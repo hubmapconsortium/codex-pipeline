@@ -51,16 +51,23 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
         Path("stitched_expressions.ome.tiff")
     )
 
-    report = run_stitcher(
+    mask_report = run_stitcher(
         path_to_mask_tiles, stitched_mask_out_path, overlap, padding, is_mask=True
     )
 
-    _ = run_stitcher(
+    expr_report = run_stitcher(
         path_to_image_tiles, stitched_expressions_out_path, overlap, padding, is_mask=False
     )
 
+    total_report = dict(
+        num_cells=mask_report["num_cells"],
+        num_channels=expr_report["num_channels"],
+        img_height=expr_report["img_height"],
+        img_width=expr_report["img_width"],
+    )
+
     final_pipeline_config = pipeline_config
-    final_pipeline_config.update({"report": report})
+    final_pipeline_config.update({"report": total_report})
     print("\nfinal_pipeline_config")
     pprint(final_pipeline_config)
     write_pipeline_config(final_pipeline_config_path, final_pipeline_config)
