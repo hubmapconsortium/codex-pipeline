@@ -6,10 +6,7 @@ from typing import List, Tuple, Union
 import numpy as np
 import pandas as pd
 import tifffile as tif
-from mask_stitching import (
-    generate_ome_meta_for_mask,
-    process_all_masks
-)
+from mask_stitching import generate_ome_meta_for_mask, process_all_masks
 
 Image = np.ndarray
 
@@ -201,7 +198,9 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True)
         if is_mask:
             tiles = load_tiles(path_list, key=None)
-            masks = process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype)
+            masks = process_all_masks(
+                tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
+            )
             for mask in masks:
                 TW.save(mask, photometric="minisblack", description=ome_meta)
             report["num_cells"] = int(masks[0].max())

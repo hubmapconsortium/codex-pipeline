@@ -1,8 +1,8 @@
 import gc
-from typing import Dict, List, Tuple
 from copy import deepcopy
-import dask
+from typing import Dict, List, Tuple
 
+import dask
 import numpy as np
 import pandas as pd
 from skimage.measure import regionprops_table
@@ -35,8 +35,8 @@ def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype) -> str:
 
 
 def get_labels_sorted_by_coordinates(img) -> List[int]:
-    props = regionprops_table(img, properties=('label', 'centroid'))
-    coord_arr = np.array((props['label'], props['centroid-0'], props['centroid-1']))
+    props = regionprops_table(img, properties=("label", "centroid"))
+    coord_arr = np.array((props["label"], props["centroid-0"], props["centroid-1"]))
     coord_df = pd.DataFrame(coord_arr)
     # sort first by y, then by x coord
     sorted_coord_arr = coord_df.sort_values(by=[1, 2], axis=1).to_numpy()
@@ -432,7 +432,9 @@ def stitch_mask(
     return big_image[: new_big_image_shape[0], : new_big_image_shape[1]]
 
 
-def process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype) -> List[Image]:
+def process_all_masks(
+    tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
+) -> List[Image]:
     print("Started processing masks")
     tiles_cell = [t[0, :, :] for t in tiles]
     tiles_nuc = [t[1, :, :] for t in tiles]
@@ -441,17 +443,17 @@ def process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, d
     raw_tile_groups = [tiles_cell, tiles_nuc, tiles_cell_b, tiles_nuc_b]
     print("Identifying and trimming border labels in all tiles")
     (
-      mod_tiles_nuc,
-      excluded_labels_nuc,
-      border_maps_nuc,
-      tile_additions_nuc,
+        mod_tiles_nuc,
+        excluded_labels_nuc,
+        border_maps_nuc,
+        tile_additions_nuc,
     ) = modify_tiles_first_channel(tiles_nuc, y_ntiles, x_ntiles, overlap, dtype)
 
     (
-      mod_tiles_cell,
-      excluded_labels_cell,
-      border_maps_cell,
-      tile_additions_cell,
+        mod_tiles_cell,
+        excluded_labels_cell,
+        border_maps_cell,
+        tile_additions_cell,
     ) = modify_tiles_first_channel(tiles_cell, y_ntiles, x_ntiles, overlap, dtype)
 
     all_exclusions = deepcopy(excluded_labels_nuc)
@@ -472,11 +474,9 @@ def process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, d
 
     mod_tile_groups = []
     for tile_group in raw_tile_groups:
-        mod_tile_group = modify_tiles_another_channel(tile_group,
-                                                      all_exclusions,
-                                                      all_border_maps,
-                                                      tile_additions_nuc,
-                                                      dtype)
+        mod_tile_group = modify_tiles_another_channel(
+            tile_group, all_exclusions, all_border_maps, tile_additions_nuc, dtype
+        )
         mod_tile_groups.append(mod_tile_group)
 
     del raw_tile_groups
@@ -484,9 +484,9 @@ def process_all_masks(tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, d
     print("Stitching masks")
     stitched_imgs = []
     for tile_group in mod_tile_groups:
-        stitched_img = stitch_mask(tile_group, y_ntiles,
-                                   x_ntiles, tile_shape,
-                                   dtype, overlap, padding)
+        stitched_img = stitch_mask(
+            tile_group, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
+        )
         stitched_imgs.append(stitched_img)
 
     del mod_tile_groups
