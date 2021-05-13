@@ -1,6 +1,5 @@
 FROM ubuntu:focal
 
-
 RUN apt-get -qq update \
     && apt-get -qq install --no-install-recommends --yes \
     wget \
@@ -25,16 +24,14 @@ RUN conda env update -f /tmp/environment.yml \
 
 ENV PATH /opt/conda/envs/hubmap/bin:$PATH
 
-WORKDIR /opt
-
-COPY bin /opt
-COPY codex_stitching /opt/codex_stitching
-RUN mkdir /output && chmod -R a+rwx /output
-
 #Copy fiji from container
 COPY --from=hubmap/fiji_bigstitcher:latest /opt/Fiji.app /opt/Fiji.app
-
 ENV PATH /opt/Fiji.app:$PATH
 
+RUN mkdir /output && chmod -R a+rwx /output
+
+WORKDIR /opt
+COPY bin /opt
+COPY codex_stitching /opt/codex_stitching
 
 CMD ["/bin/bash"]
