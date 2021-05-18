@@ -1,7 +1,11 @@
+import gc
+from copy import deepcopy
 from typing import Dict, List, Tuple
 
 import dask
 import numpy as np
+import pandas as pd
+from skimage.measure import regionprops_table
 
 Image = np.ndarray
 
@@ -28,6 +32,42 @@ def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype) -> str:
         """
     ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name)
     return ome_meta
+
+
+def get_labels_sorted_by_coordinates(img) -> List[int]:
+    props = regionprops_table(img, properties=("label", "centroid"))
+    coord_arr = np.array((props["label"], props["centroid-0"], props["centroid-1"]))
+    coord_df = pd.DataFrame(coord_arr)
+    # sort first by y, then by x coord
+    sorted_coord_arr = coord_df.sort_values(by=[1, 2], axis=1).to_numpy()
+    labels_sorted_by_coord = sorted_coord_arr[0, :].tolist()
+    return labels_sorted_by_coord
+
+
+def get_new_labels(img: Image) -> np.ndarray:
+    dtype = img.dtype
+    unique_label_ids, indices = np.unique(img, return_inverse=True)
+
+    old_label_ids = unique_label_ids.tolist()
+    old_label_ids_sorted_by_coord = get_labels_sorted_by_coordinates(img)
+
+    new_label_ids = list(range(0, len(old_label_ids)))
+    label_pairs = zip(old_label_ids_sorted_by_coord, new_label_ids)
+    label_map = {lab_pair[0]: lab_pair[1] for lab_pair in label_pairs}
+
+    updated_label_ids = [0]
+    for _id in old_label_ids[1:]:
+        updated_label_ids.append(label_map[_id])
+
+    new_unique_label_ids = np.array(updated_label_ids, dtype=dtype)
+    return new_unique_label_ids
+
+
+def reset_label_ids(img, new_label_ids) -> Image:
+    dtype = img.dtype
+    unique_labels, indices = np.unique(img, return_inverse=True)
+    reset_img = new_label_ids[indices].reshape(img.shape).astype(dtype)
+    return reset_img
 
 
 def remove_labels(
@@ -93,19 +133,6 @@ def remove_overlapping_labels(img: Image, overlap: int, mode: str) -> Tuple[Imag
         excluded_labels.extend(ex_lab)
     excluded_labels = sorted(set(excluded_labels))
     return mod_img, excluded_labels
-
-
-def reset_label_ids(img: Image) -> Image:
-    dtype = img.dtype
-    unique_vals, indices = np.unique(img, return_inverse=True)
-
-    unique_val_list = unique_vals.tolist()
-
-    new_vals = list(range(0, len(unique_val_list)))
-
-    new_unique_vals = np.array(new_vals, dtype=dtype)
-    reset_img = new_unique_vals[indices].reshape(img.shape)
-    return reset_img
 
 
 def find_and_remove_overlapping_labels_in_first_channel(
@@ -397,10 +424,79 @@ def stitch_mask(
             tile = tiles[n]
             tile = tile.astype(dtype)
 
-            mask_zeros = big_image[big_image_slice] == 0
-            big_image[big_image_slice][mask_zeros] = tile[tile_slice][mask_zeros]
-
+            mask_nonzeros = tile[tile_slice] != 0
+            big_image[big_image_slice][mask_nonzeros] = tile[tile_slice][mask_nonzeros]
             n += 1
 
     new_big_image_shape = (big_image_shape[0] - y_pad, big_image_shape[1] - x_pad)
     return big_image[: new_big_image_shape[0], : new_big_image_shape[1]]
+
+
+def process_all_masks(
+    tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
+) -> List[Image]:
+    print("Started processing masks")
+    tiles_cell = [t[0, :, :] for t in tiles]
+    tiles_nuc = [t[1, :, :] for t in tiles]
+    tiles_cell_b = [t[2, :, :] for t in tiles]
+    tiles_nuc_b = [t[3, :, :] for t in tiles]
+    raw_tile_groups = [tiles_cell, tiles_nuc, tiles_cell_b, tiles_nuc_b]
+    print("Identifying and trimming border labels in all tiles")
+    (
+        mod_tiles_nuc,
+        excluded_labels_nuc,
+        border_maps_nuc,
+        tile_additions_nuc,
+    ) = modify_tiles_first_channel(tiles_nuc, y_ntiles, x_ntiles, overlap, dtype)
+
+    (
+        mod_tiles_cell,
+        excluded_labels_cell,
+        border_maps_cell,
+        tile_additions_cell,
+    ) = modify_tiles_first_channel(tiles_cell, y_ntiles, x_ntiles, overlap, dtype)
+
+    all_exclusions = deepcopy(excluded_labels_nuc)
+    for tile in excluded_labels_cell:
+        if tile in all_exclusions:
+            for lab in excluded_labels_cell[tile]:
+                all_exclusions[tile][lab] = excluded_labels_cell[tile][lab]
+        else:
+            all_exclusions[tile] = excluded_labels_cell[tile]
+
+    all_border_maps = deepcopy(border_maps_nuc)
+    for tile in border_maps_cell:
+        if tile in all_border_maps:
+            for lab in border_maps_cell[tile]:
+                all_border_maps[tile][lab] = border_maps_cell[tile][lab]
+        else:
+            all_border_maps[tile] = border_maps_cell[tile]
+
+    mod_tile_groups = []
+    for tile_group in raw_tile_groups:
+        mod_tile_group = modify_tiles_another_channel(
+            tile_group, all_exclusions, all_border_maps, tile_additions_nuc, dtype
+        )
+        mod_tile_groups.append(mod_tile_group)
+
+    del raw_tile_groups
+    gc.collect()
+    print("Stitching masks")
+    stitched_imgs = []
+    for tile_group in mod_tile_groups:
+        stitched_img = stitch_mask(
+            tile_group, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
+        )
+        stitched_imgs.append(stitched_img)
+
+    del mod_tile_groups
+    gc.collect()
+
+    print("Resetting label ids")
+    new_label_ids = get_new_labels(stitched_imgs[0])  # cell
+    reset_imgs = []
+    for img in stitched_imgs:
+        reset_img = reset_label_ids(img, new_label_ids)
+        reset_imgs.append(reset_img)
+    print("Finished processing masks")
+    return reset_imgs

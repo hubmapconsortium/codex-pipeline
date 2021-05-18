@@ -11,8 +11,9 @@ def make_dir_if_not_exists(dir_path: Path):
 
 
 def get_img_dirs(dataset_dir: Path) -> List[Path]:
+    dataset_dir = dataset_dir.absolute()
     img_dir_names = next(os.walk(dataset_dir))[1]
-    img_dir_paths = [dataset_dir.joinpath(dir_name) for dir_name in img_dir_names]
+    img_dir_paths = [dataset_dir.joinpath(dir_name).absolute() for dir_name in img_dir_names]
     return img_dir_paths
 
 
