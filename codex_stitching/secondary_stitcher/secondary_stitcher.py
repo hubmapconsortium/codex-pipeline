@@ -1,12 +1,13 @@
 import argparse
 import re
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import tifffile as tif
 from mask_stitching import generate_ome_meta_for_mask, process_all_masks
+from skimage.measure import regionprops_table
 
 Image = np.ndarray
 
@@ -112,6 +113,35 @@ def load_tiles(path_list: List[Path], key: Union[None, int]):
     return tiles
 
 
+def calc_mask_coverage(segm_mask: Image) -> float:
+    mask_pixels = np.sum(segm_mask != 0)
+    total_pixels = segm_mask.shape[-2] * segm_mask.shape[-1]
+    return round(mask_pixels / total_pixels, 3)
+
+
+def calc_snr(img: Image) -> float:
+    return round(np.mean(img) / np.std(img), 3)
+
+
+def calc_label_sizes(segm_mask: Image) -> Dict[str, float]:
+    # bounding boxes around labels
+    # useful to check if there are merged labels
+    props = regionprops_table(segm_mask, properties=("label", "bbox"))
+    min_rows = props["bbox-0"]
+    min_cols = props["bbox-1"]
+    max_rows = props["bbox-2"]
+    max_cols = props["bbox-3"]
+    bbox_arr = np.stack((min_rows, max_rows, min_cols, max_cols), axis=1)
+    dif = np.stack((bbox_arr[:, 1] - bbox_arr[:, 0], bbox_arr[:, 3] - bbox_arr[:, 2]), axis=1)
+    long_sides = np.max(dif, axis=1)
+    label_sizes = dict(
+        min_bbox_size=dif[np.argmin(long_sides)].tolist(),
+        max_bbox_size=dif[np.argmax(long_sides)].tolist(),
+        mean_bbox_size=np.round(np.mean(dif, axis=0), 3).tolist(),
+    )
+    return label_sizes
+
+
 def stitch_plane(
     tiles: List[Image],
     y_ntiles: int,
@@ -188,22 +218,29 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
 
-    # proper report is generated only during mask stitching
-    report = dict(num_cells=0, img_width=0, img_height=0, num_channels=0)
+    # part of this report is generated after mask stitching and part after expression stitching
 
+    total_report = dict()
     reg_prefix = "reg{r:d}_"
     for r, path_list in enumerate(path_list_per_region):
         new_path = out_path.parent.joinpath(reg_prefix.format(r=r + 1) + out_path.name)
-
+        this_region_report = dict()
         TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True)
         if is_mask:
+            # mask channels 0 - cells, 1 - nuclei, 2 - cell boundaries, 3 - nucleus boundaries
             tiles = load_tiles(path_list, key=None)
             masks = process_all_masks(
                 tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
             )
             for mask in masks:
                 TW.save(mask, photometric="minisblack", description=ome_meta)
-            report["num_cells"] = int(masks[0].max())
+
+            this_region_report["num_cells"] = int(masks[0].max())
+            this_region_report["num_nuclei"] = int(masks[1].max())
+            this_region_report["cell_coverage"] = calc_mask_coverage(masks[0])
+            this_region_report["nuclei_coverage"] = calc_mask_coverage(masks[1])
+            this_region_report["cell_sizes"] = calc_label_sizes(masks[0])
+            this_region_report["nucleus_sizes"] = calc_label_sizes(masks[1])
         else:
             for p in range(0, npages):
                 tiles = load_tiles(path_list, key=p)
@@ -212,12 +249,15 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                     tiles, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
                 )
                 if p == 0:
-                    report["num_channels"] = int(npages)
-                    report["img_height"] = int(plane.shape[0])
-                    report["img_width"] = int(plane.shape[1])
+                    this_region_report["num_channels"] = int(npages)
+                    this_region_report["img_height"] = int(plane.shape[0])
+                    this_region_report["img_width"] = int(plane.shape[1])
+                    this_region_report["per_channel_snr"] = dict()
+                this_region_report["per_channel_snr"][p] = calc_snr(plane)
                 TW.save(plane, photometric="minisblack", description=ome_meta)
+        total_report["reg" + str(r + 1)] = this_region_report
         TW.close()
-    return report
+    return total_report
 
 
 if __name__ == "__main__":
