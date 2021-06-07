@@ -189,6 +189,10 @@ def remove_overlapping_labels_in_another_channel(
 def find_overlapping_border_labels(
     img1: Image, img2: Image, overlap: int, mode: str
 ) -> Dict[int, int]:
+    """Find which pixels in img2 overlap pixels in img1
+    Return mapping
+    { img2px: img1px, }
+    """
     if mode == "horizontal":
         img1_ov = img1[:, -overlap:]
         img2_ov = img2[:, overlap : overlap * 2]
@@ -219,7 +223,21 @@ def find_overlapping_border_labels(
 def replace_overlapping_border_labels(
     img1: Image, img2: Image, overlap: int, mode: str
 ) -> Tuple[Image, Dict[int, int]]:
+    """ Replace label ids in img2 with label ids of img1 """
     border_map = find_overlapping_border_labels(img1, img2, overlap, mode)
+    # to avoid merging of old and new labels
+    # find old labels that have same ids as new ones
+    # and add some value
+    old_lab_ids = tuple(np.unique(img2).tolist())
+    matches = []
+    for new_lab_id in border_map.values():
+        if new_lab_id in old_lab_ids:
+            matches.append(new_lab_id)
+    if matches != []:
+        addition = img2.max() + max(matches)
+        for value in matches:
+            img2[img2 == value] += addition
+
     for old_value, new_value in border_map.items():
         img2[img2 == old_value] = new_value
     return img2, border_map
@@ -283,21 +301,25 @@ def find_and_replace_overlapping_border_labels_in_first_channel(
 def replace_overlapping_border_labels_in_another_channel(
     tiles: List[Image], border_maps: Dict[int, dict], tile_additions: List[int], dtype
 ) -> List[Image]:
-    def replace_values(tile, value_map, addition, dtype):
+    def replace_values(tile, value_map, tile_addition, dtype):
         modified_tile = tile.astype(dtype)
-        modified_tile[np.nonzero(modified_tile)] += addition
+        modified_tile[np.nonzero(modified_tile)] += tile_addition
         if value_map != {}:
-            for old_value, new_value in value_map.items():
-                modified_tile[modified_tile == old_value] = new_value
-            return modified_tile
-        else:
-            return modified_tile
+            old_lab_ids = tuple(np.unique(modified_tile).tolist())
+            matches = []
+            for new_lab_id in value_map.values():
+                if new_lab_id in old_lab_ids:
+                    matches.append(new_lab_id)
+            if matches != []:
+                addition = modified_tile.max() + max(matches)
+                for value in matches:
+                    modified_tile[modified_tile == value] += addition
+        return modified_tile
 
     task = []
     for i, tile in enumerate(tiles):
         task.append(dask.delayed(replace_values)(tile, border_maps[i], tile_additions[i], dtype))
     modified_tiles = dask.compute(*task)
-
     return list(modified_tiles)
 
 
@@ -475,7 +497,7 @@ def process_all_masks(
     mod_tile_groups = []
     for tile_group in raw_tile_groups:
         mod_tile_group = modify_tiles_another_channel(
-            tile_group, all_exclusions, all_border_maps, tile_additions_nuc, dtype
+            tile_group, all_exclusions, all_border_maps, tile_additions_cell, dtype
         )
         mod_tile_groups.append(mod_tile_group)
 
@@ -492,11 +514,10 @@ def process_all_masks(
     del mod_tile_groups
     gc.collect()
 
-    print("Resetting label ids")
     new_label_ids = get_new_labels(stitched_imgs[0])  # cell
     reset_imgs = []
-    for img in stitched_imgs:
-        reset_img = reset_label_ids(img, new_label_ids)
+    for i in range(0, len(stitched_imgs)):
+        reset_img = reset_label_ids(stitched_imgs[i], new_label_ids)
         reset_imgs.append(reset_img)
     print("Finished processing masks")
     return reset_imgs
