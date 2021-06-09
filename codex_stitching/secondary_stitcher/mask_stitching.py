@@ -7,32 +7,39 @@ import numpy as np
 import pandas as pd
 from skimage.measure import regionprops_table
 
+from match_masks import get_matched_masks
 Image = np.ndarray
 
 
-def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype) -> str:
+def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype, match_fraction: float) -> str:
     template = """<?xml version="1.0" encoding="utf-8"?>
             <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
-              <Image ID="Image:0" Name="segmentation_mask_stitched.ome.tiff">
-
+              <Image ID="Image:0" Name="mask.ome.tiff">
                 <Pixels BigEndian="true" DimensionOrder="XYZCT" ID="Pixels:0" SizeC="4" SizeT="1" SizeX="{size_x}" SizeY="{size_y}" SizeZ="1" Type="{dtype}">
                     <Channel ID="Channel:0:0" Name="cells" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:1" Name="nuclei" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:2" Name="cell_boundaries" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:3" Name="nucleus_boundaries" SamplesPerPixel="1" />
-
                     <TiffData FirstC="0" FirstT="0" FirstZ="0" IFD="0" PlaneCount="1" />
                     <TiffData FirstC="1" FirstT="0" FirstZ="0" IFD="1" PlaneCount="1" />
                     <TiffData FirstC="2" FirstT="0" FirstZ="0" IFD="2" PlaneCount="1" />
                     <TiffData FirstC="3" FirstT="0" FirstZ="0" IFD="3" PlaneCount="1" />
                 </Pixels>
-
               </Image>
+              <StructuredAnnotations>
+                <XMLAnnotation ID="Annotation:0">
+                    <Value>
+                        <OriginalMetadata>
+                            <Key>FractionOfMatchedCellsAndNuclei</Key>
+                            <Value>{match_fraction}</Value>
+                        </OriginalMetadata>
+                    </Value>
+                </XMLAnnotation>
+              </StructuredAnnotations>
             </OME>
         """
-    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name)
+    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction)
     return ome_meta
-
 
 def get_labels_sorted_by_coordinates(img) -> List[int]:
     props = regionprops_table(img, properties=("label", "centroid"))
@@ -456,7 +463,7 @@ def stitch_mask(
 
 def process_all_masks(
     tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
-) -> List[Image]:
+) -> Tuple[List[Image], str]:
     print("Started processing masks")
     tiles_cell = [t[0, :, :] for t in tiles]
     tiles_nuc = [t[1, :, :] for t in tiles]
@@ -514,10 +521,20 @@ def process_all_masks(
     del mod_tile_groups
     gc.collect()
 
-    new_label_ids = get_new_labels(stitched_imgs[0])  # cell
+    matched_masks, fraction_matched = get_matched_masks(cell_mask=stitched_imgs[0],
+                                                        nucleus_mask=stitched_imgs[1],
+                                                        dtype=dtype)
+    del stitched_imgs
+    gc.collect()
+
+    new_label_ids = get_new_labels(matched_masks[0])  # cell
     reset_imgs = []
-    for i in range(0, len(stitched_imgs)):
-        reset_img = reset_label_ids(stitched_imgs[i], new_label_ids)
+    for i in range(0, len(matched_masks)):
+        reset_img = reset_label_ids(matched_masks[i], new_label_ids)
         reset_imgs.append(reset_img)
+
+    y_size = reset_imgs[0].shape[0]
+    x_size = reset_imgs[0].shape[1]
+    ome_meta = generate_ome_meta_for_mask(y_size, x_size, dtype, fraction_matched)
     print("Finished processing masks")
-    return reset_imgs
+    return reset_imgs, ome_meta

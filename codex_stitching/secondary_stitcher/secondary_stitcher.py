@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import pandas as pd
 import tifffile as tif
-from mask_stitching import generate_ome_meta_for_mask, process_all_masks
+from mask_stitching import process_all_masks
 from skimage.measure import regionprops_table
 
 Image = np.ndarray
@@ -213,7 +213,6 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
 
     if is_mask:
         dtype = np.uint32
-        ome_meta = generate_ome_meta_for_mask(big_image_y_size, big_image_x_size, dtype)
     else:
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
@@ -229,7 +228,7 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         if is_mask:
             # mask channels 0 - cells, 1 - nuclei, 2 - cell boundaries, 3 - nucleus boundaries
             tiles = load_tiles(path_list, key=None)
-            masks = process_all_masks(
+            masks, ome_meta = process_all_masks(
                 tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
             )
             for mask in masks:
