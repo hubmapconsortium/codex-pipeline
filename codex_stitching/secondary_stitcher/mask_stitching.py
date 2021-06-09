@@ -223,7 +223,7 @@ def find_overlapping_border_labels(
 def replace_overlapping_border_labels(
     img1: Image, img2: Image, overlap: int, mode: str
 ) -> Tuple[Image, Dict[int, int]]:
-    """ Replace label ids in img2 with label ids of img1 """
+    """Replace label ids in img2 with label ids of img1"""
     border_map = find_overlapping_border_labels(img1, img2, overlap, mode)
     # to avoid merging of old and new labels
     # find old labels that have same ids as new ones
