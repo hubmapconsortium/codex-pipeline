@@ -5,9 +5,9 @@ from typing import Dict, List, Tuple
 import dask
 import numpy as np
 import pandas as pd
+from match_masks import get_matched_masks
 from skimage.measure import regionprops_table
 
-from match_masks import get_matched_masks
 Image = np.ndarray
 
 
@@ -38,8 +38,11 @@ def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype, match_fraction: 
               </StructuredAnnotations>
             </OME>
         """
-    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction)
+    ome_meta = template.format(
+        size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction
+    )
     return ome_meta
+
 
 def get_labels_sorted_by_coordinates(img) -> List[int]:
     props = regionprops_table(img, properties=("label", "centroid"))
@@ -521,9 +524,9 @@ def process_all_masks(
     del mod_tile_groups
     gc.collect()
 
-    matched_masks, fraction_matched = get_matched_masks(cell_mask=stitched_imgs[0],
-                                                        nucleus_mask=stitched_imgs[1],
-                                                        dtype=dtype)
+    matched_masks, fraction_matched = get_matched_masks(
+        cell_mask=stitched_imgs[0], nucleus_mask=stitched_imgs[1], dtype=dtype
+    )
     del stitched_imgs
     gc.collect()
 
