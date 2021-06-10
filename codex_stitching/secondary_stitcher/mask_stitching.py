@@ -5,32 +5,42 @@ from typing import Dict, List, Tuple
 import dask
 import numpy as np
 import pandas as pd
+from match_masks import get_matched_masks
 from skimage.measure import regionprops_table
 
 Image = np.ndarray
 
 
-def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype) -> str:
+def generate_ome_meta_for_mask(size_y: int, size_x: int, dtype, match_fraction: float) -> str:
     template = """<?xml version="1.0" encoding="utf-8"?>
             <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
-              <Image ID="Image:0" Name="segmentation_mask_stitched.ome.tiff">
-
+              <Image ID="Image:0" Name="mask.ome.tiff">
                 <Pixels BigEndian="true" DimensionOrder="XYZCT" ID="Pixels:0" SizeC="4" SizeT="1" SizeX="{size_x}" SizeY="{size_y}" SizeZ="1" Type="{dtype}">
                     <Channel ID="Channel:0:0" Name="cells" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:1" Name="nuclei" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:2" Name="cell_boundaries" SamplesPerPixel="1" />
                     <Channel ID="Channel:0:3" Name="nucleus_boundaries" SamplesPerPixel="1" />
-
                     <TiffData FirstC="0" FirstT="0" FirstZ="0" IFD="0" PlaneCount="1" />
                     <TiffData FirstC="1" FirstT="0" FirstZ="0" IFD="1" PlaneCount="1" />
                     <TiffData FirstC="2" FirstT="0" FirstZ="0" IFD="2" PlaneCount="1" />
                     <TiffData FirstC="3" FirstT="0" FirstZ="0" IFD="3" PlaneCount="1" />
                 </Pixels>
-
               </Image>
+              <StructuredAnnotations>
+                <XMLAnnotation ID="Annotation:0">
+                    <Value>
+                        <OriginalMetadata>
+                            <Key>FractionOfMatchedCellsAndNuclei</Key>
+                            <Value>{match_fraction}</Value>
+                        </OriginalMetadata>
+                    </Value>
+                </XMLAnnotation>
+              </StructuredAnnotations>
             </OME>
         """
-    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name)
+    ome_meta = template.format(
+        size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction
+    )
     return ome_meta
 
 
@@ -189,6 +199,10 @@ def remove_overlapping_labels_in_another_channel(
 def find_overlapping_border_labels(
     img1: Image, img2: Image, overlap: int, mode: str
 ) -> Dict[int, int]:
+    """Find which pixels in img2 overlap pixels in img1
+    Return mapping
+    { img2px: img1px, }
+    """
     if mode == "horizontal":
         img1_ov = img1[:, -overlap:]
         img2_ov = img2[:, overlap : overlap * 2]
@@ -219,7 +233,21 @@ def find_overlapping_border_labels(
 def replace_overlapping_border_labels(
     img1: Image, img2: Image, overlap: int, mode: str
 ) -> Tuple[Image, Dict[int, int]]:
+    """Replace label ids in img2 with label ids of img1"""
     border_map = find_overlapping_border_labels(img1, img2, overlap, mode)
+    # to avoid merging of old and new labels
+    # find old labels that have same ids as new ones
+    # and add some value
+    old_lab_ids = tuple(np.unique(img2).tolist())
+    matches = []
+    for new_lab_id in border_map.values():
+        if new_lab_id in old_lab_ids:
+            matches.append(new_lab_id)
+    if matches != []:
+        addition = img2.max() + max(matches)
+        for value in matches:
+            img2[img2 == value] += addition
+
     for old_value, new_value in border_map.items():
         img2[img2 == old_value] = new_value
     return img2, border_map
@@ -283,21 +311,25 @@ def find_and_replace_overlapping_border_labels_in_first_channel(
 def replace_overlapping_border_labels_in_another_channel(
     tiles: List[Image], border_maps: Dict[int, dict], tile_additions: List[int], dtype
 ) -> List[Image]:
-    def replace_values(tile, value_map, addition, dtype):
+    def replace_values(tile, value_map, tile_addition, dtype):
         modified_tile = tile.astype(dtype)
-        modified_tile[np.nonzero(modified_tile)] += addition
+        modified_tile[np.nonzero(modified_tile)] += tile_addition
         if value_map != {}:
-            for old_value, new_value in value_map.items():
-                modified_tile[modified_tile == old_value] = new_value
-            return modified_tile
-        else:
-            return modified_tile
+            old_lab_ids = tuple(np.unique(modified_tile).tolist())
+            matches = []
+            for new_lab_id in value_map.values():
+                if new_lab_id in old_lab_ids:
+                    matches.append(new_lab_id)
+            if matches != []:
+                addition = modified_tile.max() + max(matches)
+                for value in matches:
+                    modified_tile[modified_tile == value] += addition
+        return modified_tile
 
     task = []
     for i, tile in enumerate(tiles):
         task.append(dask.delayed(replace_values)(tile, border_maps[i], tile_additions[i], dtype))
     modified_tiles = dask.compute(*task)
-
     return list(modified_tiles)
 
 
@@ -434,7 +466,7 @@ def stitch_mask(
 
 def process_all_masks(
     tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
-) -> List[Image]:
+) -> Tuple[List[Image], str]:
     print("Started processing masks")
     tiles_cell = [t[0, :, :] for t in tiles]
     tiles_nuc = [t[1, :, :] for t in tiles]
@@ -475,7 +507,7 @@ def process_all_masks(
     mod_tile_groups = []
     for tile_group in raw_tile_groups:
         mod_tile_group = modify_tiles_another_channel(
-            tile_group, all_exclusions, all_border_maps, tile_additions_nuc, dtype
+            tile_group, all_exclusions, all_border_maps, tile_additions_cell, dtype
         )
         mod_tile_groups.append(mod_tile_group)
 
@@ -492,11 +524,20 @@ def process_all_masks(
     del mod_tile_groups
     gc.collect()
 
-    print("Resetting label ids")
-    new_label_ids = get_new_labels(stitched_imgs[0])  # cell
+    matched_masks, fraction_matched = get_matched_masks(
+        cell_mask=stitched_imgs[0], nucleus_mask=stitched_imgs[1], dtype=dtype
+    )
+    del stitched_imgs
+    gc.collect()
+
+    new_label_ids = get_new_labels(matched_masks[0])  # cell
     reset_imgs = []
-    for img in stitched_imgs:
-        reset_img = reset_label_ids(img, new_label_ids)
+    for i in range(0, len(matched_masks)):
+        reset_img = reset_label_ids(matched_masks[i], new_label_ids)
         reset_imgs.append(reset_img)
+
+    y_size = reset_imgs[0].shape[0]
+    x_size = reset_imgs[0].shape[1]
+    ome_meta = generate_ome_meta_for_mask(y_size, x_size, dtype, fraction_matched)
     print("Finished processing masks")
-    return reset_imgs
+    return reset_imgs, ome_meta

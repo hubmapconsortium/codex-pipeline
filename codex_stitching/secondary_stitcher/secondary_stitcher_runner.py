@@ -2,8 +2,11 @@ import argparse
 import json
 from pathlib import Path
 from pprint import pprint
+from typing import Any, Dict
 
 import secondary_stitcher
+
+Report = Dict[str, Dict[str, Any]]
 
 
 def make_dir_if_not_exists(dir_path: Path):
@@ -11,7 +14,7 @@ def make_dir_if_not_exists(dir_path: Path):
         dir_path.mkdir(parents=True)
 
 
-def read_pipeline_config(path_to_config: Path):
+def read_pipeline_config(path_to_config: Path) -> dict:
     with open(path_to_config, "r") as s:
         config = json.load(s)
     return config
@@ -22,10 +25,19 @@ def write_pipeline_config(out_path: Path, config):
         json.dump(config, s, sort_keys=False, indent=4)
 
 
-def run_stitcher(img_dir: Path, out_path: Path, overlap: int, padding: dict, is_mask: bool):
+def run_stitcher(
+    img_dir: Path, out_path: Path, overlap: int, padding: dict, is_mask: bool
+) -> Report:
     padding_str = ",".join((str(i) for i in list(padding.values())))
     report = secondary_stitcher.main(img_dir, out_path, overlap, padding_str, is_mask)
     return report
+
+
+def merge_reports(mask_report: Report, expr_report: Report) -> Report:
+    total_report = dict()
+    for region in mask_report:
+        total_report[region] = {**mask_report[region], **expr_report[region]}
+    return total_report
 
 
 def main(pipeline_config_path: Path, ometiff_dir: Path):
@@ -59,12 +71,7 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
         path_to_image_tiles, stitched_expressions_out_path, overlap, padding, is_mask=False
     )
 
-    total_report = dict(
-        num_cells=mask_report["num_cells"],
-        num_channels=expr_report["num_channels"],
-        img_height=expr_report["img_height"],
-        img_width=expr_report["img_width"],
-    )
+    total_report = merge_reports(mask_report, expr_report)
 
     final_pipeline_config = pipeline_config
     final_pipeline_config.update({"report": total_report})
