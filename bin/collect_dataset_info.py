@@ -9,7 +9,7 @@ import re
 from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dataset_listing import get_tile_shape
 
@@ -71,7 +71,7 @@ def find_files(
     return file_paths
 
 
-def collect_attribute(fieldNames, configDict: Dict):
+def collect_attribute(fieldNames: List[str], configDict: Dict):
     """
     Returns the contents of the field matching the name(s) passed in the
     fieldNames argument.
@@ -102,15 +102,15 @@ def collect_attribute(fieldNames, configDict: Dict):
 def infer_channel_name_from_index(
     cycleIndex: int,
     channelIndex: int,
-    channelNames,
+    channelNames: List[str],
     channelsPerCycle: int,
-):
+) -> Optional[str]:
 
     # If there is no cycle+channel set for a particular measurement, then the
     # cycle (or channel?) index is set to "-1". E.g. if no membrane stain
     # channel exists, the membraneStainCycle can be set to "-1". Just return
     # None in this case.
-    if any(x == -1 for x in [cycleIndex, channelIndex]):
+    if -1 in {cycleIndex, channelIndex}:
         return None
 
     cycleLastChannelIdx = cycleIndex * channelsPerCycle
@@ -149,7 +149,7 @@ def calculate_target_shape(magnification: int, tileHeight: int, tileWidth: int):
     return [dims["height"], dims["width"]]
 
 
-def make_DAPI_channel_names_unique(channelNames):
+def make_DAPI_channel_names_unique(channelNames: List[str]) -> List[str]:
     """
     Sometimes DAPI channel names are not unique, e.g. if DAPI was used in every
     cycle, sometimes each DAPI channel is just named "DAPI", other times they
@@ -169,7 +169,7 @@ def make_DAPI_channel_names_unique(channelNames):
     for channel in channelNames:
         if channel == "DAPI":
             if uniqueNames[channel] > 1:
-                newNames.append(channel + "_" + str(dapiCount))
+                newNames.append(f"{channel}_{dapiCount}")
                 dapiCount += 1
             else:
                 newNames.append(channel)
@@ -224,7 +224,7 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
     return sorted(regions)
 
 
-def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: Dict) -> str:
+def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: Dict) -> int:
 
     if target_key != "tile_overlap_x" and target_key != "tile_overlap_y":
         raise ValueError(f"Invalid target_key for looking up tile overlap: {target_key}")
@@ -268,16 +268,9 @@ def collect_tiling_mode(exptConfigDict: Dict) -> str:
         raise ValueError(f"Unknown tiling mode found: {tiling_mode}")
 
 
-def create_cycle_channel_names(exptConfigDict: Dict) -> List:
-
+def create_cycle_channel_names(exptConfigDict: Dict) -> List[str]:
     num_channels = collect_attribute(["numChannels"], exptConfigDict)
-
-    cycle_channel_names = []
-
-    for i in range(1, num_channels + 1):
-        cycle_channel_names.append(f"CH{ str( i ) }")
-
-    return cycle_channel_names
+    return [f"CH{i}" for i in range(1, num_channels + 1)]
 
 
 def get_tile_shape_no_overlap(
