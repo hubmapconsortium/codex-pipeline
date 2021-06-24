@@ -1,7 +1,7 @@
 FROM eczech/cytokit:latest
 
 WORKDIR /lab/data/.cytokit
-RUN curl https://giygas.compbio.cs.cmu.edu/cytokit-cache.tar | tar -xf -
+RUN curl https://assets.cmu.hubmapconsortium.org/cytokit-cache.tar | tar -xf -
 
 WORKDIR /opt
 
