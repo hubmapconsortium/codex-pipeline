@@ -70,9 +70,7 @@ def create_output_dirs_for_tiles(
     return new_tiles_dirs
 
 
-def remove_temp_dirs(best_focus_dir: Path, stitched_channel_dirs: dict):
-    shutil.rmtree(str(best_focus_dir))
-
+def remove_temp_dirs(stitched_channel_dirs: dict):
     for cycle in stitched_channel_dirs:
         for region in stitched_channel_dirs[cycle]:
             for channel, dir_path in stitched_channel_dirs[cycle][region].items():

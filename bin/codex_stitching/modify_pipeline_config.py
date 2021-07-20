@@ -43,7 +43,6 @@ def generate_slicer_info(
 
 
 def replace_values_in_config(exp, slicer_info):
-
     original_measurements = {
         "original_measurements": {
             "tiling_mode": exp["tiling_mode"],

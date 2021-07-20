@@ -42,10 +42,30 @@ steps:
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
 
+  illumination_correction:
+    in:
+      base_directory:
+        source: data_dir
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+      - illum_corrected_tiles
+    run: steps/illumination_correction.cwl
+
+  best_focus:
+    in:
+      data_dir:
+        source: illumination_correction/illum_corrected_tiles
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+      - best_focus_tiles
+    run: steps/best_focus.cwl
+
   first_stitching:
     in:
       data_dir:
-        source: data_dir
+        source: best_focus/best_focus_tiles
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
