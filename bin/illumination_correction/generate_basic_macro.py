@@ -20,11 +20,12 @@ def fill_in_basic_macro_template(path_to_stack: Path, out_dir: Path) -> str:
     eval("script", "System.exit(0);");
     """
     # [Compute shading only, Compute shading and correct images]
-    basic_macro = macro_template.format(path_to_stack=str(path_to_stack.absolute()), out_dir=str(out_dir.absolute()))
+    basic_macro = macro_template.format(
+        path_to_stack=str(path_to_stack.absolute()), out_dir=str(out_dir.absolute())
+    )
     return basic_macro
 
 
 def save_macro(out_path: Path, macro: str):
     with open(out_path, "w", encoding="utf-8") as s:
         s.write(macro)
-

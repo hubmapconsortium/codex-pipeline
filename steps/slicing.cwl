@@ -6,15 +6,14 @@ requirements:
     dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
+baseCommand: ["python", "/opt/slicing/run_slicing.py"]
 
 
 inputs:
-  data_dir:
+  base_stitched_dir:
     type: Directory
     inputBinding:
-      prefix: "--data_dir"
-
+      prefix: "--base_stitched_dir"
 
   pipeline_config:
     type: File
@@ -22,7 +21,12 @@ inputs:
       prefix: "--pipeline_config_path"
 
 outputs:
-  stitched_images:
+  new_tiles:
     type: Directory
     outputBinding:
-      glob: "/output/stitched_images"
+      glob: "/output/new_tiles"
+
+  modified_pipeline_config:
+    type: File
+    outputBinding:
+      glob: "/output/pipeline_conf/pipelineConfig.json"

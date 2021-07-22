@@ -90,3 +90,9 @@ def modify_pipeline_config(
     config.update(slicer_info)
 
     return config
+
+
+def save_modified_pipeline_config(pipeline_config: dict, out_dir: Path):
+    out_file_path = out_dir.joinpath("pipelineConfig.json")
+    with open(out_file_path, "w") as s:
+        json.dump(pipeline_config, s, indent=4)

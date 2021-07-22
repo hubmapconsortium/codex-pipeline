@@ -12,7 +12,13 @@ from directory_management import (
     get_ref_channel_dir_per_region,
 )
 from generate_bigstitcher_macro import BigStitcherMacro, FuseMacro
-from slicer.slicer_runner import get_image_path_in_dir
+
+
+def get_image_path_in_dir(dir_path: Path) -> Path:
+    allowed_extensions = (".tif", ".tiff")
+    listing = list(dir_path.iterdir())
+    img_listing = [f for f in listing if f.suffix in allowed_extensions]
+    return img_listing[0]
 
 
 def generate_bigstitcher_macro_for_reference_channel(

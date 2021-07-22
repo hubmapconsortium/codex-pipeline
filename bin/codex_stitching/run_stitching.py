@@ -16,8 +16,6 @@ from directory_management import (
     remove_temp_dirs,
 )
 from image_stitching import stitch_images
-from modify_pipeline_config import modify_pipeline_config
-from slicer.slicer_runner import split_channels_into_tiles
 
 from pipeline_utils.dataset_listing import (
     create_listing_for_each_cycle_region,
@@ -43,12 +41,6 @@ def get_file_listing(data_dir: Path):
     img_dirs = get_img_dirs(data_dir)
     listing = create_listing_for_each_cycle_region(img_dirs)
     return listing
-
-
-def save_modified_pipeline_config(pipeline_config: dict, out_dir: Path):
-    out_file_path = out_dir.joinpath("pipelineConfig.json")
-    with open(out_file_path, "w") as s:
-        json.dump(pipeline_config, s, indent=4)
 
 
 def copy_to_channel_dirs(listing, base_channel_dir: Path) -> Dict[int, Dict[int, Dict[int, Path]]]:
@@ -78,12 +70,10 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     dataset_meta = load_dataset_info(pipeline_config_path)
 
-    out_dir = Path("/output/processed_images")
-    pipeline_conf_dir = Path("/output/pipeline_conf/")
+    out_dir = Path("/output/stitched_images")
     base_channel_dir = Path("/output/channel_dirs")
 
     make_dir_if_not_exists(out_dir)
-    make_dir_if_not_exists(pipeline_conf_dir)
     make_dir_if_not_exists(base_channel_dir)
 
     dask.config.set({"num_workers": 5, "scheduler": "processes"})
@@ -91,26 +81,6 @@ def main(data_dir: Path, pipeline_config_path: Path):
     listing = get_file_listing(data_dir)
     channel_dirs = copy_to_channel_dirs(listing, base_channel_dir)
     stitched_channel_dirs, stitched_img_shape = stitch_images(channel_dirs, dataset_meta, out_dir)
-
-    tile_output_dir_naming_template = "Cyc{cycle:d}_reg{region:d}"
-    dirs_for_new_tiles_per_cycle_region = create_output_dirs_for_tiles(
-        stitched_channel_dirs, out_dir, tile_output_dir_naming_template
-    )
-
-    print("\nSplitting channels into tiles")
-    tile_size = 1000
-    overlap = 100
-    tile_shape = (tile_size, tile_size)
-    split_channels_into_tiles(
-        stitched_channel_dirs, dirs_for_new_tiles_per_cycle_region, tile_size, overlap
-    )
-    modified_experiment = modify_pipeline_config(
-        pipeline_config_path, tile_shape, overlap, stitched_img_shape
-    )
-
-    save_modified_pipeline_config(modified_experiment, pipeline_conf_dir)
-
-    remove_temp_dirs(stitched_channel_dirs)
 
     print("\nTime elapsed", datetime.now() - start)
 

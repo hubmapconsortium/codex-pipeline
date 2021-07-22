@@ -1,7 +1,7 @@
-from pathlib import Path
 import json
-from typing import List
 import os
+from pathlib import Path
+from typing import List
 
 
 def load_pipeline_config(pipeline_config_path: Path) -> dict:
@@ -36,7 +36,8 @@ def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
         pixel_distance_x=pipeline_config["lateral_resolution"],
         pixel_distance_y=pipeline_config["lateral_resolution"],
         pixel_distance_z=pipeline_config["axial_resolution"],
-        reference_channel=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"]) + 1,
+        reference_channel=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
+        + 1,
         tiling_mode=_convert_tiling_mode(pipeline_config["tiling_mode"]),
         num_z_planes=pipeline_config["num_z_planes"],
         channel_names=pipeline_config["channel_names"],

@@ -69,14 +69,24 @@ steps:
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
-       - modified_pipeline_config
-       - image_tiles
+       - stitched_images
     run: steps/first_stitching.cwl
+
+  slicing:
+    in:
+      base_stitched_dir:
+        source: first_stitching/stitched_images
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+       - new_tiles
+       - modified_pipeline_config
+    run: steps/slicing.cwl
 
   create_yaml_config:
     in:
       pipeline_config:
-        source: first_stitching/modified_pipeline_config
+        source: slicing/modified_pipeline_config
       gpus:
         source: gpus
     out:
@@ -87,7 +97,7 @@ steps:
   run_cytokit:
     in:
       data_dir:
-        source: first_stitching/image_tiles
+        source: slicing/new_tiles
       yaml_config:
         source: create_yaml_config/cytokit_config
     out:
@@ -95,7 +105,6 @@ steps:
       - data_json
     run: steps/run_cytokit.cwl
     label: "CODEX analysis via Cytokit processor and operator"
-
 
   ome_tiff_creation:
     in:
@@ -111,7 +120,7 @@ steps:
   second_stitching:
     in:
       pipeline_config:
-        source: first_stitching/modified_pipeline_config
+        source: slicing/modified_pipeline_config
       ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
     out:

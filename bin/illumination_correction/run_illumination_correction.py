@@ -1,19 +1,24 @@
 import argparse
-from pathlib import Path
-from typing import List, Dict
-import subprocess
 import platform
+import subprocess
 import sys
+from pathlib import Path
+from typing import Dict, List
 
+import cv2 as cv
+import dask
 import numpy as np
 import tifffile as tif
-import dask
-import cv2 as cv
 
 sys.path.append("/opt/")
 from generate_basic_macro import fill_in_basic_macro_template, save_macro
-from pipeline_utils.dataset_listing import get_img_listing, create_listing_for_each_cycle_region
+
+from pipeline_utils.dataset_listing import (
+    create_listing_for_each_cycle_region,
+    get_img_listing,
+)
 from pipeline_utils.pipeline_config_reader import load_dataset_info
+
 ImgStack = np.ndarray  # 3d
 Image = np.ndarray  # 2d
 
@@ -57,8 +62,9 @@ def read_and_save_to_stack(path_list: List[Path], out_stack_path: Path):
     save_stack(out_stack_path, read_imgs_to_stack(path_list))
 
 
-def resave_imgs_to_stacks(zplane_img_listing: Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]],
-                          img_stack_dir: Path) -> Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]:
+def resave_imgs_to_stacks(
+    zplane_img_listing: Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]], img_stack_dir: Path
+) -> Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]:
     stack_paths = dict()
     stack_name_template = "Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif"
     tasks = []
@@ -69,7 +75,9 @@ def resave_imgs_to_stacks(zplane_img_listing: Dict[int, Dict[int, Dict[int, Dict
             for channel in zplane_img_listing[cycle][region]:
                 stack_paths[cycle][region][channel] = dict()
                 for zplane, path_list in zplane_img_listing[cycle][region][channel].items():
-                    stack_name = stack_name_template.format(cyc=cycle, reg=region, ch=channel, z=zplane)
+                    stack_name = stack_name_template.format(
+                        cyc=cycle, reg=region, ch=channel, z=zplane
+                    )
                     out_stack_path = img_stack_dir / stack_name
                     stack_paths[cycle][region][channel][zplane] = out_stack_path
                     tasks.append(dask.delayed(read_and_save_to_stack)(path_list, out_stack_path))
@@ -77,9 +85,11 @@ def resave_imgs_to_stacks(zplane_img_listing: Dict[int, Dict[int, Dict[int, Dict
     return stack_paths
 
 
-def generate_basic_macro_for_each_stack(stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]],
-                                        macro_out_dir: Path, illum_cor_dir: Path
-                                        ) -> Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]:
+def generate_basic_macro_for_each_stack(
+    stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]],
+    macro_out_dir: Path,
+    illum_cor_dir: Path,
+) -> Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]:
     macro_paths = dict()
     for cycle in stack_paths:
         macro_paths[cycle] = dict()
@@ -130,8 +140,9 @@ def run_all_macros(macro_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
     dask.compute(*tasks)
 
 
-def read_flatfield_imgs(illum_cor_dir: Path, stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
-                           ) -> Dict[int, Dict[int, Dict[int, Dict[int, ImgStack]]]]:
+def read_flatfield_imgs(
+    illum_cor_dir: Path, stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
+) -> Dict[int, Dict[int, Dict[int, Dict[int, ImgStack]]]]:
     per_zplane_flatfield = dict()
     stack_name_template = "Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif"
     for cycle in stack_paths:
@@ -141,7 +152,9 @@ def read_flatfield_imgs(illum_cor_dir: Path, stack_paths: Dict[int, Dict[int, Di
             for channel in stack_paths[cycle][region]:
                 per_zplane_flatfield[cycle][region][channel] = dict()
                 for zplane, stack_path in stack_paths[cycle][region][channel].items():
-                    stack_name = stack_name_template.format(cyc=cycle, reg=region, ch=channel, z=zplane)
+                    stack_name = stack_name_template.format(
+                        cyc=cycle, reg=region, ch=channel, z=zplane
+                    )
                     flatfield_filename = "flatfield_" + stack_name
                     flatfield_path = illum_cor_dir / "flatfield" / flatfield_filename
                     flatfield = tif.imread(str(flatfield_path.absolute()))  # float32 0-1
@@ -157,9 +170,13 @@ def apply_flatfield_cor(img: Image, flatfield: Image) -> Image:
 
     corrected_imgf = imgf / flatfield
 
-    new_range = (round(orig_range[0] * corrected_imgf.min()),
-                 round(orig_range[1] * corrected_imgf.max()))
-    corrected_img = cv.normalize(corrected_imgf, None, new_range[0], new_range[1], cv.NORM_MINMAX, cv_dtype)
+    new_range = (
+        round(orig_range[0] * corrected_imgf.min()),
+        round(orig_range[1] * corrected_imgf.max()),
+    )
+    corrected_img = cv.normalize(
+        corrected_imgf, None, new_range[0], new_range[1], cv.NORM_MINMAX, cv_dtype
+    )
     return corrected_img
 
 
@@ -168,9 +185,11 @@ def correct_and_save(img_path: Path, flatfield: Image, out_path: Path):
     tif.imwrite(out_path, corrected_img)
 
 
-def apply_flatfield_and_save(listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
-                             flatfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
-                             out_dir: Path):
+def apply_flatfield_and_save(
+    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
+    flatfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
+    out_dir: Path,
+):
     img_dir_template = "Cyc{cyc:03d}_reg{reg:03d}"
     img_name_template = "{reg:d}_{tile:05d}_Z{z:03d}_CH{ch:d}.tif"
     tasks = []
@@ -180,7 +199,9 @@ def apply_flatfield_and_save(listing: Dict[int, Dict[int, Dict[int, Dict[int, Di
                 for tile, zplane_dict in listing[cycle][region][channel].items():
                     for zplane, path in zplane_dict.items():
                         img_dir_name = img_dir_template.format(cyc=cycle, reg=region)
-                        img_name = img_name_template.format(reg=region, tile=tile, z=zplane, ch=channel)
+                        img_name = img_name_template.format(
+                            reg=region, tile=tile, z=zplane, ch=channel
+                        )
                         out_dir_full = Path(out_dir / img_dir_name)
                         make_dir_if_not_exists(out_dir_full)
                         out_path = out_dir_full / img_name
@@ -189,8 +210,9 @@ def apply_flatfield_and_save(listing: Dict[int, Dict[int, Dict[int, Dict[int, Di
     dask.compute(*tasks)
 
 
-def organize_listing_by_cyc_reg_ch_zplane(listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]
-                                          ) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]:
+def organize_listing_by_cyc_reg_ch_zplane(
+    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]
+) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]:
     new_arrangemnt = dict()
     for cycle in listing:
         new_arrangemnt[cycle] = dict()
@@ -208,9 +230,9 @@ def organize_listing_by_cyc_reg_ch_zplane(listing: Dict[int, Dict[int, Dict[int,
 
 
 def main(data_dir: Path, pipeline_config_path: Path):
-    """ It is expected that images are separated
-        into different directories per region, cycle, channel
-        e.g. Cyc1_Reg1_Ch1/0001.tif
+    """It is expected that images are separated
+    into different directories per region, cycle, channel
+    e.g. Cyc1_Reg1_Ch1/0001.tif
     """
     img_stack_dir = Path("/output/image_stacks/")
     macro_dir = Path("/output/basic_macros")
@@ -242,11 +264,11 @@ def main(data_dir: Path, pipeline_config_path: Path):
     print(list(corrected_img_dir.iterdir()))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=Path,
-                        help="path to directory with dataset directory")
-    parser.add_argument("--pipeline_config_path", type=Path,
-                        help="path to pipelineConfig.json file")
+    parser.add_argument("--data_dir", type=Path, help="path to directory with dataset directory")
+    parser.add_argument(
+        "--pipeline_config_path", type=Path, help="path to pipelineConfig.json file"
+    )
     args = parser.parse_args()
     main(args.data_dir, args.pipeline_config_path)
