@@ -57,7 +57,7 @@ RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites
 && ImageJ-linux64 --headless --update update
 
 # Install BaSiC_Mod
-RUN wget --quiet https://github.com/VasylVaskivskyi/BaSiC_Mod/releases/download/v1.0/BaSiC_Mod_v10.zip -P /tmp/ \
+RUN wget --quiet https://github.com/hubmapconsortium/BaSiC_Mod/releases/download/v1.0/BaSiC_Mod_v10.zip -P /tmp/ \
     && unzip /tmp/BaSiC_Mod_v10.zip -d /tmp/ \
     && mv /tmp/BaSiC_Mod_v10/BaSiC_Mod.jar /opt/Fiji.app/plugins/ \
     && mv /tmp/BaSiC_Mod_v10/dependencies/* /opt/Fiji.app/jars/. \
