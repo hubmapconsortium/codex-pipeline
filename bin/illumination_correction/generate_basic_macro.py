@@ -20,6 +20,7 @@ def fill_in_basic_macro_template(path_to_stack: Path, out_dir: Path) -> str:
     eval("script", "System.exit(0);");
     """
     # [Compute shading only, Compute shading and correct images]
+    # [Estimate flat-field only (ignore dark-field), Estimate both flat-field and dark-field]
     basic_macro = macro_template.format(
         path_to_stack=str(path_to_stack.absolute()), out_dir=str(out_dir.absolute())
     )
