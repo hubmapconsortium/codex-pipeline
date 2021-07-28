@@ -32,6 +32,5 @@ RUN mkdir /output && chmod -R a+rwx /output
 
 WORKDIR /opt
 COPY bin /opt
-COPY codex_stitching /opt/codex_stitching
 
 CMD ["/bin/bash"]

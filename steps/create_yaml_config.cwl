@@ -1,9 +1,11 @@
 cwlVersion: v1.1
 class: CommandLineTool
 label: Create Cytokit experiment config
-hints:
+
+requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.0
+    dockerPull: hubmap/codex-scripts
+
 baseCommand: ["python", "/opt/create_cytokit_config.py"]
 
 inputs:

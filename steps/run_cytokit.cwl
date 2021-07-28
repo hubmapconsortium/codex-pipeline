@@ -4,10 +4,11 @@ class: CommandLineTool
 cwlVersion: v1.1
 baseCommand: ["sh", "run_cytokit.sh"]
 
-hints:
+requirements:
   DockerRequirement:
-    dockerPull: hubmap/cytokit:2.0
+    dockerPull: hubmap/cytokit:latest
     dockerOutputDirectory: "/lab/cytokit_output"
+hints:
   DockerGpuRequirement: {}
 
   InitialWorkDirRequirement:

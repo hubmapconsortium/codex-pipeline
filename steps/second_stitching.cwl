@@ -1,12 +1,11 @@
 cwlVersion: v1.1
 class: CommandLineTool
 
-hints:
+requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.0
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: /output
-  NetworkAccess:
-    networkAccess: true
+
 baseCommand: ["python", "/opt/codex_stitching/secondary_stitcher/secondary_stitcher_runner.py"]
 
 

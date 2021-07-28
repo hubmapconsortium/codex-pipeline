@@ -43,7 +43,6 @@ def generate_slicer_info(
 
 
 def replace_values_in_config(exp, slicer_info):
-
     original_measurements = {
         "original_measurements": {
             "tiling_mode": exp["tiling_mode"],
@@ -91,3 +90,9 @@ def modify_pipeline_config(
     config.update(slicer_info)
 
     return config
+
+
+def save_modified_pipeline_config(pipeline_config: dict, out_dir: Path):
+    out_file_path = out_dir.joinpath("pipelineConfig.json")
+    with open(out_file_path, "w") as s:
+        json.dump(pipeline_config, s, indent=4)

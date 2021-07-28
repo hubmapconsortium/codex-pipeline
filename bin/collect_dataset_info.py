@@ -11,7 +11,7 @@ from os import fspath, walk
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from dataset_listing import get_tile_shape
+from pipeline_utils.dataset_listing import get_tile_shape
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
