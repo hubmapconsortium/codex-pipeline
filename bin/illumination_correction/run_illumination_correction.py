@@ -162,32 +162,49 @@ def read_flatfield_imgs(
     return per_zplane_flatfield
 
 
-def apply_flatfield_cor(img: Image, flatfield: Image) -> Image:
+def read_darkfield_imgs(
+    illum_cor_dir: Path, stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
+) -> Dict[int, Dict[int, Dict[int, Dict[int, ImgStack]]]]:
+    per_zplane_darkfield = dict()
+    stack_name_template = "Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif"
+    for cycle in stack_paths:
+        per_zplane_darkfield[cycle] = dict()
+        for region in stack_paths[cycle]:
+            per_zplane_darkfield[cycle][region] = dict()
+            for channel in stack_paths[cycle][region]:
+                per_zplane_darkfield[cycle][region][channel] = dict()
+                for zplane, stack_path in stack_paths[cycle][region][channel].items():
+                    stack_name = stack_name_template.format(
+                        cyc=cycle, reg=region, ch=channel, z=zplane
+                    )
+                    darkfield_filename = "darkfield_" + stack_name
+                    darkfield_path = illum_cor_dir / "darkfield" / darkfield_filename
+                    darkfield = tif.imread(str(darkfield_path.absolute()))  # float32 0-1
+                    per_zplane_darkfield[cycle][region][channel][zplane] = darkfield
+    return per_zplane_darkfield
+
+
+def apply_illum_cor(img: Image, flatfield: Image, darkfield: Image) -> Image:
     orig_dtype = img.dtype
-    orig_range = (img.min(), img.max())
-    cv_dtype = convert_np_cv_dtype(orig_dtype)
-    imgf = cv.normalize(img, None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+    dtype_info = np.iinfo(orig_dtype)
+    orig_minmax = (dtype_info.min, dtype_info.max)
+    imgf = img.astype(np.float32)
 
-    corrected_imgf = imgf / flatfield
+    corrected_imgf = (imgf - darkfield) / flatfield
 
-    new_range = (
-        round(orig_range[0] * corrected_imgf.min()),
-        round(orig_range[1] * corrected_imgf.max()),
-    )
-    corrected_img = cv.normalize(
-        corrected_imgf, None, new_range[0], new_range[1], cv.NORM_MINMAX, cv_dtype
-    )
+    corrected_img = np.clip(np.round(corrected_imgf, 0), *orig_minmax).astype(orig_dtype)
     return corrected_img
 
 
-def correct_and_save(img_path: Path, flatfield: Image, out_path: Path):
-    corrected_img = apply_flatfield_cor(tif.imread(str(img_path.absolute())), flatfield)
+def correct_and_save(img_path: Path, flatfield: Image, darkfield: Image, out_path: Path):
+    corrected_img = apply_illum_cor(tif.imread(str(img_path.absolute())), flatfield, darkfield)
     tif.imwrite(out_path, corrected_img)
 
 
 def apply_flatfield_and_save(
     listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
     flatfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
+    darkfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
     out_dir: Path,
 ):
     img_dir_template = "Cyc{cyc:03d}_reg{reg:03d}"
@@ -206,7 +223,10 @@ def apply_flatfield_and_save(
                         make_dir_if_not_exists(out_dir_full)
                         out_path = out_dir_full / img_name
                         flatfield = flatfields[cycle][region][channel][zplane]
-                        tasks.append(dask.delayed(correct_and_save)(path, flatfield, out_path))
+                        darkfield = darkfields[cycle][region][channel][zplane]
+                        tasks.append(
+                            dask.delayed(correct_and_save)(path, flatfield, darkfield, out_path)
+                        )
     dask.compute(*tasks)
 
 
@@ -262,7 +282,8 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
-    apply_flatfield_and_save(listing, flatfields, corrected_img_dir)
+    darkfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
+    apply_flatfield_and_save(listing, flatfields, darkfields, corrected_img_dir)
 
 
 if __name__ == "__main__":
