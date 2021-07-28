@@ -42,21 +42,51 @@ steps:
     run: steps/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
 
-  first_stitching:
+  illumination_correction:
     in:
-      data_dir:
+      base_directory:
         source: data_dir
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
-       - modified_pipeline_config
-       - image_tiles
+      - illum_corrected_tiles
+    run: steps/illumination_correction.cwl
+
+  best_focus:
+    in:
+      data_dir:
+        source: illumination_correction/illum_corrected_tiles
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+      - best_focus_tiles
+    run: steps/best_focus.cwl
+
+  first_stitching:
+    in:
+      data_dir:
+        source: best_focus/best_focus_tiles
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+       - stitched_images
     run: steps/first_stitching.cwl
+
+  slicing:
+    in:
+      base_stitched_dir:
+        source: first_stitching/stitched_images
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+       - new_tiles
+       - modified_pipeline_config
+    run: steps/slicing.cwl
 
   create_yaml_config:
     in:
       pipeline_config:
-        source: first_stitching/modified_pipeline_config
+        source: slicing/modified_pipeline_config
       gpus:
         source: gpus
     out:
@@ -67,7 +97,7 @@ steps:
   run_cytokit:
     in:
       data_dir:
-        source: first_stitching/image_tiles
+        source: slicing/new_tiles
       yaml_config:
         source: create_yaml_config/cytokit_config
     out:
@@ -76,11 +106,24 @@ steps:
     run: steps/run_cytokit.cwl
     label: "CODEX analysis via Cytokit processor and operator"
 
+  background_subtraction:
+    in:
+      cytokit_output:
+        source: run_cytokit/cytokit_output
+      pipeline_config:
+        source: slicing/modified_pipeline_config
+      cytokit_config:
+        source: create_yaml_config/cytokit_config
+    out:
+      - bg_sub_tiles
+    run: steps/background_subtraction.cwl
 
   ome_tiff_creation:
     in:
       cytokit_output:
         source: run_cytokit/cytokit_output
+      bg_sub_tiles:
+        source: background_subtraction/bg_sub_tiles
       cytokit_config:
         source: create_yaml_config/cytokit_config
     out:
@@ -91,7 +134,7 @@ steps:
   second_stitching:
     in:
       pipeline_config:
-        source: first_stitching/modified_pipeline_config
+        source: slicing/modified_pipeline_config
       ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
     out:

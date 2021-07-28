@@ -6,11 +6,11 @@ requirements:
     dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
+baseCommand: ["python", "/opt/background_subtraction/run_background_subtraction.py"]
 
 
 inputs:
-  data_dir:
+  cytokit_output:
     type: Directory
     inputBinding:
       prefix: "--data_dir"
@@ -21,8 +21,13 @@ inputs:
     inputBinding:
       prefix: "--pipeline_config_path"
 
+  cytokit_config:
+    type: File
+    inputBinding:
+      prefix: "--cytokit_config_path"
+
 outputs:
-  stitched_images:
+  bg_sub_tiles:
     type: Directory
     outputBinding:
-      glob: "/output/stitched_images"
+      glob: "/output/background_subtraction"

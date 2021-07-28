@@ -116,11 +116,11 @@ def load_tiles(path_list: List[Path], key: Union[None, int]):
 def calc_mask_coverage(segm_mask: Image) -> float:
     mask_pixels = np.sum(segm_mask != 0)
     total_pixels = segm_mask.shape[-2] * segm_mask.shape[-1]
-    return round(mask_pixels / total_pixels, 3)
+    return float(round(mask_pixels / total_pixels, 3))
 
 
 def calc_snr(img: Image) -> float:
-    return round(np.mean(img) / np.std(img), 3)
+    return float(round(np.mean(img) / np.std(img), 3))
 
 
 def calc_label_sizes(segm_mask: Image) -> Dict[str, float]:
@@ -135,9 +135,9 @@ def calc_label_sizes(segm_mask: Image) -> Dict[str, float]:
     dif = np.stack((bbox_arr[:, 1] - bbox_arr[:, 0], bbox_arr[:, 3] - bbox_arr[:, 2]), axis=1)
     long_sides = np.max(dif, axis=1)
     label_sizes = dict(
-        min_bbox_size=dif[np.argmin(long_sides)].tolist(),
-        max_bbox_size=dif[np.argmax(long_sides)].tolist(),
-        mean_bbox_size=np.round(np.mean(dif, axis=0), 3).tolist(),
+        min_bbox_size=[float(i) for i in dif[np.argmin(long_sides)].tolist()],
+        max_bbox_size=[float(i) for i in dif[np.argmax(long_sides)].tolist()],
+        mean_bbox_size=[float(i) for i in np.round(np.mean(dif, axis=0), 3).tolist()],
     )
     return label_sizes
 
@@ -216,7 +216,7 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
     else:
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
-
+        ome_meta = re.sub(r'\sDimensionOrder="[XYCZT]+"', ' DimensionOrder="XYZCT"', ome_meta)
     # part of this report is generated after mask stitching and part after expression stitching
 
     total_report = dict()
@@ -232,7 +232,13 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                 tiles, tile_shape, y_ntiles, x_ntiles, overlap, padding, dtype
             )
             for mask in masks:
-                TW.save(mask, photometric="minisblack", description=ome_meta)
+                new_shape = (1, mask.shape[0], mask.shape[1])
+                TW.write(
+                    mask.reshape(new_shape),
+                    contiguous=True,
+                    photometric="minisblack",
+                    description=ome_meta,
+                )
 
             this_region_report["num_cells"] = int(masks[0].max())
             this_region_report["num_nuclei"] = int(masks[1].max())
@@ -247,13 +253,19 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                 plane = stitch_plane(
                     tiles, y_ntiles, x_ntiles, tile_shape, dtype, overlap, padding
                 )
+                new_shape = (1, plane.shape[0], plane.shape[1])
                 if p == 0:
                     this_region_report["num_channels"] = int(npages)
                     this_region_report["img_height"] = int(plane.shape[0])
                     this_region_report["img_width"] = int(plane.shape[1])
                     this_region_report["per_channel_snr"] = dict()
                 this_region_report["per_channel_snr"][p] = calc_snr(plane)
-                TW.save(plane, photometric="minisblack", description=ome_meta)
+                TW.write(
+                    plane.reshape(new_shape),
+                    contiguous=True,
+                    photometric="minisblack",
+                    description=ome_meta,
+                )
         total_report["reg" + str(r + 1)] = this_region_report
         TW.close()
     return total_report

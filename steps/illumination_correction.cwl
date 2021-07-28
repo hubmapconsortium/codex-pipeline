@@ -6,15 +6,14 @@ requirements:
     dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
+baseCommand: ["python", "/opt/illumination_correction/run_illumination_correction.py"]
 
 
 inputs:
-  data_dir:
+  base_directory:
     type: Directory
     inputBinding:
       prefix: "--data_dir"
-
 
   pipeline_config:
     type: File
@@ -22,7 +21,7 @@ inputs:
       prefix: "--pipeline_config_path"
 
 outputs:
-  stitched_images:
+  illum_corrected_tiles:
     type: Directory
     outputBinding:
-      glob: "/output/stitched_images"
+      glob: "/output/corrected_images"

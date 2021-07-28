@@ -18,6 +18,51 @@ RUN wget --quiet https://downloads.imagej.net/fiji/latest/fiji-linux64.zip -P /t
 
 ENV PATH /opt/Fiji.app:$PATH
 
-# Update imagej
+# Install BigStitcher
 RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
 && ImageJ-linux64 --headless --update update
+
+# Install BaSiC_Mod
+RUN wget --quiet https://github.com/VasylVaskivskyi/BaSiC_Mod/releases/download/v1.0/BaSiC_Mod_v10.zip -P /tmp/ \
+    && unzip /tmp/BaSiC_Mod_v10.zip -d /tmp/ \
+    && mv /tmp/BaSiC_Mod_v10/BaSiC_Mod.jar /opt/Fiji.app/plugins/ \
+    && mv /tmp/BaSiC_Mod_v10/dependencies/* /opt/Fiji.app/jars/. \
+    && rm -r /tmp/BaSiC_Mod_v10 \
+    && rm /tmp/BaSiC_Mod_v10.zip \
+    && rm /opt/Fiji.app/jars/jtransforms-2.4.jar \
+    && rm /opt/Fiji.app/jars/netlib-java-0.9.3-renjin-patched-2.jar \
+    && ImageJ-linux64 --headless --update update
+FROM ubuntu:focal
+
+RUN apt-get -qq update \
+    && apt-get -qq install --no-install-recommends --yes \
+    wget \
+    bzip2 \
+    ca-certificates \
+    curl \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+#Get imagej
+RUN wget --quiet https://downloads.imagej.net/fiji/latest/fiji-linux64.zip -P /tmp/ \
+    && unzip /tmp/fiji-linux64.zip -d /opt/ \
+    && rm /tmp/fiji-linux64.zip
+
+ENV PATH /opt/Fiji.app:$PATH
+
+# Install BigStitcher
+RUN ImageJ-linux64 --headless --update add-update-site BigStitcher https://sites.imagej.net/BigStitcher/ \
+&& ImageJ-linux64 --headless --update update
+
+# Install BaSiC_Mod
+RUN wget --quiet https://github.com/hubmapconsortium/BaSiC_Mod/releases/download/v1.0/BaSiC_Mod_v10.zip -P /tmp/ \
+    && unzip /tmp/BaSiC_Mod_v10.zip -d /tmp/ \
+    && mv /tmp/BaSiC_Mod_v10/BaSiC_Mod.jar /opt/Fiji.app/plugins/ \
+    && mv /tmp/BaSiC_Mod_v10/dependencies/* /opt/Fiji.app/jars/. \
+    && rm -r /tmp/BaSiC_Mod_v10 \
+    && rm /tmp/BaSiC_Mod_v10.zip \
+    && rm /opt/Fiji.app/jars/jtransforms-2.4.jar \
+    && rm /opt/Fiji.app/jars/netlib-java-0.9.3-renjin-patched-2.jar \
+    && ImageJ-linux64 --headless --update update

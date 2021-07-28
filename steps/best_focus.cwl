@@ -6,7 +6,7 @@ requirements:
     dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
+baseCommand: ["python", "/opt/best_focus/run_best_focus_selection.py"]
 
 
 inputs:
@@ -22,7 +22,8 @@ inputs:
       prefix: "--pipeline_config_path"
 
 outputs:
-  stitched_images:
+  best_focus_tiles:
     type: Directory
     outputBinding:
-      glob: "/output/stitched_images"
+      glob: "/output/best_focus"
+
