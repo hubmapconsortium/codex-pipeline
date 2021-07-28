@@ -74,6 +74,7 @@ def split_channels_into_tiles(
         for region in stitched_dirs[cycle]:
             for channel, dir_path in stitched_dirs[cycle][region].items():
                 stitched_image_path = get_image_path_in_dir(dir_path)
+                print(stitched_image_path.name)
                 out_dir = out_dirs_for_tiles[cycle][region]
                 slice_img(
                     path_to_str(stitched_image_path),
@@ -119,6 +120,8 @@ def main(base_stitched_dir: Path, pipeline_config_path: Path):
 
     tile_size = 1000
     overlap = 100
+    print("Splitting images into tiles")
+    print("Tile size:", tile_size, "| overlap:", overlap)
     split_channels_into_tiles(stitched_channel_dirs, out_dirs_for_tiles, tile_size, overlap)
 
     modified_experiment = modify_pipeline_config(

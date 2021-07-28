@@ -249,19 +249,20 @@ def main(data_dir: Path, pipeline_config_path: Path):
     dataset_info = load_dataset_info(pipeline_config_path)
     raw_data_dir = dataset_info["dataset_dir"]
     img_dirs = get_input_img_dirs(Path(data_dir / raw_data_dir))
+    print("Getting image listing")
     listing = create_listing_for_each_cycle_region(img_dirs)
-
     zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing)
 
+    print("Resaving images as stacks")
     stack_paths = resave_imgs_to_stacks(zplane_listing, img_stack_dir)
-
+    print("Generating BaSiC macros")
     macro_paths = generate_basic_macro_for_each_stack(stack_paths, macro_dir, illum_cor_dir)
+    print("Running estimation of illumination")
     run_all_macros(macro_paths)
 
+    print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
     apply_flatfield_and_save(listing, flatfields, corrected_img_dir)
-
-    print(list(corrected_img_dir.iterdir()))
 
 
 if __name__ == "__main__":
