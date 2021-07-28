@@ -106,10 +106,24 @@ steps:
     run: steps/run_cytokit.cwl
     label: "CODEX analysis via Cytokit processor and operator"
 
+  background_subtraction:
+    in:
+      cytokit_output:
+        source: run_cytokit/cytokit_output
+      pipeline_config:
+        source: slicing/modified_pipeline_config
+      cytokit_config:
+        source: create_yaml_config/cytokit_config
+    out:
+      - bg_sub_tiles
+    run: steps/background_subtraction.cwl
+
   ome_tiff_creation:
     in:
       cytokit_output:
         source: run_cytokit/cytokit_output
+      bg_sub_tiles:
+        source: background_subtraction/bg_sub_tiles
       cytokit_config:
         source: create_yaml_config/cytokit_config
     out:

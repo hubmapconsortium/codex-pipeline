@@ -68,17 +68,15 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     We need to do this to get the channel names in the correct order, and the
     ImageJ "Labels" attribute isn't picked up by AICSImageIO.
     """
-    img = TiffFile(extractFile)
 
-    numChannels = int(img.imagej_metadata["channels"])
-
-    channelList = img.imagej_metadata["Labels"][0:numChannels]
+    with TiffFile(str(extractFile.absolute())) as TF:
+        ij_meta = TF.imagej_metadata
+    numChannels = int(ij_meta["channels"])
+    channelList = ij_meta["Labels"][0:numChannels]
 
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
-
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
-
     return channelList
 
 
@@ -188,6 +186,10 @@ def create_ome_tiffs(
         pool.join()
 
 
+def check_dir_is_empty(dir_path: Path):
+    return not any(dir_path.iterdir())
+
+
 ########
 # MAIN #
 ########
@@ -204,6 +206,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "cytokit_output",
         help="Path to output of `cytokit processor`",
+        type=Path,
+    )
+    parser.add_argument(
+        "bg_sub_tiles",
+        help="Path to tiles with subtracted background",
         type=Path,
     )
     parser.add_argument(
@@ -240,7 +247,12 @@ if __name__ == "__main__":
 
     cytometryTileDir = args.cytokit_output / cytometry_tile_dir_piece
     print("Cytometry tile directory:", cytometryTileDir)
-    extractDir = args.cytokit_output / extract_expressions_piece
+
+    if not check_dir_is_empty(args.bg_sub_tiles):
+        extractDir = args.bg_sub_tiles
+        print(list(Path(args.bg_sub_tiles).iterdir()))
+    else:
+        extractDir = args.cytokit_output / extract_expressions_piece
     print("Extract expressions directory:", extractDir)
 
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)

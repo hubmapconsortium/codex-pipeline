@@ -13,10 +13,14 @@ inputs:
     type: Directory
     inputBinding:
       position: 1
+  bg_sub_tiles:
+    type: Directory
+    inputBinding:
+      position: 2
   cytokit_config:
     type: File
     inputBinding:
-      position: 2
+      position: 3
 outputs:
   ome_tiffs:
     type: Directory
