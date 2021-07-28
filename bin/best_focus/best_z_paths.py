@@ -90,7 +90,7 @@ def _select_best_z_plane_paths(
     out_dirs: Dict[int, Dict[int, Path]],
     best_z_plane_per_region: Dict[int, Dict[int, List[int]]],
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Tuple[List[Path], Path]]]]]]:
-    """ Creates a map of several raw planes that will be processed into one image """
+    """Creates a map of several raw planes that will be processed into one image"""
     best_z_plane_paths = dict()
     for cycle in listing:
         best_z_plane_paths[cycle] = dict()

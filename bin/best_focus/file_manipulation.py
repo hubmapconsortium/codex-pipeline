@@ -20,7 +20,7 @@ def project_stack(path_list: List[Path]):
 
 
 def process_images(src, dst):
-    """ Read, take average of several z-planes, write"""
+    """Read, take average of several z-planes, write"""
     img = project_stack(src)
     tif.imwrite(str(dst), img)
 
