@@ -34,7 +34,7 @@ steps:
         source: data_dir
     out:
       - pipeline_config
-    run: illumination_stitching_1/collect_dataset_info.cwl
+    run: illumination_first_stitching/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
 
   illumination_correction:
@@ -45,7 +45,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
       - illum_corrected_tiles
-    run: illumination_stitching_1/illumination_correction.cwl
+    run: illumination_first_stitching/illumination_correction.cwl
 
   best_focus:
     in:
@@ -55,7 +55,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
       - best_focus_tiles
-    run: illumination_stitching_1/best_focus.cwl
+    run: illumination_first_stitching/best_focus.cwl
 
   first_stitching:
     in:
@@ -65,7 +65,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
        - stitched_images
-    run: illumination_stitching_1/first_stitching.cwl
+    run: illumination_first_stitching/first_stitching.cwl
 
   slicing:
     in:
@@ -76,7 +76,7 @@ steps:
     out:
        - new_tiles
        - modified_pipeline_config
-    run: illumination_stitching_1/slicing.cwl
+    run: illumination_first_stitching/slicing.cwl
 
   create_yaml_config:
     in:
@@ -86,5 +86,5 @@ steps:
         source: gpus
     out:
       - cytokit_config
-    run: illumination_stitching_1/create_yaml_config.cwl
+    run: illumination_first_stitching/create_yaml_config.cwl
     label: "Create Cytokit experiment config in YAML format"
