@@ -3,14 +3,14 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.1
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/background_subtraction/run_background_subtraction.py"]
+baseCommand: ["python", "/opt/codex_stitching/run_stitching.py"]
 
 
 inputs:
-  cytokit_output:
+  data_dir:
     type: Directory
     inputBinding:
       prefix: "--data_dir"
@@ -21,13 +21,8 @@ inputs:
     inputBinding:
       prefix: "--pipeline_config_path"
 
-  cytokit_config:
-    type: File
-    inputBinding:
-      prefix: "--cytokit_config_path"
-
 outputs:
-  bg_sub_tiles:
+  stitched_images:
     type: Directory
     outputBinding:
-      glob: "/output/background_subtraction"
+      glob: "/output/stitched_images"

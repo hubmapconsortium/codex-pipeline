@@ -6,9 +6,7 @@ baseCommand: ["sh", "run_cytokit.sh"]
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/cytokit:2.1
-    dockerOutputDirectory: "/lab/cytokit_output"
-hints:
+    dockerPull: hubmap/cytokit:latest
   DockerGpuRequirement: {}
 
   InitialWorkDirRequirement:
@@ -30,9 +28,10 @@ hints:
           export PYTHONPATH=/lab/repos/cytokit/python/pipeline
           conda activate cytokit
 
+          mkdir $HOME/cytokit
 
-          cytokit processor run_all --data-dir $(inputs.data_dir.path) --config-path $(inputs.yaml_config.path) --output-dir /lab/cytokit_output && \
-          cytokit operator run_all --data-dir /lab/cytokit_output --config-path $(inputs.yaml_config.path) --output-dir /lab/cytokit_output
+          cytokit processor run_all --data-dir $(inputs.data_dir.path) --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit && \
+          cytokit operator run_all --data-dir $HOME/cytokit --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit
 
 
 inputs:
@@ -47,11 +46,11 @@ outputs:
   cytokit_output:
     type: Directory
     outputBinding:
-      glob: /lab/cytokit_output
+      glob: cytokit
 
   data_json:
     type: File
     outputBinding:
-      glob: /lab/cytokit_output/processor/data.json
+      glob: cytokit/processor/data.json
 
 

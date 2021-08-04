@@ -3,14 +3,14 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.1
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
-baseCommand: ["python", "/opt/best_focus/run_best_focus_selection.py"]
+baseCommand: ["python", "/opt/background_subtraction/run_background_subtraction.py"]
 
 
 inputs:
-  data_dir:
+  cytokit_output:
     type: Directory
     inputBinding:
       prefix: "--data_dir"
@@ -21,9 +21,13 @@ inputs:
     inputBinding:
       prefix: "--pipeline_config_path"
 
+  cytokit_config:
+    type: File
+    inputBinding:
+      prefix: "--cytokit_config_path"
+
 outputs:
-  best_focus_tiles:
+  bg_sub_tiles:
     type: Directory
     outputBinding:
-      glob: "/output/best_focus"
-
+      glob: "/output/background_subtraction"

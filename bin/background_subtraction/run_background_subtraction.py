@@ -38,7 +38,7 @@ def get_num_bg_ch_per_cycle(
 def organize_channels_per_cycle(
     channel_names: List[str], num_cycles: int, num_channels_per_cycle: int
 ) -> Dict[int, Dict[int, str]]:
-    """  {1: {1: 'DAPI-01', 2: 'Blank', 3: 'Blank', 4: 'Blank'},} """
+    """{1: {1: 'DAPI-01', 2: 'Blank', 3: 'Blank', 4: 'Blank'},}"""
     channels_per_cycle = {cyc: dict() for cyc in range(1, num_cycles + 1)}
     cycle = 0
     ch_id = 1
