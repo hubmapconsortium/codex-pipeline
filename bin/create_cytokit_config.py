@@ -137,8 +137,9 @@ if __name__ == "__main__":
     for channelName in pipelineConfigInfo["channel_names"]:
 
         # Skip unwanted channels.
-        # if blankPattern.match(channelName):
-        #     continue
+        if blankPattern.match(channelName):
+            operatorExtractChannels.append("proc_" + channelName)
+            continue
         if emptyPattern.match(channelName):
             continue
         elif dapiChannelPattern.match(channelName):
