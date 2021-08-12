@@ -133,15 +133,33 @@ def filter_channels(
     return filtered_ch_per_cycle
 
 
+def create_new_channel_name_order(
+        channels_per_cycle: Dict[int, Dict[int, str]],
+        background_channel_name: str
+) -> List[str]:
+    channel_names = []
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if ch_name.lower() == background_channel_name:
+                continue
+            else:
+                channel_names.append("proc_" + ch_name)
+    return channel_names
+
+
 def get_stack_ids_per_cycle(
-    channels_per_cycle: Dict[int, Dict[int, str]]
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    channel_names_in_stack: List[str]
 ) -> Dict[int, Dict[int, int]]:
     stack_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    n = 0
+
+    lookup_ch_name_list = channel_names_in_stack.copy()
     for cycle, channels in channels_per_cycle.items():
         for ch_id, ch_name in channels.items():
-            stack_ids_per_cycle[cycle][ch_id] = n
-            n += 1
+            if ch_name.lower() in lookup_ch_name_list:
+                stack_id = lookup_ch_name_list.index(ch_name.lower())
+                lookup_ch_name_list[stack_id] = None
+                stack_ids_per_cycle[cycle][ch_id] = stack_id
     return stack_ids_per_cycle
 
 
@@ -163,17 +181,13 @@ def save_stack(out_path: Path, img_stack: ImgStack, ij_meta: Dict[str, Any]):
         )
 
 
-def modify_initial_ij_meta(ij_meta: Dict[str, Any], num_channels: int) -> Dict[str, Any]:
+def modify_initial_ij_meta(ij_meta: Dict[str, Any], new_channel_name_order: List[str]) -> Dict[str, Any]:
+    num_ch = len(new_channel_name_order)
     new_ij_meta = deepcopy(ij_meta)
     new_ij_meta["Labels"] = []
-    blank_pattern = re.compile(r"(proc_)?blank", re.IGNORECASE)
-    for ch_name in ij_meta["Labels"]:
-        if blank_pattern.match(ch_name):
-            continue
-        else:
-            new_ij_meta["Labels"].append(ch_name)
-    new_ij_meta["channels"] = num_channels
-    new_ij_meta["images"] = num_channels
+    new_ij_meta["Labels"] = new_channel_name_order
+    new_ij_meta["channels"] = num_ch
+    new_ij_meta["images"] = num_ch
     return new_ij_meta
 
 
@@ -230,6 +244,7 @@ def subtract_bg_from_imgs(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
+    new_channel_name_order: List[str]
 ):
     img_stack, ij_meta = read_stack_and_meta(img_path)
     orig_dtype = deepcopy(img_stack.dtype)
@@ -263,8 +278,7 @@ def subtract_bg_from_imgs(
     del processed_imgs, processed_img, img_stack
     out_path = out_dir / img_path.name
 
-    num_channels = processed_stack.shape[0]
-    new_ij_meta = modify_initial_ij_meta(ij_meta, num_channels)
+    new_ij_meta = modify_initial_ij_meta(ij_meta, new_channel_name_order)
 
     save_stack(out_path, processed_stack, new_ij_meta)
 
@@ -277,6 +291,7 @@ def subtract_bg_from_imgs_parallelized(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
+    new_channel_name_order: List[str]
 ):
     tasks = []
     for img_path in img_listing:
@@ -288,6 +303,7 @@ def subtract_bg_from_imgs_parallelized(
             fractions_of_bg_per_cycle,
             nuc_ch_stack_id,
             bg_ch_stack_ids,
+            new_channel_name_order
         )
         tasks.append(task)
     dask.compute(*tasks)
@@ -303,6 +319,13 @@ def get_channels_that_passed_qc(cytokit_config_path: Path) -> List[str]:
     return channels_that_passed_qc
 
 
+def get_channel_names_in_stack(img_path: Path) -> List[str]:
+    with tif.TiffFile(str(img_path.absolute())) as TF:
+        ij_meta = TF.imagej_metadata
+    channel_names = [ch_name.lstrip('proc_').lower() for ch_name in ij_meta["Labels"]]
+    return channel_names
+
+
 def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     """Input images are expected to be stack outputs of cytokit processing
     and have names R001_X001_Y001.tif
@@ -316,22 +339,31 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     num_channels_per_cycle = dataset_info["num_channels"]
     channel_names = dataset_info["channel_names"]
     background_ch_name = "blank"
+
+    expr_dir = data_dir / "extract/expressions"
+    img_listing = get_img_listing(expr_dir)
+    print(img_listing)
+
     print("Channel names\n", channel_names)
     print("Number of channels per cycle\n", num_channels_per_cycle)
 
-    channels_passed_qc = get_channels_that_passed_qc(cytokit_config_path)
-    print("Channels that passed qc\n", channels_passed_qc)
+    channel_names_in_stack = get_channel_names_in_stack(img_listing[0])
+    #channels_passed_qc = get_channels_that_passed_qc(cytokit_config_path)
+    print("Channels names in stack\n", channel_names_in_stack)
 
     channels_per_cycle = organize_channels_per_cycle(
         channel_names, num_cycles, num_channels_per_cycle
     )
     print("Channels per cycle\n", channels_per_cycle)
 
-    filtered_channels_per_cycle = filter_channels(channels_per_cycle, channels_passed_qc)
+    filtered_channels_per_cycle = filter_channels(channels_per_cycle, channel_names_in_stack)
     print("Filtered channels per cycle\n", filtered_channels_per_cycle)
 
+    new_channel_name_order = create_new_channel_name_order(filtered_channels_per_cycle, background_ch_name)
+    print("New channel name order", new_channel_name_order)
+
     # channel ids start from 1, stack ids start from 0
-    stack_ids_per_cycle = get_stack_ids_per_cycle(filtered_channels_per_cycle)
+    stack_ids_per_cycle = get_stack_ids_per_cycle(filtered_channels_per_cycle, channel_names_in_stack)
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
     bg_channel_ids_per_cycle = get_stack_ids_of_bg_channels(
@@ -362,10 +394,6 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     else:
         fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(cycles_with_bg_ch, cycle_names)
 
-    expr_dir = data_dir / "extract/expressions"
-    img_listing = get_img_listing(expr_dir)
-    print(img_listing)
-
     print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
     subtract_bg_from_imgs_parallelized(
         img_listing,
@@ -375,6 +403,7 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         fractions_of_bg_per_cycle,
         nuc_ch_stack_id,
         bg_ch_stack_ids,
+        new_channel_name_order
     )
 
 
