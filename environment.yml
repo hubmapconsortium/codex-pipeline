@@ -16,8 +16,8 @@ dependencies:
         - PyYAML>=5.3.0
         - aicsimageio==3.3.4
         - lxml~=4.5.1
-        - matplotlib~=3.2.1
-        - scikit-image~=0.17.2
-        - scikit-learn~=0.23.1
+        - matplotlib>=3.2.1
+        - scikit-image>=0.17.2
+        - scikit-learn>=0.23.1
         - shapely~=1.7.0
         - opencv-contrib-python-headless>=4.0
