@@ -1,5 +1,4 @@
 import argparse
-import re
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -8,7 +7,6 @@ from typing import Any, Dict, List, Tuple
 import dask
 import numpy as np
 import tifffile as tif
-import yaml
 
 sys.path.append("/opt/")
 from pipeline_utils.dataset_listing import get_img_listing
@@ -23,18 +21,6 @@ def make_dir_if_not_exists(dir_path: Path):
         dir_path.mkdir(parents=True)
 
 
-def get_num_bg_ch_per_cycle(
-    channels_per_cycle: Dict[int, List[str]], background_channel: str
-) -> Dict[int, int]:
-    bg_channel = background_channel.lower()
-    num_bg_ch_per_cyc = {cyc: 0 for cyc in channels_per_cycle.keys()}
-    for cycle, channels in channels_per_cycle.items():
-        for ch in channels:
-            if ch.lower() == bg_channel:
-                num_bg_ch_per_cyc[cycle] += 1
-    return num_bg_ch_per_cyc
-
-
 def organize_channels_per_cycle(
     channel_names: List[str], num_cycles: int, num_channels_per_cycle: int
 ) -> Dict[int, Dict[int, str]]:
@@ -46,9 +32,39 @@ def organize_channels_per_cycle(
         if i % num_channels_per_cycle == 0:
             cycle += 1
             ch_id = 1
-        channels_per_cycle[cycle][ch_id] = channel_names[i].lower()
+        channels_per_cycle[cycle][ch_id] = channel_names[i]
         ch_id += 1
     return channels_per_cycle
+
+
+def filter_channels(
+    channels_per_cycle: Dict[int, Dict[int, str]], channel_names_in_stack: List[str]
+) -> Dict[int, Dict[int, str]]:
+    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
+    channel_names_in_stack_lookup = [ch.lower() for ch in channel_names_in_stack]
+    for cycle in channels_per_cycle:
+        for ch_id, channel_name in channels_per_cycle[cycle].items():
+            if channel_name.lower() in channel_names_in_stack_lookup:
+                filtered_ch_per_cycle[cycle][ch_id] = channel_name
+    return filtered_ch_per_cycle
+
+
+def get_channel_names_in_stack(img_path: Path) -> List[str]:
+    with tif.TiffFile(str(img_path.absolute())) as TF:
+        ij_meta = TF.imagej_metadata
+    channel_names = [ch_name.lstrip('proc_').lower() for ch_name in ij_meta["Labels"]]
+    return channel_names
+
+
+def get_num_bg_ch_per_cycle(
+    channels_per_cycle: Dict[int, List[str]], background_channel: str
+) -> Dict[int, int]:
+    num_bg_ch_per_cyc = {cyc: 0 for cyc in channels_per_cycle.keys()}
+    for cycle, channels in channels_per_cycle.items():
+        for ch in channels:
+            if ch.lower() == background_channel.lower():
+                num_bg_ch_per_cyc[cycle] += 1
+    return num_bg_ch_per_cyc
 
 
 def get_stack_ids_of_bg_channels(
@@ -65,7 +81,7 @@ def get_stack_ids_of_bg_channels(
     return bg_channel_ids_per_cycle
 
 
-def select_bg_ch_per_cycle(
+def select_cycles_with_bg_ch(
     bg_channel_ids_per_cycle: Dict[int, Dict[int, int]], num_channels_per_cycle: int
 ) -> Dict[int, Dict[int, int]]:
     required_num_of_bg_channels = num_channels_per_cycle - 1
@@ -74,6 +90,45 @@ def select_bg_ch_per_cycle(
         if len(channels.keys()) >= required_num_of_bg_channels:
             selected_bg_channels_per_cyc[cycle] = channels
     return selected_bg_channels_per_cyc
+
+
+def get_stack_ids_for_bg_sub(
+    channels_per_cycle: Dict[int, Dict[int, str]], bg_and_ref_nuc_ch: List[str]
+):
+    other_ex_ch = [ch.lower() for ch in bg_and_ref_nuc_ch]
+    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
+    n = 0
+    for cycle, channels in channels_per_cycle.items():
+        for ch_id, ch_name in channels.items():
+            if ch_name.lower() not in other_ex_ch:
+                filtered_ch_per_cycle[cycle][ch_id] = n
+            n += 1
+    return filtered_ch_per_cycle
+
+
+def get_nuc_ch_stack_id(
+    nuc_ch_name: str,
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    stack_ids_per_cycle: Dict[int, Dict[int, int]],
+) -> int:
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if ch_name.lower() == nuc_ch_name.lower():
+                nuc_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
+                return nuc_ch_stack_id
+
+
+def get_bg_ch_stack_ids(
+    bg_ch_name: str,
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    stack_ids_per_cycle: Dict[int, Dict[int, int]],
+) -> List[int]:
+    bg_ch_stack_ids = []
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if ch_name.lower() == bg_ch_name.lower():
+                bg_ch_stack_ids.append(stack_ids_per_cycle[cycle][ch_id])
+    return bg_ch_stack_ids
 
 
 def assign_fraction_of_bg_mix_when_one_bg_cyc(
@@ -122,17 +177,6 @@ def assign_fraction_of_bg_mix(
     return fractions_per_cycle_sorted
 
 
-def filter_channels(
-    channels_per_cycle: Dict[int, Dict[int, str]], channels_passed_qc: List[str]
-) -> Dict[int, Dict[int, str]]:
-    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    for cycle in channels_per_cycle:
-        for ch_id, channel_name in channels_per_cycle[cycle].items():
-            if channel_name in channels_passed_qc:
-                filtered_ch_per_cycle[cycle][ch_id] = channel_name
-    return filtered_ch_per_cycle
-
-
 def create_new_channel_name_order(
         channels_per_cycle: Dict[int, Dict[int, str]],
         background_channel_name: str
@@ -140,7 +184,7 @@ def create_new_channel_name_order(
     channel_names = []
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if ch_name.lower() == background_channel_name:
+            if ch_name.lower() == background_channel_name.lower():
                 continue
             else:
                 channel_names.append("proc_" + ch_name)
@@ -152,8 +196,8 @@ def get_stack_ids_per_cycle(
     channel_names_in_stack: List[str]
 ) -> Dict[int, Dict[int, int]]:
     stack_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
+    lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
 
-    lookup_ch_name_list = channel_names_in_stack.copy()
     for cycle, channels in channels_per_cycle.items():
         for ch_id, ch_name in channels.items():
             if ch_name.lower() in lookup_ch_name_list:
@@ -195,45 +239,6 @@ def do_bg_subtraction(img: Image, bg: Image) -> Image:
     orig_dtype = deepcopy(img.dtype)
     orig_dtype_minmax = (np.iinfo(orig_dtype).min, np.iinfo(orig_dtype).max)
     return (img.astype(np.int32) - bg).clip(*orig_dtype_minmax).astype(orig_dtype)
-
-
-def get_stack_ids_for_bg_sub(
-    channels_per_cycle: Dict[int, Dict[int, str]], bg_and_ref_nuc_ch: List[str]
-):
-    other_ex_ch = [ch.lower() for ch in bg_and_ref_nuc_ch]
-    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    n = 0
-    for cycle, channels in channels_per_cycle.items():
-        for ch_id, ch_name in channels.items():
-            if ch_name.lower() not in other_ex_ch:
-                filtered_ch_per_cycle[cycle][ch_id] = n
-            n += 1
-    return filtered_ch_per_cycle
-
-
-def get_nuc_ch_stack_id(
-    nuc_ch_name: str,
-    channels_per_cycle: Dict[int, Dict[int, str]],
-    stack_ids_per_cycle: Dict[int, Dict[int, int]],
-) -> int:
-    for cycle in channels_per_cycle:
-        for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if ch_name.lower() == nuc_ch_name.lower():
-                nuc_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
-                return nuc_ch_stack_id
-
-
-def get_bg_ch_stack_ids(
-    bg_ch_name: str,
-    channels_per_cycle: Dict[int, Dict[int, str]],
-    stack_ids_per_cycle: Dict[int, Dict[int, int]],
-) -> List[int]:
-    bg_ch_stack_ids = []
-    for cycle in channels_per_cycle:
-        for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if ch_name.lower() == bg_ch_name.lower():
-                bg_ch_stack_ids.append(stack_ids_per_cycle[cycle][ch_id])
-    return bg_ch_stack_ids
 
 
 def subtract_bg_from_imgs(
@@ -309,23 +314,6 @@ def subtract_bg_from_imgs_parallelized(
     dask.compute(*tasks)
 
 
-def get_channels_that_passed_qc(cytokit_config_path: Path) -> List[str]:
-    with open(cytokit_config_path, "r") as s:
-        cytokit_config = yaml.safe_load(s)
-    channels_from_opertaor = cytokit_config["operator"][0]["extract"]["channels"]
-    channels_that_passed_qc = []
-    for ch in channels_from_opertaor:
-        channels_that_passed_qc.append(ch.lstrip("proc_").lower())
-    return channels_that_passed_qc
-
-
-def get_channel_names_in_stack(img_path: Path) -> List[str]:
-    with tif.TiffFile(str(img_path.absolute())) as TF:
-        ij_meta = TF.imagej_metadata
-    channel_names = [ch_name.lstrip('proc_').lower() for ch_name in ij_meta["Labels"]]
-    return channel_names
-
-
 def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     """Input images are expected to be stack outputs of cytokit processing
     and have names R001_X001_Y001.tif
@@ -347,8 +335,8 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     print("Channel names\n", channel_names)
     print("Number of channels per cycle\n", num_channels_per_cycle)
 
+    # will read channel names from imagej metadata in tifs
     channel_names_in_stack = get_channel_names_in_stack(img_listing[0])
-    #channels_passed_qc = get_channels_that_passed_qc(cytokit_config_path)
     print("Channels names in stack\n", channel_names_in_stack)
 
     channels_per_cycle = organize_channels_per_cycle(
@@ -379,7 +367,7 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     )
     print("Background channel stack ids\n", bg_ch_stack_ids)
 
-    cycles_with_bg_ch = select_bg_ch_per_cycle(bg_channel_ids_per_cycle, num_channels_per_cycle)
+    cycles_with_bg_ch = select_cycles_with_bg_ch(bg_channel_ids_per_cycle, num_channels_per_cycle)
     print("Cycles with background channels\n", cycles_with_bg_ch)
     if len(cycles_with_bg_ch) == 0:
         print("NOT ENOUGH BACKGROUND CHANNELS")
