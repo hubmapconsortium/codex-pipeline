@@ -198,7 +198,9 @@ def apply_illum_cor(img: Image, flatfield: Image, darkfield: Image) -> Image:
 
 def correct_and_save(img_path: Path, flatfield: Image, darkfield: Image, out_path: Path):
     corrected_img = apply_illum_cor(tif.imread(str(img_path.absolute())), flatfield, darkfield)
-    tif.imwrite(out_path, corrected_img)
+    with tif.TiffWriter(str(out_path.absolute())) as TW:
+        TW.write(corrected_img, photometric="minisblack")
+    del corrected_img
 
 
 def apply_flatfield_and_save(
