@@ -52,7 +52,7 @@ def filter_channels(
 def get_channel_names_in_stack(img_path: Path) -> List[str]:
     with tif.TiffFile(str(img_path.absolute())) as TF:
         ij_meta = TF.imagej_metadata
-    channel_names = [ch_name.lstrip('proc_').lower() for ch_name in ij_meta["Labels"]]
+    channel_names = [ch_name.lstrip("proc_").lower() for ch_name in ij_meta["Labels"]]
     return channel_names
 
 
@@ -178,8 +178,7 @@ def assign_fraction_of_bg_mix(
 
 
 def create_new_channel_name_order(
-        channels_per_cycle: Dict[int, Dict[int, str]],
-        background_channel_name: str
+    channels_per_cycle: Dict[int, Dict[int, str]], background_channel_name: str
 ) -> List[str]:
     channel_names = []
     for cycle in channels_per_cycle:
@@ -192,8 +191,7 @@ def create_new_channel_name_order(
 
 
 def get_stack_ids_per_cycle(
-    channels_per_cycle: Dict[int, Dict[int, str]],
-    channel_names_in_stack: List[str]
+    channels_per_cycle: Dict[int, Dict[int, str]], channel_names_in_stack: List[str]
 ) -> Dict[int, Dict[int, int]]:
     stack_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
     lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
@@ -225,7 +223,9 @@ def save_stack(out_path: Path, img_stack: ImgStack, ij_meta: Dict[str, Any]):
         )
 
 
-def modify_initial_ij_meta(ij_meta: Dict[str, Any], new_channel_name_order: List[str]) -> Dict[str, Any]:
+def modify_initial_ij_meta(
+    ij_meta: Dict[str, Any], new_channel_name_order: List[str]
+) -> Dict[str, Any]:
     num_ch = len(new_channel_name_order)
     new_ij_meta = deepcopy(ij_meta)
     new_ij_meta["Labels"] = []
@@ -249,7 +249,7 @@ def subtract_bg_from_imgs(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
-    new_channel_name_order: List[str]
+    new_channel_name_order: List[str],
 ):
     img_stack, ij_meta = read_stack_and_meta(img_path)
     orig_dtype = deepcopy(img_stack.dtype)
@@ -296,7 +296,7 @@ def subtract_bg_from_imgs_parallelized(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
-    new_channel_name_order: List[str]
+    new_channel_name_order: List[str],
 ):
     tasks = []
     for img_path in img_listing:
@@ -308,7 +308,7 @@ def subtract_bg_from_imgs_parallelized(
             fractions_of_bg_per_cycle,
             nuc_ch_stack_id,
             bg_ch_stack_ids,
-            new_channel_name_order
+            new_channel_name_order,
         )
         tasks.append(task)
     dask.compute(*tasks)
@@ -347,11 +347,15 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     filtered_channels_per_cycle = filter_channels(channels_per_cycle, channel_names_in_stack)
     print("Filtered channels per cycle\n", filtered_channels_per_cycle)
 
-    new_channel_name_order = create_new_channel_name_order(filtered_channels_per_cycle, background_ch_name)
+    new_channel_name_order = create_new_channel_name_order(
+        filtered_channels_per_cycle, background_ch_name
+    )
     print("New channel name order", new_channel_name_order)
 
     # channel ids start from 1, stack ids start from 0
-    stack_ids_per_cycle = get_stack_ids_per_cycle(filtered_channels_per_cycle, channel_names_in_stack)
+    stack_ids_per_cycle = get_stack_ids_per_cycle(
+        filtered_channels_per_cycle, channel_names_in_stack
+    )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
     bg_channel_ids_per_cycle = get_stack_ids_of_bg_channels(
@@ -391,7 +395,7 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         fractions_of_bg_per_cycle,
         nuc_ch_stack_id,
         bg_ch_stack_ids,
-        new_channel_name_order
+        new_channel_name_order,
     )
 
 

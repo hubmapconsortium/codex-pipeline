@@ -525,7 +525,10 @@ def process_all_masks(
     gc.collect()
 
     matched_masks, fraction_matched = get_matched_masks(
-        cell_mask=stitched_imgs[0], nucleus_mask=stitched_imgs[1], dtype=dtype, do_mismatch_repair=True,
+        cell_mask=stitched_imgs[0],
+        nucleus_mask=stitched_imgs[1],
+        dtype=dtype,
+        do_mismatch_repair=True,
     )
     del stitched_imgs
     gc.collect()
