@@ -138,9 +138,8 @@ if __name__ == "__main__":
 
         # Skip unwanted channels.
         if blankPattern.match(channelName):
-            operatorExtractChannels.append("proc_" + channelName)
             continue
-        if emptyPattern.match(channelName):
+        elif emptyPattern.match(channelName):
             continue
         elif dapiChannelPattern.match(channelName):
             if channelName != pipelineConfigInfo["nuclei_channel"]:
@@ -152,10 +151,7 @@ if __name__ == "__main__":
         # Skip channels that failed QC.
         if pipelineConfigInfo["channel_names_qc_pass"]:
             if len(pipelineConfigInfo["channel_names_qc_pass"][channelName]) > 1:
-                if blankPattern.match(channelName):
-                    continue
-                else:
-                    raise ValueError(f"More than one {channelName} channel found.")
+                raise ValueError(f"More than one {channelName} channel found.")
             else:
                 channel_qc_pass = pipelineConfigInfo["channel_names_qc_pass"][channelName][0]
                 if channel_qc_pass.casefold() == "false".casefold():

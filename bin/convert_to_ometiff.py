@@ -209,11 +209,6 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
-        "bg_sub_tiles",
-        help="Path to tiles with subtracted background",
-        type=Path,
-    )
-    parser.add_argument(
         "cytokit_config",
         help="Path to Cytokit YAML config file",
         type=Path,
@@ -248,11 +243,7 @@ if __name__ == "__main__":
     cytometryTileDir = args.cytokit_output / cytometry_tile_dir_piece
     print("Cytometry tile directory:", cytometryTileDir)
 
-    if not check_dir_is_empty(args.bg_sub_tiles):
-        extractDir = args.bg_sub_tiles
-        print(list(Path(args.bg_sub_tiles).iterdir()))
-    else:
-        extractDir = args.cytokit_output / extract_expressions_piece
+    extractDir = args.cytokit_output / extract_expressions_piece
     print("Extract expressions directory:", extractDir)
 
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)

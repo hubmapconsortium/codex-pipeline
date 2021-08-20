@@ -25,13 +25,13 @@ outputs:
   data_json:
     outputSource: run_cytokit/data_json
     type: File
-    label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection"
+    label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plane selection"
   stitched_images:
-    outputSource: background_second_stitching/stitched_images
+    outputSource: ometiff_second_stitching/stitched_images
     type: Directory
     label: "Segmentation masks and expressions in OME-TIFF format"
   pipeline_config:
-    outputSource: background_second_stitching/final_pipeline_config
+    outputSource: ometiff_second_stitching/final_pipeline_config
     type: File
     label: "Pipeline config with all the modifications"
 
@@ -59,7 +59,7 @@ steps:
     run: steps/run_cytokit.cwl
     label: "CODEX analysis via Cytokit processor and operator"
 
-  background_second_stitching:
+  ometiff_second_stitching:
     in:
       cytokit_output:
         source: run_cytokit/cytokit_output
@@ -70,5 +70,5 @@ steps:
     out:
       - stitched_images
       - final_pipeline_config
-    run: steps/background_second_stitching.cwl
-    label: "Background subtraction and stitching stage 2"
+    run: steps/ometiff_second_stitching.cwl
+    label: "OMETIFF creation and stitching stage 2"
