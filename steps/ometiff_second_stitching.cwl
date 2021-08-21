@@ -23,29 +23,15 @@ outputs:
     label: "Pipeline config with all the modifications"
 
 steps:
-  background_subtraction:
-    in:
-      cytokit_output:
-        source: cytokit_output
-      pipeline_config:
-        source: slicing_pipeline_config
-      cytokit_config:
-        source: cytokit_config
-    out:
-      - bg_sub_tiles
-    run: background_second_stitching/background_subtraction.cwl
-
   ome_tiff_creation:
     in:
       cytokit_output:
         source: cytokit_output
-      bg_sub_tiles:
-        source: background_subtraction/bg_sub_tiles
       cytokit_config:
         source: cytokit_config
     out:
       - ome_tiffs
-    run: background_second_stitching/ome_tiff_creation.cwl
+    run: ometiff_second_stitching/ome_tiff_creation.cwl
     label: "Create OME-TIFF versions of Cytokit segmentation and extract results"
 
   second_stitching:
@@ -57,4 +43,4 @@ steps:
     out:
        - stitched_images
        - final_pipeline_config
-    run: background_second_stitching/second_stitching.cwl
+    run: ometiff_second_stitching/second_stitching.cwl

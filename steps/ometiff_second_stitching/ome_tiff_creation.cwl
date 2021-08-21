@@ -4,7 +4,7 @@ label: Create OME-TIFF versions of Cytokit segmentation and extract results
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.1.2
+    dockerPull: hubmap/codex-scripts
 
 baseCommand: ["python", "/opt/convert_to_ometiff.py"]
 
@@ -13,14 +13,10 @@ inputs:
     type: Directory
     inputBinding:
       position: 1
-  bg_sub_tiles:
-    type: Directory
-    inputBinding:
-      position: 2
   cytokit_config:
     type: File
     inputBinding:
-      position: 3
+      position: 2
 outputs:
   ome_tiffs:
     type: Directory
