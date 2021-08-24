@@ -40,6 +40,8 @@ steps:
     in:
       data_dir:
         source: data_dir
+      gpus:
+        source: gpus
     out:
       - slicing_pipeline_config
       - cytokit_config
