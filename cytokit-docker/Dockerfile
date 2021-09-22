@@ -1,7 +1,7 @@
 FROM eczech/cytokit:latest
 
 WORKDIR /lab/data/.cytokit
-RUN curl https://assets.cmu.hubmapconsortium.org/cytokit-cache.tar | tar -xf -
+RUN curl https://s3.amazonaws.com/hubmap-pipeline-assets/cytokit-cache.tar | tar -xf -
 
 WORKDIR /opt
 
