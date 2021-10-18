@@ -68,14 +68,12 @@ if __name__ == "__main__":
                 "run_drift_comp": True,
                 "run_cytometry": True,
                 "run_best_focus": True,
-                "run_deconvolution": True,
+                "run_deconvolution": False,
             },
-            "deconvolution": {"n_iter": 25, "scale_factor": 0.5},
             "tile_generator": {"raw_file_type": "keyence_mixed"},
             "best_focus": {"channel": pipelineConfigInfo["best_focus"]},
             "drift_compensation": {"channel": pipelineConfigInfo["drift_compensation"]},
             "cytometry": {
-                "target_shape": pipelineConfigInfo["target_shape"],
                 "nuclei_channel_name": pipelineConfigInfo["nuclei_channel"],
                 "segmentation_params": {
                     "memb_min_dist": 8,

@@ -284,7 +284,7 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
-    darkfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
+    darkfields = read_darkfield_imgs(illum_cor_dir, stack_paths)
     apply_flatfield_and_save(listing, flatfields, darkfields, corrected_img_dir)
 
 

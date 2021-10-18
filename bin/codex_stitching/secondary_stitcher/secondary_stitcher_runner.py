@@ -26,10 +26,18 @@ def write_pipeline_config(out_path: Path, config):
 
 
 def run_stitcher(
-    img_dir: Path, out_path: Path, overlap: int, padding: dict, is_mask: bool
+    img_dir: Path,
+    out_path: Path,
+    overlap: int,
+    padding: dict,
+    is_mask: bool,
+    nucleus_channel: str,
+    cell_channel: str,
 ) -> Report:
     padding_str = ",".join((str(i) for i in list(padding.values())))
-    report = secondary_stitcher.main(img_dir, out_path, overlap, padding_str, is_mask)
+    report = secondary_stitcher.main(
+        img_dir, out_path, overlap, padding_str, is_mask, nucleus_channel, cell_channel
+    )
     return report
 
 
@@ -44,6 +52,8 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
 
     pipeline_config = read_pipeline_config(pipeline_config_path)
     slicer_meta = pipeline_config["slicer"]
+    nucleus_channel = pipeline_config.get("nuclei_channel", "None")
+    cell_channel = pipeline_config.get("membrane_channel", "None")
 
     path_to_mask_tiles = Path(ometiff_dir).joinpath("cytometry/tile/ome-tiff")
     path_to_image_tiles = Path(ometiff_dir).joinpath("extract/expressions/ome-tiff")
@@ -64,11 +74,23 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     )
 
     mask_report = run_stitcher(
-        path_to_mask_tiles, stitched_mask_out_path, overlap, padding, is_mask=True
+        path_to_mask_tiles,
+        stitched_mask_out_path,
+        overlap,
+        padding,
+        True,
+        nucleus_channel,
+        cell_channel,
     )
 
     expr_report = run_stitcher(
-        path_to_image_tiles, stitched_expressions_out_path, overlap, padding, is_mask=False
+        path_to_image_tiles,
+        stitched_expressions_out_path,
+        overlap,
+        padding,
+        False,
+        nucleus_channel,
+        cell_channel,
     )
 
     total_report = merge_reports(mask_report, expr_report)

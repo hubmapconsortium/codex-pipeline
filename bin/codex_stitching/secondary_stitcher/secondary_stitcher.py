@@ -1,5 +1,6 @@
 import argparse
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
@@ -10,6 +11,43 @@ from mask_stitching import process_all_masks
 from skimage.measure import regionprops_table
 
 Image = np.ndarray
+
+
+def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_channel: str) -> str:
+    """
+    Will add this, to the root, after Image node
+    <StructuredAnnotations>
+    <XMLAnnotation ID="Annotation:0">
+        <Value>
+            <OriginalMetadata>
+                <Key>SegmentationChannels</Key>
+                <Value>
+                    <Nucleus>DAPI-02</Nucleus>
+                    <Cell>CD45</Cell>
+                </Value>
+            </OriginalMetadata>
+        </Value>
+    </XMLAnnotation>
+    </StructuredAnnotations>
+    """
+
+    structured_annotation = ET.Element("StructuredAnnotations")
+    annotation = ET.SubElement(structured_annotation, "XMLAnnotation", {"ID": "Annotation:0"})
+    annotation_value = ET.SubElement(annotation, "Value")
+    original_metadata = ET.SubElement(annotation_value, "OriginalMetadata")
+    segmentation_channels_key = ET.SubElement(
+        original_metadata, "Key"
+    ).text = "SegmentationChannels"
+    segmentation_channels_value = ET.SubElement(original_metadata, "Value")
+    ET.SubElement(segmentation_channels_value, "Nucleus").text = nucleus_channel
+    ET.SubElement(segmentation_channels_value, "Cell").text = cell_channel
+    sa_str = ET.tostring(structured_annotation, encoding="utf-8").decode("utf-8")
+
+    closed_image_node_position = omexml_str.find("</Image>") + len("</Image>")
+    omexml_str_with_sa = (
+        omexml_str[:closed_image_node_position] + sa_str + omexml_str[closed_image_node_position:]
+    )
+    return omexml_str_with_sa
 
 
 def alpha_num_order(string: str) -> str:
@@ -123,7 +161,7 @@ def calc_snr(img: Image) -> float:
     return float(round(np.mean(img) / np.std(img), 3))
 
 
-def calc_label_sizes(segm_mask: Image) -> Dict[str, float]:
+def calc_label_sizes(segm_mask: Image) -> Dict[str, List[float]]:
     # bounding boxes around labels
     # useful to check if there are merged labels
     props = regionprops_table(segm_mask, properties=("label", "bbox"))
@@ -186,7 +224,15 @@ def stitch_plane(
     return big_image
 
 
-def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask: bool):
+def main(
+    img_dir: Path,
+    out_path: Path,
+    overlap: int,
+    padding_str: str,
+    is_mask: bool,
+    nucleus_channel: str,
+    cell_channel: str,
+):
 
     padding_int = [int(i) for i in padding_str.split(",")]
     padding = {
@@ -217,6 +263,7 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         ome_meta = re.sub(r'\sSizeY="\d+"', ' SizeY="' + str(big_image_y_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sSizeX="\d+"', ' SizeX="' + str(big_image_x_size) + '"', ome_meta)
         ome_meta = re.sub(r'\sDimensionOrder="[XYCZT]+"', ' DimensionOrder="XYZCT"', ome_meta)
+        ome_meta = add_structured_annotations(ome_meta, nucleus_channel, cell_channel)
     # part of this report is generated after mask stitching and part after expression stitching
 
     total_report = dict()
@@ -259,6 +306,8 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
                     this_region_report["img_height"] = int(plane.shape[0])
                     this_region_report["img_width"] = int(plane.shape[1])
                     this_region_report["per_channel_snr"] = dict()
+                    this_region_report["nucleus_channel"] = nucleus_channel
+                    this_region_report["cell_channel"] = cell_channel
                 this_region_report["per_channel_snr"][p] = calc_snr(plane)
                 TW.write(
                     plane.reshape(new_shape),
@@ -289,6 +338,12 @@ if __name__ == "__main__":
         "--mask", action="store_true", help="use this flag if image is a binary mask"
     )
 
+    parser.add_argument(
+        "--nucleus_channel", type=str, default="None", help="channel used for nucleus segmentation"
+    )
+    parser.add_argument(
+        "--cell_channel", type=str, default="None", help="channel used for cell segmentation"
+    )
     args = parser.parse_args()
 
-    main(args.i, args.o, args.v, args.p, args.mask)
+    main(args.i, args.o, args.v, args.p, args.mask, args.nucleus_channel, args.cell_channel)
