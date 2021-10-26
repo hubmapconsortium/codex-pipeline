@@ -30,6 +30,10 @@ NONRAW_DIRECTORY_NAME_PIECES = [
 #   Can't share code easily because these files go to different containers
 RAW_DIR_NAMING_PATTERN = re.compile(r"^cyc(\d+)_(?P<region>reg\d+).*", re.IGNORECASE)
 
+# Checked with .match below, but be extra explicit that we care about
+# the entire string being composed of \x00 characters
+ALL_ZERO_CHANNEL_NAME_PATTERN = re.compile("^\x00+$")
+
 
 def find_files(
     base_directory: Path,
@@ -441,6 +445,11 @@ def standardize_metadata(directory: Path):
         logger.info(f"Reading channel names from {channel_names_file}")
         with open(channel_names_file, "r") as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
+            # HACK: work around odd 0x00 bytes read past where this file should end
+            if ALL_ZERO_CHANNEL_NAME_PATTERN.match(channelNames[-1]):
+                count = len(channelNames[-1])
+                logger.info(f"Dropping spurious channel name containing {count} \\x00 characters")
+                channelNames = channelNames[:-1]
     elif "channelNames" in exptConfigDict:
         logger.info("Obtaining channel names from configuration data")
         channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
