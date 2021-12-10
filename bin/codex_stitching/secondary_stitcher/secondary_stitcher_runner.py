@@ -27,7 +27,8 @@ def write_pipeline_config(out_path: Path, config):
 
 def run_stitcher(
     img_dir: Path,
-    out_path: Path,
+    out_dir: Path,
+    img_name_template: str,
     overlap: int,
     padding: dict,
     is_mask: bool,
@@ -36,7 +37,7 @@ def run_stitcher(
 ) -> Report:
     padding_str = ",".join((str(i) for i in list(padding.values())))
     report = secondary_stitcher.main(
-        img_dir, out_path, overlap, padding_str, is_mask, nucleus_channel, cell_channel
+        img_dir, out_dir, img_name_template, overlap, padding_str, is_mask, nucleus_channel, cell_channel
     )
     return report
 
@@ -61,21 +62,20 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     overlap = slicer_meta["overlap"]
     padding = slicer_meta["padding"]
 
-    mask_out_dir = Path("/output/stitched/mask")
-    expressions_out_dir = Path("/output/stitched/expressions")
+    mask_out_dir = Path("/output/pipeline_output/mask")
+    expr_out_dir = Path("/output/pipeline_output/expr")
     final_pipeline_config_path = Path("/output/pipelineConfig.json")
 
     make_dir_if_not_exists(mask_out_dir)
-    make_dir_if_not_exists(expressions_out_dir)
+    make_dir_if_not_exists(expr_out_dir)
 
-    stitched_mask_out_path = mask_out_dir.joinpath(Path("stitched_mask.ome.tiff"))
-    stitched_expressions_out_path = expressions_out_dir.joinpath(
-        Path("stitched_expressions.ome.tiff")
-    )
+    mask_out_name_template = "reg{r:d}_mask.ome.tiff"
+    expr_out_name_template = "reg{r:d}_expr.ome.tiff"
 
     mask_report = run_stitcher(
         path_to_mask_tiles,
-        stitched_mask_out_path,
+        mask_out_dir,
+        mask_out_name_template,
         overlap,
         padding,
         True,
@@ -85,7 +85,8 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
 
     expr_report = run_stitcher(
         path_to_image_tiles,
-        stitched_expressions_out_path,
+        expr_out_dir,
+        expr_out_name_template,
         overlap,
         padding,
         False,

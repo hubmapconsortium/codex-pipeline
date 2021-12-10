@@ -226,7 +226,8 @@ def stitch_plane(
 
 def main(
     img_dir: Path,
-    out_path: Path,
+    out_dir: Path,
+    img_name_template: str,
     overlap: int,
     padding_str: str,
     is_mask: bool,
@@ -267,9 +268,8 @@ def main(
     # part of this report is generated after mask stitching and part after expression stitching
 
     total_report = dict()
-    reg_prefix = "reg{r:d}_"
     for r, path_list in enumerate(path_list_per_region):
-        new_path = out_path.parent.joinpath(reg_prefix.format(r=r + 1) + out_path.name)
+        new_path = out_dir / img_name_template.format(r=r + 1)
         this_region_report = dict()
         TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True)
         if is_mask:
@@ -318,32 +318,3 @@ def main(
         total_report["reg" + str(r + 1)] = this_region_report
         TW.close()
     return total_report
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", type=Path, required=True, help="path to directory with images")
-    parser.add_argument("-o", type=Path, required=True, help="path to output file")
-    parser.add_argument(
-        "-v", type=int, required=True, default=0, help="overlap size in pixels, default 0"
-    )
-    parser.add_argument(
-        "-p",
-        type=str,
-        default="0,0,0,0",
-        help="image padding that should be removed, 4 comma separated numbers: left, right, top, bottom."
-        + "Default: 0,0,0,0",
-    )
-    parser.add_argument(
-        "--mask", action="store_true", help="use this flag if image is a binary mask"
-    )
-
-    parser.add_argument(
-        "--nucleus_channel", type=str, default="None", help="channel used for nucleus segmentation"
-    )
-    parser.add_argument(
-        "--cell_channel", type=str, default="None", help="channel used for cell segmentation"
-    )
-    args = parser.parse_args()
-
-    main(args.i, args.o, args.v, args.p, args.mask, args.nucleus_channel, args.cell_channel)
