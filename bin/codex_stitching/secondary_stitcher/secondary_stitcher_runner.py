@@ -37,7 +37,14 @@ def run_stitcher(
 ) -> Report:
     padding_str = ",".join((str(i) for i in list(padding.values())))
     report = secondary_stitcher.main(
-        img_dir, out_dir, img_name_template, overlap, padding_str, is_mask, nucleus_channel, cell_channel
+        img_dir,
+        out_dir,
+        img_name_template,
+        overlap,
+        padding_str,
+        is_mask,
+        nucleus_channel,
+        cell_channel,
     )
     return report
 
