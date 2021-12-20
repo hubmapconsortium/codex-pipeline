@@ -1,0 +1,4 @@
+data_dir:
+  class: Directory
+  path: "/path/to/dir/with/codex_dataset"
+gpus: "0"

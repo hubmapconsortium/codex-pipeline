@@ -6,11 +6,85 @@ A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.a
 
 ## Pipeline steps
 * Collect required parameters from metadata files.
-* Create Cytokit YAML config file containing parameters collected above.
+* Perform illumination correction with Fiji plugin [BaSiC](https://github.com/VasylVaskivskyi/BaSiC_Mod) 
+* Find sharpest z-plane for each channel, using variation of Laplacian
+* Perform stitching of tiles using Fiji plugin [BigStitcher](https://imagej.net/plugins/bigstitcher/)
+* Create Cytokit YAML config file containing parameters from input metadata
 * Run Cytokit's `processor` command to perform tile pre-processing, and nucleus and cell segmentation.
 * Run Cytokit's `operator` command to extract all antigen fluoresence images (discarding blanks and empty channels).
 * Generate [OME-TIFF](https://docs.openmicroscopy.org/ome-model/6.0.1/ome-tiff/specification.html) versions of TIFFs created by Cytokit.
+* Stitch tiles with segmentation masks
 * Perform downstream analysis using [SPRM](https://github.com/hubmapconsortium/sprm).
+
+
+## Requirements
+
+Please use [HuBMAP Consortium fork of cwltool](https://github.com/hubmapconsortium/cwltool) 
+to be able to run pipeline with GPU in Docker and Singularity containers.\
+For the list of python packages check `environment.yml`.
+
+
+## How to run
+
+`cwltool pipeline.cwl subm.yaml`
+
+If you use Singularity containers add `--singularity`. Example of submission file `subm.yaml` is provided in the repo.
+
+
+## Expected input directory and file structure
+
+```
+codex_dataset/
+src_data OR raw
+    ├── channelnames.txt
+    ├── channelnames_report.csv
+    ├── experiment.json
+    ├── exposure_times.txt
+    ├── segmentation.json
+    ├── Cyc1_reg1 OR Cyc001_reg001  
+    │     ├── 1_00001_Z001_CH1.tif
+    │     ├── 1_00001_Z001_CH2.tif
+    │     │              ...
+    │     └── 1_0000N_Z00N_CHN.tif
+    └── Cyc1_reg2 OR Cyc001_reg002  
+          ├── 2_00001_Z001_CH1.tif
+          ├── 2_00001_Z001_CH2.tif
+          │             ...
+          └── 1_0000N_Z00N_CHN.tif
+
+```
+
+Images should be separated into directories by cycles and regions using the following pattern `Cyc{cycle:d}_reg{region:d}`.
+The file names must contain region, tile, z-plane and channel ids starting from 1, and follow this pattern 
+`{region:d}_{tile:05d}_Z{zplane:03d}_CH{channel:d}.tif`.
+
+Necessary metadata files that must be present in the input directory:
+
+* `experiment.json` - acquisition parameters and data structure;
+* `segmentation.json` - which channel from which cycle to use for segmentation;
+* `channelnames.txt` - list of channel names, one per row;
+* `channelnames_report.csv` - which channels to use, and which to exclude;
+* `exposure_times.txt` - not used at the moment, but will be useful for background subtraction.
+
+Examples of these files are present in the directory `metadata_examples`. 
+Note: all fields related to regions, cycles, channels, z-planes and tiles start from 1, 
+and xyResolution, zPitch are measured in `nm`.
+
+## Output file structure
+
+```
+pipeline_output/
+├── expr
+│   ├── reg001_expr.ome.tiff
+│   └── reg002_expr.ome.tiff
+└── mask
+    ├── reg001_mask.ome.tiff
+    └── reg002_expr.ome.tiff
+```
+
+Where `expr` directory contains processed images and `mask` contains segmentation masks.
+The output of SPRM will be different, see https://github.com/hubmapconsortium/sprm .
+
 
 ## Development
 Code in this repository is formatted with [black](https://github.com/psf/black) and

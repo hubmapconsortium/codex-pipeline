@@ -1,0 +1,40 @@
+{
+  "version": "1.7.0.6",
+  "name": "src_CX_19-002_CC2-spleen-A",
+  "dateProcessed": "2020-02-10T16:01:15.357-05:00[America/New_York]",
+  "objectiveType": "air",
+  "magnification": 20,
+  "aperture": 0.75,
+  "xyResolution": 377.4463383838384,
+  "zPitch": 1500.0,
+  "wavelengths": [
+    358,
+    488,
+    550,
+    650
+  ],
+  "bitDepth": 16,
+  "numRegions": 1,
+  "numCycles": 9,
+  "numZPlanes": 13,
+  "numChannels": 4,
+  "regionWidth": 9,
+  "regionHeight": 9,
+  "tileWidth": 1920,
+  "tileHeight": 1440,
+  "tileOverlapX": 0.3,
+  "tileOverlapY": 0.3,
+  "tilingMode": "EITHER SNAKE OR GRID",
+  "referenceCycle": 2,
+  "referenceChannel": 1,
+  "regIdx": [
+    1
+  ],
+  "cycle_lower_limit": 1,
+  "cycle_upper_limit": 9,
+  "num_z_planes": 1,
+  "region_width": 9,
+  "region_height": 9,
+  "tile_width": 1344,
+  "tile_height": 1008
+}
