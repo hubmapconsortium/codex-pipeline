@@ -69,8 +69,8 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     make_dir_if_not_exists(mask_out_dir)
     make_dir_if_not_exists(expr_out_dir)
 
-    mask_out_name_template = "reg{r:d}_mask.ome.tiff"
-    expr_out_name_template = "reg{r:d}_expr.ome.tiff"
+    mask_out_name_template = "reg{r:03d}_mask.ome.tiff"
+    expr_out_name_template = "reg{r:03d}_expr.ome.tiff"
 
     mask_report = run_stitcher(
         path_to_mask_tiles,
