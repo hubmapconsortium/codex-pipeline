@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.2.1
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: /output
 
 baseCommand: ["python", "/opt/codex_stitching/secondary_stitcher/secondary_stitcher_runner.py"]
@@ -24,7 +24,7 @@ outputs:
   stitched_images:
     type: Directory
     outputBinding:
-      glob: /output/stitched
+      glob: /output/pipeline_output
 
   final_pipeline_config:
     type: File
