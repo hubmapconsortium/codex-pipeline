@@ -255,9 +255,10 @@ def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: 
     if float(pixel_overlap).is_integer():
         return int(pixel_overlap)
     else:
-        raise ValueError(
-            f"Calculated pixel overlap {pixel_overlap} is not a whole number: target_dimension: {target_dimension}, overlap_proportion: {overlap_proportion}."
-        )
+        # if not overlap is not a whole number in px
+        closest_overlap = int(math.ceil(pixel_overlap))
+        closest_overlap += closest_overlap % 2  # make even
+        return  closest_overlap
 
 
 def collect_tiling_mode(exptConfigDict: Dict) -> str:
