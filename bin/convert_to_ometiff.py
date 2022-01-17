@@ -7,6 +7,7 @@ from os import walk
 from pathlib import Path
 from typing import List, Tuple
 
+import dask
 import lxml.etree
 import numpy as np
 import yaml
@@ -163,27 +164,15 @@ def create_ome_tiffs(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    args_for_conversion = []
-
+    task = []
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
-
-        args_for_conversion.append(
-            (
-                source_file,
-                ome_tiff_file,
-                channel_names,
-                lateral_resolution,
+        task.append(
+            dask.delayed(convert_tiff_file)(
+                (source_file, ome_tiff_file, channel_names, lateral_resolution)
             )
         )
-
-    # for argtuple in args_for_conversion :
-    #    convert_tiff_file( argtuple )
-
-    with Pool(processes=subprocesses) as pool:
-        pool.imap_unordered(convert_tiff_file, args_for_conversion)
-        pool.close()
-        pool.join()
+    dask.compute(*task, scheduler="processes")
 
 
 def check_dir_is_empty(dir_path: Path):
