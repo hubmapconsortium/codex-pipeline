@@ -1,5 +1,7 @@
 import argparse
+import math
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -233,8 +235,13 @@ def apply_flatfield_and_save(
 
 
 def organize_listing_by_cyc_reg_ch_zplane(
-    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]
+    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
+    num_tiles: int,
+    num_tiles_to_use: int,
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]:
+    np.random.seed(42)
+    tile_ids = set(np.random.randint(1, num_tiles, num_tiles_to_use).tolist())
+
     new_arrangemnt = dict()
     for cycle in listing:
         new_arrangemnt[cycle] = dict()
@@ -244,18 +251,35 @@ def organize_listing_by_cyc_reg_ch_zplane(
                 new_arrangemnt[cycle][region][channel] = dict()
                 for tile, zplane_dict in listing[cycle][region][channel].items():
                     for zplane, path in zplane_dict.items():
-                        if zplane in new_arrangemnt[cycle][region][channel]:
-                            new_arrangemnt[cycle][region][channel][zplane].append(path)
-                        else:
-                            new_arrangemnt[cycle][region][channel][zplane] = [path]
+                        if tile in tile_ids:
+                            if zplane in new_arrangemnt[cycle][region][channel]:
+                                new_arrangemnt[cycle][region][channel][zplane].append(path)
+                            else:
+                                new_arrangemnt[cycle][region][channel][zplane] = [path]
     return new_arrangemnt
 
 
-def main(data_dir: Path, pipeline_config_path: Path):
-    """It is expected that images are separated
-    into different directories per region, cycle, channel
-    e.g. Cyc1_Reg1_Ch1/0001.tif
-    """
+def calculate_how_many_tiles_to_use(n_tiles, tile_dtype, tile_size):
+    img_dtype = int(re.search(r"(\d+)", tile_dtype.name).groups()[0])  # int16 -> 16
+    nbytes = img_dtype / 8
+    stack_size_gb = n_tiles * tile_size[0] * tile_size[1] * nbytes / 1024 ** 3
+    if stack_size_gb > 1.0:
+        selection_coef = 1.0 / stack_size_gb
+        num_tiles_to_use = math.floor(n_tiles * selection_coef)
+    else:
+        num_tiles_to_use = n_tiles
+    return num_tiles_to_use
+
+
+def main(data_dir: Path, converted_dataset: Path, pipeline_config_path: Path):
+    converted_data_raw_dir = converted_dataset / "raw"
+    is_converted_data_dir_empty = not any(converted_data_raw_dir.iterdir())
+
+    if is_converted_data_dir_empty:
+        pass
+    else:
+        data_dir = converted_dataset
+
     img_stack_dir = Path("/output/image_stacks/")
     macro_dir = Path("/output/basic_macros")
     illum_cor_dir = Path("/output/illumination_correction/")
@@ -273,7 +297,23 @@ def main(data_dir: Path, pipeline_config_path: Path):
     img_dirs = get_input_img_dirs(Path(data_dir / raw_data_dir))
     print("Getting image listing")
     listing = create_listing_for_each_cycle_region(img_dirs)
-    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing)
+
+    tile_size = (
+        dataset_info["tile_height"] + dataset_info["overlap_y"],
+        dataset_info["tile_width"] + dataset_info["overlap_x"],
+    )
+    n_tiles = dataset_info["num_tiles"]
+
+    num_tiles_to_use = calculate_how_many_tiles_to_use(n_tiles, np.dtype("uint16"), tile_size)
+
+    print(
+        "tile size:",
+        tile_size,
+        "| number of tiles:",
+        n_tiles,
+        "| using " + str(num_tiles_to_use) + " tiles to compute illumination correction",
+    )
+    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing, n_tiles, num_tiles_to_use)
 
     print("Resaving images as stacks")
     stack_paths = resave_imgs_to_stacks(zplane_listing, img_stack_dir)
@@ -292,7 +332,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=Path, help="path to directory with dataset directory")
     parser.add_argument(
+        "--converted_dataset", type=Path, help="path to directory with converted dataset"
+    )
+    parser.add_argument(
         "--pipeline_config_path", type=Path, help="path to pipelineConfig.json file"
     )
     args = parser.parse_args()
-    main(args.data_dir, args.pipeline_config_path)
+    main(args.data_dir, args.converted_dataset, args.pipeline_config_path)

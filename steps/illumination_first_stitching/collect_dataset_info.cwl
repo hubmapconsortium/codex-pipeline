@@ -13,6 +13,12 @@ inputs:
     type: Directory
     inputBinding:
       position: 1
+
+  converted_dataset:
+    type: Directory
+    inputBinding:
+      position: 2
+
 outputs:
   pipeline_config:
     type: File

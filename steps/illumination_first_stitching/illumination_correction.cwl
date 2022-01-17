@@ -15,6 +15,11 @@ inputs:
     inputBinding:
       prefix: "--data_dir"
 
+  converted_dataset:
+    type: Directory
+    inputBinding:
+      prefix: "--converted_dataset"
+
   pipeline_config:
     type: File
     inputBinding:

@@ -36,10 +36,21 @@ outputs:
     label: "Pipeline config with all the modifications"
 
 steps:
+  convert_to_tiff:
+    in:
+      data_dir:
+        source: data_dir
+    out:
+      - converted_dataset
+    run: steps/convert_to_tiff.cwl
+    label: "Conversion of images from other microscope formats to TIFF"
+
   illumination_first_stitching:
     in:
       data_dir:
         source: data_dir
+      converted_dataset:
+        source: convert_to_tiff/converted_dataset
       gpus:
         source: gpus
     out:

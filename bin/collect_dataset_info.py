@@ -223,8 +223,10 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
     for child in base_path.iterdir():
         if not child.is_dir():
             continue
-        if m := RAW_DIR_NAMING_PATTERN.match(child.name):
-            regions.add(m.group("region"))
+        else:
+            m = RAW_DIR_NAMING_PATTERN.match(child.name)
+            if m:
+                regions.add(m.group("region"))
     return sorted(regions)
 
 
@@ -258,7 +260,7 @@ def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: 
         # if not overlap is not a whole number in px
         closest_overlap = int(math.ceil(pixel_overlap))
         closest_overlap += closest_overlap % 2  # make even
-        return  closest_overlap
+        return closest_overlap
 
 
 def collect_tiling_mode(exptConfigDict: Dict) -> str:
@@ -379,7 +381,7 @@ def standardize_metadata(directory: Path):
 
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    datasetInfo["raw_data_location"] = fspath(raw_data_location.relative_to(args.rawDataLocation))
+    datasetInfo["raw_data_location"] = fspath(raw_data_location.relative_to(directory))
     datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     info_key_mapping = [
@@ -547,6 +549,13 @@ if __name__ == "__main__":
         help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
         type=Path,
     )
+
+    parser.add_argument(
+        "convertedDataLocation",
+        help="Path to directory containing with TIFF images converted from other file formats in subdirectories (named with cycle and region numbers).",
+        type=Path,
+    )
+
     parser.add_argument(
         "--outfile",
         type=Path,
@@ -554,7 +563,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data = standardize_metadata(args.rawDataLocation)
+    converted_data_raw_dir = args.convertedDataLocation / "raw"
+    is_converted_data_dir_empty = not any(converted_data_raw_dir.iterdir())
+    if is_converted_data_dir_empty:
+        data = standardize_metadata(args.rawDataLocation)
+    else:
+        data = standardize_metadata(args.convertedDataLocation)
 
     if not args.outfile:
         args.outfile = Path("pipelineConfig.json")

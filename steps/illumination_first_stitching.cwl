@@ -8,6 +8,9 @@ inputs:
   data_dir:
     label: "Directory containing CODEX data"
     type: Directory
+  converted_dataset:
+    label: "Image files converted from other formats"
+    type: Directory
   gpus:
     label: >-
       GPUs to use, represented as a comma-separated list of integers.
@@ -32,6 +35,8 @@ steps:
     in:
       base_directory:
         source: data_dir
+      converted_dataset:
+        source: converted_dataset
     out:
       - pipeline_config
     run: illumination_first_stitching/collect_dataset_info.cwl
@@ -41,6 +46,8 @@ steps:
     in:
       base_directory:
         source: data_dir
+      converted_dataset:
+        source: converted_dataset
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
