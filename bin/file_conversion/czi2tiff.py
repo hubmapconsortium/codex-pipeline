@@ -1,11 +1,11 @@
-from typing import Union, Optional
-from pathlib import Path
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Optional, Union
+
 import czifile
 import numpy as np
 from tifffile import imwrite
-
 
 # requires
 # numpy
@@ -19,7 +19,7 @@ def path_to_str(path: Path):
 
 
 def read_and_write_tile(
-        sub_block_directory: czifile.DirectoryEntryDV,
+    sub_block_directory: czifile.DirectoryEntryDV,
 ) -> None:
     """
     mapped function to read tile metadata and data and write to disk
@@ -57,10 +57,10 @@ def read_and_write_tile(
 
 
 def convert_czi_to_tiles(
-        czi_fp: Union[str, Path],
-        region_no: int,
-        output_dir: Union[str, Path],
-        max_workers: Optional[int] = None,
+    czi_fp: Union[str, Path],
+    region_no: int,
+    output_dir: Union[str, Path],
+    max_workers: Optional[int] = None,
 ) -> None:
     """
     Reads a CODEX zeiss .czi and dumps the tiles onto disk mimicing akoya layout
@@ -114,6 +114,7 @@ def convert_czi_to_tiles(
 if __name__ == "__main__":
     import argparse
     from datetime import datetime
+
     start = datetime.now()
 
     parser = argparse.ArgumentParser()
@@ -124,9 +125,7 @@ if __name__ == "__main__":
         help="region number of the czi cycles (this should always be 1, "
         "but this argument is futureproofing)",
     )
-    parser.add_argument(
-        "--output_dir", type=Path, help="directory to place to the tiles"
-    )
+    parser.add_argument("--output_dir", type=Path, help="directory to place to the tiles")
     parser.add_argument("--max_workers", nargs="?", const=None, type=int)
 
     args = parser.parse_args()

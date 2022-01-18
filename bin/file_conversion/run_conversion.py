@@ -3,10 +3,12 @@ import shutil
 import sys
 
 sys.path.append("/opt/")
-from typing import List, Dict, Tuple
 from pathlib import Path
-from collect_dataset_info import find_raw_data_dir
+from typing import Dict, List, Tuple
+
 from czi2tiff import convert_czi_to_tiles
+
+from collect_dataset_info import find_raw_data_dir
 
 
 def make_dir_if_not_exists(dir_path: Path):
@@ -90,7 +92,9 @@ def check_if_need_to_convert(raw_data_dir: Path):
 
 
 def copy_metadata(raw_data_dir: Path, output_dir: Path):
-    file_list = get_file_listing_by_extension(raw_data_dir, [".json", ".txt", ".tsv", ".csv", ".yaml", ".yml"])
+    file_list = get_file_listing_by_extension(
+        raw_data_dir, [".json", ".txt", ".tsv", ".csv", ".yaml", ".yml"]
+    )
     for file_path in file_list:
         dst = output_dir / file_path.name
         shutil.copy(file_path, dst)
@@ -102,23 +106,26 @@ def main(data_dir: Path):
     output_dir = Path("/output/converted_dataset/raw")
     make_dir_if_not_exists(output_dir)
 
-    print("Checking if need to do an image file conversion")
+    print("Checking if need to convert image files to TIFFs")
     if check_if_need_to_convert(raw_data_dir) is True:
-        print("Images are in CZI format, proceeding with conversion")
+        print("Images are in CZI format, converting them to TIFFs")
         convert_czi_files(raw_data_dir, output_dir)
         copy_metadata(raw_data_dir, output_dir)
     else:
-        print("Do not need to convert, skipping step")
+        print("Images are already TIFFs, do not need to convert, skipping step")
         return
 
 
 if __name__ == "__main__":
     import argparse
     from datetime import datetime
+
     start = datetime.now()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=Path, help="path to the dataset directory with image files")
+    parser.add_argument(
+        "--data_dir", type=Path, help="path to the dataset directory with image files"
+    )
     args = parser.parse_args()
 
     main(args.data_dir)
