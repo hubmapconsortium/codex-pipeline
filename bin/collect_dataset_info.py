@@ -9,9 +9,13 @@ import re
 from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
+from pprint import pprint
 from typing import Dict, List, Optional, Tuple
 
-from pipeline_utils.dataset_listing import get_tile_shape
+import numpy as np
+import psutil
+
+from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -280,6 +284,44 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List[str]:
     return [f"CH{i}" for i in range(1, num_channels + 1)]
 
 
+def calc_how_many_big_concurrent_tasks(
+    tile_size: Tuple[int, int],
+    overlap_size: Tuple[int, int],
+    dtype: np.dtype,
+    n_tiles_per_plane: int,
+) -> int:
+    ram_stats = psutil.virtual_memory()
+    num_cpus = psutil.cpu_count()
+    free_ram_gb = ram_stats.available / 1024 ** 3
+    img_dtype = int(re.search(r"(\d+)", np.dtype(dtype).name).groups()[0])  # int16 -> 16
+    nbytes = img_dtype / 8
+
+    img_plane_size = (
+        n_tiles_per_plane
+        * (tile_size[0] + overlap_size[0])
+        * (tile_size[1] + overlap_size[1])
+        * nbytes
+    )
+    img_plane_size += round(img_plane_size * 0.1)  # 10% overhead
+    img_plane_size_gb = img_plane_size / 1024 ** 3
+
+    num_of_concurrent_tasks = free_ram_gb // img_plane_size_gb
+    if num_of_concurrent_tasks < 1:
+        print(
+            "WARNING: Image plane size is larger than memory. "
+            + "Will try to run large jobs in a single process"
+        )
+        num_of_concurrent_tasks = 1
+    if num_of_concurrent_tasks > num_cpus:
+        num_of_concurrent_tasks = num_cpus
+    return num_of_concurrent_tasks
+
+
+def get_img_dtype(raw_data_location: Path) -> np.dtype:
+    tile_dtype = get_tile_dtype(raw_data_location)
+    return tile_dtype
+
+
 def get_tile_shape_no_overlap(
     raw_data_location: Path,
     overlap_y: int,
@@ -426,6 +468,9 @@ def standardize_metadata(directory: Path):
     datasetInfo["tile_height"] = tile_shape[0]
     datasetInfo["tile_width"] = tile_shape[1]
 
+    tile_dtype = get_tile_dtype(raw_data_location)
+    datasetInfo["tile_dtype"] = tile_dtype.name
+
     # Get tiling mode.
     try:
         datasetInfo["tiling_mode"] = collect_attribute(["tiling_mode"], exptConfigDict)
@@ -533,6 +578,13 @@ def standardize_metadata(directory: Path):
         datasetInfo["tile_width"],
     )
 
+    overlap_size = (datasetInfo["tile_overlap_y"], datasetInfo["tile_overlap_x"])
+    n_tiles_per_plane = datasetInfo["region_height"] * datasetInfo["region_width"]
+    num_concurrent_tasks = calc_how_many_big_concurrent_tasks(
+        tile_shape, overlap_size, tile_dtype, n_tiles_per_plane
+    )
+    datasetInfo["num_concurrent_tasks"] = num_concurrent_tasks
+    pprint(datasetInfo)
     return datasetInfo
 
 

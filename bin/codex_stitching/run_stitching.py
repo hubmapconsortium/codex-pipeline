@@ -76,7 +76,8 @@ def main(data_dir: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(out_dir)
     make_dir_if_not_exists(base_channel_dir)
 
-    dask.config.set({"num_workers": 5, "scheduler": "processes"})
+    num_workers = dataset_meta["num_concurrent_tasks"]
+    dask.config.set({"num_workers": num_workers, "scheduler": "processes"})
 
     listing = get_file_listing(data_dir)
     channel_dirs = copy_to_channel_dirs(listing, base_channel_dir)

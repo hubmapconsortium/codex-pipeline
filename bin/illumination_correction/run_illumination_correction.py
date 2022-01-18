@@ -290,9 +290,13 @@ def main(data_dir: Path, converted_dataset: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(illum_cor_dir)
     make_dir_if_not_exists(corrected_img_dir)
 
-    dask.config.set({"num_workers": 10, "scheduler": "processes"})
-
     dataset_info = load_dataset_info(pipeline_config_path)
+
+    tile_dtype = dataset_info["tile_dtype"]
+
+    num_workers = dataset_info["num_concurrent_tasks"]
+    dask.config.set({"num_workers": num_workers, "scheduler": "processes"})
+
     raw_data_dir = dataset_info["dataset_dir"]
     img_dirs = get_input_img_dirs(Path(data_dir / raw_data_dir))
     print("Getting image listing")
@@ -304,7 +308,7 @@ def main(data_dir: Path, converted_dataset: Path, pipeline_config_path: Path):
     )
     n_tiles = dataset_info["num_tiles"]
 
-    num_tiles_to_use = calculate_how_many_tiles_to_use(n_tiles, np.dtype("uint16"), tile_size)
+    num_tiles_to_use = calculate_how_many_tiles_to_use(n_tiles, np.dtype(tile_dtype), tile_size)
 
     print(
         "tile size:",

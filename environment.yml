@@ -21,4 +21,5 @@ dependencies:
         - scikit-image>=0.17.2
         - scikit-learn>=0.23.1
         - shapely~=1.7.0
-        - opencv-contrib-python-headless>=4.0
+        - opencv-contrib-python-headless>=4.0,<5
+        - psutil~=5.9.0
