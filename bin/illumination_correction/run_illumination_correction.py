@@ -236,12 +236,8 @@ def apply_flatfield_and_save(
 
 def organize_listing_by_cyc_reg_ch_zplane(
     listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
-    num_tiles: int,
-    num_tiles_to_use: int,
+    tile_ids_to_use: List[int],
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]:
-    np.random.seed(42)
-    tile_ids = set(np.random.randint(1, num_tiles, num_tiles_to_use).tolist())
-
     new_arrangemnt = dict()
     for cycle in listing:
         new_arrangemnt[cycle] = dict()
@@ -251,7 +247,7 @@ def organize_listing_by_cyc_reg_ch_zplane(
                 new_arrangemnt[cycle][region][channel] = dict()
                 for tile, zplane_dict in listing[cycle][region][channel].items():
                     for zplane, path in zplane_dict.items():
-                        if tile in tile_ids:
+                        if tile in tile_ids_to_use:
                             if zplane in new_arrangemnt[cycle][region][channel]:
                                 new_arrangemnt[cycle][region][channel][zplane].append(path)
                             else:
@@ -259,16 +255,21 @@ def organize_listing_by_cyc_reg_ch_zplane(
     return new_arrangemnt
 
 
-def calculate_how_many_tiles_to_use(n_tiles, tile_dtype, tile_size):
+def select_which_tiles_to_use(n_tiles_y, n_tiles_x, tile_dtype, tile_size):
+    """ Select every n-th tile, keeping the max size of the tile stack at 2GB """
+    n_tiles = n_tiles_y * n_tiles_x
+
     img_dtype = int(re.search(r"(\d+)", tile_dtype.name).groups()[0])  # int16 -> 16
     nbytes = img_dtype / 8
-    stack_size_gb = n_tiles * tile_size[0] * tile_size[1] * nbytes / 1024 ** 3
-    if stack_size_gb > 1.0:
-        selection_coef = 1.0 / stack_size_gb
-        num_tiles_to_use = math.floor(n_tiles * selection_coef)
-    else:
-        num_tiles_to_use = n_tiles
-    return num_tiles_to_use
+
+    single_tile_gb = tile_size[0] * tile_size[1] * nbytes / 1024 ** 3
+    max_num_tiles = round(2.0 // single_tile_gb)
+
+    step = max(n_tiles // max_num_tiles, 1)
+    if step < 2 and n_tiles > max_num_tiles:
+        step = 2
+    tile_ids = list(range(0, n_tiles, step))
+    return tile_ids
 
 
 def main(data_dir: Path, converted_dataset: Path, pipeline_config_path: Path):
@@ -307,17 +308,21 @@ def main(data_dir: Path, converted_dataset: Path, pipeline_config_path: Path):
         dataset_info["tile_width"] + dataset_info["overlap_x"],
     )
     n_tiles = dataset_info["num_tiles"]
+    n_tiles_y = dataset_info["num_tiles_y"]
+    n_tiles_x = dataset_info["num_tiles_x"]
 
-    num_tiles_to_use = calculate_how_many_tiles_to_use(n_tiles, np.dtype(tile_dtype), tile_size)
+    tile_ids_to_use = select_which_tiles_to_use(
+        n_tiles_y, n_tiles_x, np.dtype(tile_dtype), tile_size
+    )
 
     print(
         "tile size:",
         tile_size,
         "| number of tiles:",
         n_tiles,
-        "| using " + str(num_tiles_to_use) + " tiles to compute illumination correction",
+        "| using " + str(len(tile_ids_to_use)) + " tiles to compute illumination correction",
     )
-    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing, n_tiles, num_tiles_to_use)
+    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing, tile_ids_to_use)
 
     print("Resaving images as stacks")
     stack_paths = resave_imgs_to_stacks(zplane_listing, img_stack_dir)
