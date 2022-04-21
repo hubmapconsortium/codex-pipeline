@@ -38,10 +38,14 @@ def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
         pixel_distance_z=pipeline_config["axial_resolution"],
         reference_channel=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
         + 1,  # id of nuclei channel
+        reference_cycle=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
+        // (len(pipeline_config["channel_names"]) // pipeline_config["num_cycles"])
+        + 1,
         nuclei_channel=pipeline_config["nuclei_channel"],
         tiling_mode=_convert_tiling_mode(pipeline_config["tiling_mode"]),
         num_z_planes=pipeline_config["num_z_planes"],
         channel_names=pipeline_config["channel_names"],
+        num_concurrent_tasks=pipeline_config["num_concurrent_tasks"],
     )
     return pipeline_config_dict
 

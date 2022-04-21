@@ -12,7 +12,8 @@ inputs:
   base_directory:
     type: Directory
     inputBinding:
-      position: 1
+      prefix: "--path_to_dataset"
+
 outputs:
   pipeline_config:
     type: File
