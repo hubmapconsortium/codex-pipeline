@@ -1,17 +1,17 @@
 [
-	{
-		"pattern": "experiment.json",
-		"description": "File containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection, in JSON format",
-		"edam_ontology_term": "EDAM_1.24.format_3464"
-	},
-	{
-		"pattern": "stitched/expressions/reg(?P<region>\\d+)_stitched_expressions\\.ome\\.tiff",
-		"description": "Cytokit expression output for region {region}, in OME-TIFF format",
-		"edam_ontology_term": "EDAM_1.24.format_3727"
-	},
-	{
-		"pattern": "stitched/mask/reg(?P<region>\\d+)_stitched_mask\\.ome\\.tiff",
-		"description": "Segmentation mask for region {region}, in OME-TIFF format",
-		"edam_ontology_term": "EDAM_1.24.format_3727"
-	}
+    {
+        "pattern": "experiment.json",
+        "description": "File containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection, in JSON format",
+        "edam_ontology_term": "EDAM_1.24.format_3464"
+    },
+    {
+        "pattern": "pipeline_output/expr/reg(?P<region>\\d+)_expr\\.ome\\.tiff",
+        "description": "Cytokit expression output for region {region}, in OME-TIFF format",
+        "edam_ontology_term": "EDAM_1.24.format_3727"
+    },
+    {
+        "pattern": "pipeline_output/mask/reg(?P<region>\\d+)_mask\\.ome\\.tiff",
+        "description": "Segmentation mask for region {region}, in OME-TIFF format",
+        "edam_ontology_term": "EDAM_1.24.format_3727"
+    }
 ]
