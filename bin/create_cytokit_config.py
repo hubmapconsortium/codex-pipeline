@@ -65,7 +65,7 @@ if __name__ == "__main__":
                 "memory_limit": memory_limit,
                 "run_crop": False,
                 "run_tile_generator": True,
-                "run_drift_comp": True,
+                "run_drift_comp": False,
                 "run_cytometry": True,
                 "run_best_focus": True,
                 "run_deconvolution": False,

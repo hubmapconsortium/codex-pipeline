@@ -67,10 +67,20 @@ steps:
        - stitched_images
     run: illumination_first_stitching/first_stitching.cwl
 
+  image_registration:
+    in:
+      data_dir:
+        source: first_stitching/stitched_images
+      pipeline_config:
+        source: collect_dataset_info/pipeline_config
+    out:
+      - registered_images
+    run: illumination_first_stitching/image_registration.cwl
+
   slicing:
     in:
       base_stitched_dir:
-        source: first_stitching/stitched_images
+        source: image_registration/registered_images
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
