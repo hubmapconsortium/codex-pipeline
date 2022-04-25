@@ -6,7 +6,11 @@ from typing import List
 
 sys.path.append("/opt/")
 from best_z_paths import find_best_z_paths_and_dirs
-from file_manipulation import process_z_planes_and_save_to_out_dirs
+from file_manipulation import (
+    copy_dirs,
+    copy_z_planes_to_out_dirs,
+    process_z_planes_and_save_to_out_dirs,
+)
 
 from pipeline_utils.pipeline_config_reader import load_dataset_info
 
@@ -28,10 +32,14 @@ def main(data_dir: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(best_focus_dir)
     dataset_info = load_dataset_info(pipeline_config_path)
     img_dirs = get_img_dirs(data_dir)
-    best_z_channel_dirs, best_z_plane_paths = find_best_z_paths_and_dirs(
-        dataset_info, img_dirs, best_focus_dir
-    )
-    process_z_planes_and_save_to_out_dirs(best_z_channel_dirs, best_z_plane_paths)
+    if dataset_info["num_z_planes"] == 1:
+        print("Number of z planes is 1, will just copy them to the output directory")
+        copy_dirs(img_dirs, best_focus_dir)
+    else:
+        best_z_channel_dirs, best_z_plane_paths = find_best_z_paths_and_dirs(
+            dataset_info, img_dirs, best_focus_dir
+        )
+        process_z_planes_and_save_to_out_dirs(best_z_channel_dirs, best_z_plane_paths)
 
 
 if __name__ == "__main__":

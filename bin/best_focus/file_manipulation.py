@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Union
 
@@ -29,7 +30,6 @@ def process_images_parallelized(best_z_plane_paths: List[tuple]):
     task = []
     for src, dst in best_z_plane_paths:
         task.append(dask.delayed(process_images)(src, dst))
-        # shutil.copy(src[0], dst)
     dask.compute(*task, scheduler="processes")
 
 
@@ -46,3 +46,11 @@ def process_z_planes_and_save_to_out_dirs(
             for channel in best_z_plane_paths[cycle][region]:
                 for tile, paths in best_z_plane_paths[cycle][region][channel].items():
                     process_images_parallelized(paths)
+
+
+def copy_dirs(img_dirs: List[Path], out_dir: Path):
+    task = []
+    for src_dir in img_dirs:
+        dst_dir = out_dir / src_dir.name
+        task.append(dask.delayed(shutil.copytree)(src_dir, dst_dir))
+    dask.compute(*task, scheduler="processes")
