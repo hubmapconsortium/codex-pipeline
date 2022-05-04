@@ -52,7 +52,7 @@ steps:
       - best_focus_tiles
     run: image_processing/best_focus.cwl
 
-  first_stitching:
+  image_stitching:
     in:
       data_dir:
         source: best_focus/best_focus_tiles
@@ -60,12 +60,12 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
        - stitched_images
-    run: image_processing/first_stitching.cwl
+    run: image_processing/image_stitching.cwl
 
   image_registration:
     in:
       data_dir:
-        source: first_stitching/stitched_images
+        source: image_stitching/stitched_images
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
