@@ -1,4 +1,5 @@
 data_dir:
   class: Directory
   path: "/path/to/dir/with/codex_dataset"
-gpus: "0"
+gpus: "all"
+segmentation_method: "deepcell"

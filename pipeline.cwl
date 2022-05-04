@@ -12,65 +12,61 @@ inputs:
     label: "Directory containing CODEX data"
     type: Directory
   gpus:
-    label: >-
-      GPUs to use, represented as a comma-separated list of integers.
+    label: "GPUs to use, comma-separated list of integers or all"
     type: string
-    default: "0"
+    default: "all"
+  segmentation_method:
+    label: "Which segmentation method to use deepcell or cellpose"
+    type: string
+    default: "deepcell"
+
 
 outputs:
-  experiment_config:
-    outputSource: illumination_first_stitching/cytokit_config
-    type: File
-    label: "Cytokit configuration format"
-  data_json:
-    outputSource: run_cytokit/data_json
-    type: File
-    label: "JSON file containing Cytokit's calculations from deconvolution, drift compensation, and focal plane selection"
-  stitched_images:
-    outputSource: ometiff_second_stitching/stitched_images
+  pipeline_output:
+    outputSource: collect_output/pipeline_output
     type: Directory
-    label: "Segmentation masks and expressions in OME-TIFF format"
+    label: "Expression data and segmentation masks"
   pipeline_config:
-    outputSource: ometiff_second_stitching/final_pipeline_config
+    outputSource: image_processing/pipeline_config
     type: File
     label: "Pipeline config with all the modifications"
 
 steps:
-  illumination_first_stitching:
+  image_processing:
     in:
       data_dir:
         source: data_dir
       gpus:
         source: gpus
     out:
-      - slicing_pipeline_config
-      - cytokit_config
-      - new_tiles
-    run: steps/illumination_first_stitching.cwl
-    label: "Illumination correction, best focus selection, and stitching stage 1"
+      - pipeline_config
+      - expression_channels
+      - segmentation_channels
+    run: steps/image_processing.cwl
+    label: "Illumination correction, best focus selection, and stitching"
 
-  run_cytokit:
+  run_segmentation:
     in:
-      data_dir:
-        source: illumination_first_stitching/new_tiles
-      yaml_config:
-        source: illumination_first_stitching/cytokit_config
+      method:
+        source: segmentation_method
+      dataset_dir:
+        source: image_processing/segmentation_channels
+      gpus:
+        source: gpus
     out:
-      - cytokit_output
-      - data_json
-    run: steps/run_cytokit.cwl
-    label: "CODEX analysis via Cytokit processor and operator"
+      - segmentation_masks
+    run: steps/run_segmentation.cwl
+    label: "Nucleus and cell segmentation"
 
-  ometiff_second_stitching:
+  collect_output:
     in:
-      cytokit_output:
-        source: run_cytokit/cytokit_output
-      slicing_pipeline_config:
-        source: illumination_first_stitching/slicing_pipeline_config
-      cytokit_config:
-        source: illumination_first_stitching/cytokit_config
+      pipeline_config:
+        source: image_processing/pipeline_config
+      expression_channels:
+        source: image_processing/expression_channels
+      segmentation_masks:
+        source: run_segmentation/segmentation_masks
     out:
-      - stitched_images
-      - final_pipeline_config
-    run: steps/ometiff_second_stitching.cwl
-    label: "OMETIFF creation and stitching stage 2"
+      - pipeline_output
+    run: steps/collect_output.cwl
+    label: "Gathering data together in one directory"

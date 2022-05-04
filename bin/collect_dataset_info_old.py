@@ -288,7 +288,7 @@ def calc_how_many_big_concurrent_tasks(
 ) -> int:
     ram_stats = psutil.virtual_memory()
     num_cpus = psutil.cpu_count()
-    free_ram_gb = ram_stats.available / 1024 ** 3
+    free_ram_gb = ram_stats.available / 1024**3
     img_dtype = int(re.search(r"(\d+)", np.dtype(dtype).name).groups()[0])  # int16 -> 16
     nbytes = img_dtype / 8
 
@@ -299,7 +299,7 @@ def calc_how_many_big_concurrent_tasks(
         * nbytes
     )
     img_plane_size += round(img_plane_size * 0.1)  # 10% overhead
-    img_plane_size_gb = img_plane_size / 1024 ** 3
+    img_plane_size_gb = img_plane_size / 1024**3
 
     num_of_concurrent_tasks = free_ram_gb // img_plane_size_gb
     if num_of_concurrent_tasks < 1:

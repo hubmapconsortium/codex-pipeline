@@ -1,20 +1,20 @@
 import argparse
 import csv
-from datetime import datetime
 import json
 import logging
 import math
 import re
 from collections import Counter, defaultdict
+from datetime import datetime
 from os import fspath, walk
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+
+import numpy as np
+import pint
 import psutil
 
-from pipeline_utils.dataset_listing import get_tile_shape, get_tile_dtype
-
-import pint
-import numpy as np
+from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
 
 class ConfigCreator:
@@ -95,6 +95,8 @@ class ConfigCreator:
             "drift_compensation": self._get_nuc_ch(),
             "nuclei_channel": self._get_nuc_ch(),
             "membrane_channel": self._get_membr_ch(),
+            "nuclei_channel_loc": self._std_meta["NuclearStainForSegmentation"],
+            "membrane_channel_loc": self._std_meta["MembraneStainForSegmentation"],
             "target_shape": self._calc_target_shape(),
             "num_concurrent_tasks": self._get_num_concur_tasks(),
         }

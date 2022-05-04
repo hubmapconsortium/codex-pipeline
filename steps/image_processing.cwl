@@ -8,24 +8,19 @@ inputs:
   data_dir:
     label: "Directory containing CODEX data"
     type: Directory
-  gpus:
-    label: >-
-      GPUs to use, represented as a comma-separated list of integers.
-    type: string
-    default: "0"
 
 outputs:
-  cytokit_config:
-    outputSource: create_yaml_config/cytokit_config
+  pipeline_config:
+    outputSource: collect_dataset_info/pipeline_config
     type: File
-    label: "Cytokit configuration in YAML format"
-  new_tiles:
-    outputSource: slicing/new_tiles
+    label: "Pipeline config"
+  segmentation_channels:
     type: Directory
-  slicing_pipeline_config:
-    outputSource: slicing/modified_pipeline_config
-    type: File
-    label: "Pipeline config with all the modifications"
+    outputSource: prepare_segmentation_channels/segmentation_channels
+    label: "Channels that will be used for nucleus and cell segmentation"
+  expression_channels:
+    type: Directory
+    outputSource: prepare_segmentation_channels/expression_channels
 
 steps:
   collect_dataset_info:
@@ -34,7 +29,7 @@ steps:
         source: data_dir
     out:
       - pipeline_config
-    run: illumination_first_stitching/collect_dataset_info.cwl
+    run: image_processing/collect_dataset_info.cwl
     label: "Collect CODEX dataset info"
 
   illumination_correction:
@@ -45,7 +40,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
       - illum_corrected_tiles
-    run: illumination_first_stitching/illumination_correction.cwl
+    run: image_processing/illumination_correction.cwl
 
   best_focus:
     in:
@@ -55,7 +50,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
       - best_focus_tiles
-    run: illumination_first_stitching/best_focus.cwl
+    run: image_processing/best_focus.cwl
 
   first_stitching:
     in:
@@ -65,7 +60,7 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
        - stitched_images
-    run: illumination_first_stitching/first_stitching.cwl
+    run: image_processing/first_stitching.cwl
 
   image_registration:
     in:
@@ -75,26 +70,15 @@ steps:
         source: collect_dataset_info/pipeline_config
     out:
       - registered_images
-    run: illumination_first_stitching/image_registration.cwl
+    run: image_processing/image_registration.cwl
 
-  slicing:
+  prepare_segmentation_channels:
     in:
-      base_stitched_dir:
+      data_dir:
         source: image_registration/registered_images
       pipeline_config:
         source: collect_dataset_info/pipeline_config
     out:
-       - new_tiles
-       - modified_pipeline_config
-    run: illumination_first_stitching/slicing.cwl
-
-  create_yaml_config:
-    in:
-      pipeline_config:
-        source: slicing/modified_pipeline_config
-      gpus:
-        source: gpus
-    out:
-      - cytokit_config
-    run: illumination_first_stitching/create_yaml_config.cwl
-    label: "Create Cytokit experiment config in YAML format"
+      - segmentation_channels
+      - expression_channels
+    run: image_processing/prepare_segm_and_expr_channels.cwl
