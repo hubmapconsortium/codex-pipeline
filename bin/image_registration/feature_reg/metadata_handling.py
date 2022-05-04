@@ -51,9 +51,7 @@ def strip_cycle_info(name):
 
 def find_where_ref_channel(ome_xml: XML, ref_channel: str):
     """Find if reference channel is in fluorophores or channel names and return them"""
-    channels, channel_names, channel_ids, channel_fluors, _, _ = extract_channel_info(
-        ome_xml
-    )
+    channels, channel_names, channel_ids, channel_fluors, _, _ = extract_channel_info(ome_xml)
 
     ref_ch = strip_cycle_info(ref_channel)
     channel_fluors = [fluor.lower() for fluor in channel_fluors]

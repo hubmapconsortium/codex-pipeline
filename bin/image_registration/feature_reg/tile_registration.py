@@ -1,21 +1,23 @@
-import sys
 import gc
+import sys
 from typing import List
 
 import cv2 as cv
 import numpy as np
 
 sys.path.append("/opt/image_registration")
+from feature_reg.feature_detection import (
+    Features,
+    find_features_parallelized,
+    match_features,
+)
 from feature_reg.slicer import split_image_into_tiles_of_size
-from feature_reg.feature_detection import find_features_parallelized, match_features, Features
 
 
 def split_image_into_tiles(img, tile_size: int):
     x_size = tile_size
     y_size = tile_size
-    img_tiles, tile_info = split_image_into_tiles_of_size(
-        img, x_size, y_size, overlap=51
-    )
+    img_tiles, tile_info = split_image_into_tiles_of_size(img, x_size, y_size, overlap=51)
     return img_tiles, tile_info
 
 

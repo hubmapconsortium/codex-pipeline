@@ -1,21 +1,21 @@
+import argparse
+import gc
 import os
 import os.path as osp
-import gc
-from datetime import datetime
-import argparse
-from typing import Tuple, List
 import sys
+from datetime import datetime
+from typing import List, Tuple
 
-import numpy as np
-import tifffile as tif
 import cv2 as cv
 import dask
+import numpy as np
+import tifffile as tif
 
 sys.path.append("/opt/image_registration")
-from opt_flow_reg.slicer import split_image_into_tiles_of_size
 from opt_flow_reg.metadata_handling import get_cycle_composition
+from opt_flow_reg.opt_flow_methods import deepflow, denselk, farneback, pcaflow, rlof
+from opt_flow_reg.slicer import split_image_into_tiles_of_size
 from opt_flow_reg.warper import Warper
-from opt_flow_reg.opt_flow_methods import farneback, denselk, deepflow, rlof, pcaflow
 
 Image = np.ndarray
 

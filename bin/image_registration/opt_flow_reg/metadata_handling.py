@@ -1,6 +1,6 @@
+import re
 import xml.etree.ElementTree as ET
 from io import StringIO
-import re
 
 XML = ET.ElementTree
 

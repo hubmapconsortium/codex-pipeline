@@ -1,13 +1,14 @@
 import gc
-from typing import Tuple, List, Union
 import sys
+from typing import List, Tuple, Union
+
+import cv2 as cv
 import numpy as np
 from sklearn.metrics import normalized_mutual_info_score
-import cv2 as cv
 
 sys.path.append("/opt/image_registration")
-from feature_reg.tile_registration import find_features, register_img_pair
 from feature_reg.feature_detection import Features
+from feature_reg.tile_registration import find_features, register_img_pair
 
 Image = np.ndarray
 
@@ -49,9 +50,7 @@ class PyrReg:
                 rescaled_t_mat_list = [
                     self._rescale_t_mat(m, 1 / factor) for m in fullscale_t_mat_list
                 ]
-                this_scale_t_mat = self._multiply_transform_matrices(
-                    rescaled_t_mat_list
-                )
+                this_scale_t_mat = self._multiply_transform_matrices(rescaled_t_mat_list)
                 mov_img_prev_scale_transform = cv.warpAffine(
                     mov_img_pyrs[i], this_scale_t_mat, dsize=mov_img_pyrs[i].shape[::-1]
                 )
@@ -110,9 +109,7 @@ class PyrReg:
         final_t_mat = self._multiply_transform_matrices(t_matrices)
         return aligned_img, final_t_mat
 
-    def _align_imgs(
-        self, ref: Union[Image, Features], mov_img: Image
-    ) -> Tuple[Image, np.ndarray]:
+    def _align_imgs(self, ref: Union[Image, Features], mov_img: Image) -> Tuple[Image, np.ndarray]:
         if not isinstance(ref, Features):
             ref_features = find_features(ref, self.tile_size)
         else:
@@ -122,9 +119,7 @@ class PyrReg:
         if np.equal(transform_mat, np.eye(2, 3)).all():
             return mov_img, np.eye(2, 3)
         else:
-            img_aligned = cv.warpAffine(
-                mov_img, transform_mat, dsize=mov_img.shape[::-1]
-            )
+            img_aligned = cv.warpAffine(mov_img, transform_mat, dsize=mov_img.shape[::-1])
             return img_aligned, transform_mat
 
     def _realign_img(self, mov_img: Image, mat_list: List[np.ndarray]) -> Image:
@@ -148,9 +143,7 @@ class PyrReg:
         t_mat_copy[1, 2] *= scale
         return t_mat_copy
 
-    def _check_if_outside_borders(
-        self, t_mat: np.ndarray, img_shape: Tuple[int, int]
-    ) -> bool:
+    def _check_if_outside_borders(self, t_mat: np.ndarray, img_shape: Tuple[int, int]) -> bool:
         cy = img_shape[0] // 2
         cx = img_shape[1] // 2
         center_coords = np.array([[cx], [cy], [1]])
@@ -178,20 +171,14 @@ class PyrReg:
         print("    MI score after:", mi_scores[0], "| MI score before:", mi_scores[1])
         return checks
 
-    def diff_of_gaus(
-        self, img: Image, low_sigma: int = 5, high_sigma: int = 9
-    ) -> Image:
+    def diff_of_gaus(self, img: Image, low_sigma: int = 5, high_sigma: int = 9) -> Image:
         if img.max() == 0:
             return img
         else:
             fimg = cv.normalize(img, None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
             kernel = (low_sigma * 4 * 2 + 1, low_sigma * 4 * 2 + 1)  # as in opencv
-            ls = cv.GaussianBlur(
-                fimg, kernel, sigmaX=low_sigma, dst=None, sigmaY=low_sigma
-            )
-            hs = cv.GaussianBlur(
-                fimg, kernel, sigmaX=high_sigma, dst=None, sigmaY=high_sigma
-            )
+            ls = cv.GaussianBlur(fimg, kernel, sigmaX=low_sigma, dst=None, sigmaY=low_sigma)
+            hs = cv.GaussianBlur(fimg, kernel, sigmaX=high_sigma, dst=None, sigmaY=high_sigma)
             dog = hs - ls
             del hs, ls
             return cv.normalize(dog, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)

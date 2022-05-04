@@ -1,9 +1,9 @@
-from typing import Tuple, List
 import gc
 import sys
+from typing import List, Tuple
 
-import numpy as np
 import cv2 as cv
+import numpy as np
 
 sys.path.append("/opt/image_registration")
 from opt_flow_reg.slicer import split_image_into_tiles_of_size

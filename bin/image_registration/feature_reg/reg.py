@@ -1,18 +1,18 @@
-import re
+import argparse
+import gc
 import os
 import os.path as osp
-import gc
+import re
 import sys
-import argparse
 from datetime import datetime
 from typing import List
 
-import numpy as np
-from skimage.transform import AffineTransform, warp
-import pandas as pd
 import cv2 as cv
-import tifffile as tif
 import dask
+import numpy as np
+import pandas as pd
+import tifffile as tif
+from skimage.transform import AffineTransform, warp
 
 sys.path.append("/opt/image_registration")
 from feature_reg.metadata_handling import generate_new_metadata, get_dataset_structure
@@ -26,19 +26,14 @@ def alphaNumOrder(string):
     Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
     """
     return "".join(
-        [
-            format(int(x), "05d") if x.isdigit() else x
-            for x in re.split(r"(\d+)", string)
-        ]
+        [format(int(x), "05d") if x.isdigit() else x for x in re.split(r"(\d+)", string)]
     )
 
 
 def save_param(img_paths, out_dir, transform_matrices_flat, padding, image_shape):
     transform_table = pd.DataFrame(transform_matrices_flat)
     for i in transform_table.index:
-        dataset_name = "dataset_{id}_{name}".format(
-            id=i + 1, name=os.path.basename(img_paths[i])
-        )
+        dataset_name = "dataset_{id}_{name}".format(id=i + 1, name=os.path.basename(img_paths[i]))
         transform_table.loc[i, "name"] = dataset_name
     cols = transform_table.columns.to_list()
     cols = cols[-1:] + cols[:-1]
@@ -78,9 +73,7 @@ def pad_to_size(target_shape, img):
     else:
         left, right = calculate_padding_size(target_shape[1], img.shape[1])
         top, bottom = calculate_padding_size(target_shape[0], img.shape[0])
-        return cv.copyMakeBorder(
-            img, top, bottom, left, right, cv.BORDER_CONSTANT, None, 0
-        ), (
+        return cv.copyMakeBorder(img, top, bottom, left, right, cv.BORDER_CONSTANT, None, 0), (
             left,
             right,
             top,
@@ -160,9 +153,7 @@ def estimate_registration_parameters(
     return transform_matrices, target_shape, padding
 
 
-def transform_imgs(
-    dataset_structure, out_dir, target_shape, transform_matrices, is_stack
-):
+def transform_imgs(dataset_structure, out_dir, target_shape, transform_matrices, is_stack):
     print("Transforming images")
     identity_matrix = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
     output_path = osp.join(out_dir, "out.tif")
@@ -178,8 +169,7 @@ def transform_imgs(
 
     ncycles = len(dataset_structure.keys())
     nzplanes = {
-        cyc: len(dataset_structure[cyc]["img_structure"][0].keys())
-        for cyc in dataset_structure
+        cyc: len(dataset_structure[cyc]["img_structure"][0].keys()) for cyc in dataset_structure
     }
     max_zplanes = max(nzplanes.values())
 
@@ -201,20 +191,16 @@ def transform_imgs(
                 img, _ = pad_to_size(target_shape, img)
                 gc.collect()
                 if not np.array_equal(transform_matrix, identity_matrix):
-                    homogenous_transform_matrix = np.append(
-                        transform_matrix, [[0, 0, 1]], axis=0
-                    )
+                    homogenous_transform_matrix = np.append(transform_matrix, [[0, 0, 1]], axis=0)
                     inv_matrix = np.linalg.pinv(
                         homogenous_transform_matrix
                     )  # Using partial inverse to handle singular matrices
                     AT = AffineTransform(inv_matrix)
-                    img = warp(
-                        img, AT, output_shape=img.shape, preserve_range=True
-                    ).astype(original_dtype)
+                    img = warp(img, AT, output_shape=img.shape, preserve_range=True).astype(
+                        original_dtype
+                    )
                     gc.collect()
-                TW.write(
-                    img, contiguous=True, photometric="minisblack", description=new_meta
-                )
+                TW.write(img, contiguous=True, photometric="minisblack", description=new_meta)
                 page += 1
                 gc.collect()
 
@@ -242,21 +228,16 @@ def check_input_size(img_paths: List[str], is_stack: bool):
         if is_stack:
             pass
         else:
-            raise ValueError(
-                "You need to provide at least two images to do a registration."
-            )
+            raise ValueError("You need to provide at least two images to do a registration.")
     elif len(img_paths) > 1:
         if is_stack:
             raise ValueError(
-                "Too many input images. "
-                + "When flag --stack enabled only one image can be used"
+                "Too many input images. " + "When flag --stack enabled only one image can be used"
             )
         else:
             pass
     else:
-        raise ValueError(
-            "You need to provide at least two images to do a registration."
-        )
+        raise ValueError("You need to provide at least two images to do a registration.")
 
 
 def main(
@@ -265,12 +246,12 @@ def main(
     ref_channel: str,
     out_dir: str,
     n_workers: int,
-    tile_size: int,
-    num_pyr_lvl: int,
-    num_iter: int,
-    stack: bool,
-    estimate_only: bool,
-    load_param: str,
+    tile_size: int = 1000,
+    num_pyr_lvl: int = 3,
+    num_iter: int = 3,
+    stack: bool = False,
+    estimate_only: bool = False,
+    load_param: str = "none",
 ):
 
     if not os.path.exists(out_dir):
@@ -315,9 +296,7 @@ def main(
             padding.append(pad)
 
     if not estimate_only:
-        transform_imgs(
-            dataset_structure, out_dir, target_shape, transform_matrices, is_stack
-        )
+        transform_imgs(dataset_structure, out_dir, target_shape, transform_matrices, is_stack)
 
     transform_matrices_flat = [M.flatten() for M in transform_matrices]
     img_paths2 = [dataset_structure[cyc]["img_path"] for cyc in dataset_structure]

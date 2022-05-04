@@ -1,8 +1,8 @@
-from pathlib import Path
-import xml.etree.ElementTree as ET
-import re
 import copy
-from typing import List, Dict
+import re
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Dict, List
 
 import tifffile as tif
 

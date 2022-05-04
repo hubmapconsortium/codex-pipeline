@@ -72,9 +72,7 @@ def diff_of_gaus(img: Image, low_sigma: int = 5, high_sigma: int = 9) -> Image:
         fimg = cv.normalize(img, None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
         kernel = (low_sigma * 4 * 2 + 1, low_sigma * 4 * 2 + 1)  # as in opencv
         ls = cv.GaussianBlur(fimg, kernel, sigmaX=low_sigma, dst=None, sigmaY=low_sigma)
-        hs = cv.GaussianBlur(
-            fimg, kernel, sigmaX=high_sigma, dst=None, sigmaY=high_sigma
-        )
+        hs = cv.GaussianBlur(fimg, kernel, sigmaX=high_sigma, dst=None, sigmaY=high_sigma)
         dog = hs - ls
         del hs, ls
         return cv.normalize(dog, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
@@ -162,12 +160,8 @@ def match_features(img1_features: Features, img2_features: Features) -> np.ndarr
     if len(good) < 3:
         return np.eye(2, 3)
     # convert keypoints to format acceptable for estimator
-    src_pts = np.array([kp1[m.trainIdx].pt for m in good], dtype=np.float32).reshape(
-        (-1, 1, 2)
-    )
-    dst_pts = np.array([kp2[m.queryIdx].pt for m in good], dtype=np.float32).reshape(
-        (-1, 1, 2)
-    )
+    src_pts = np.array([kp1[m.trainIdx].pt for m in good], dtype=np.float32).reshape((-1, 1, 2))
+    dst_pts = np.array([kp2[m.queryIdx].pt for m in good], dtype=np.float32).reshape((-1, 1, 2))
 
     # find out how images shifted (compute affine transformation)
     affine_transform_matrix, mask = cv.estimateAffinePartial2D(

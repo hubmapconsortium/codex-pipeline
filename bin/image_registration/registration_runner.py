@@ -1,15 +1,15 @@
-import sys
-from pathlib import Path
 import argparse
 import re
+import sys
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
 import tifffile as tif
-
+from bundle_images import bundle_channel_images
 from feature_reg import reg
 from opt_flow_reg import opt_flow_reg
-from bundle_images import bundle_channel_images
 
 sys.path.append("/opt/")
 from pipeline_utils.pipeline_config_reader import load_dataset_info
@@ -112,6 +112,8 @@ def run_feature_reg(img_paths, ref_img_id, ref_channel, out_dir, n_workers):
         path_to_str(out_dir),
         n_workers,
         tile_size=1000,
+        num_pyr_lvl=3,
+        num_iter=3,
         stack=False,
         estimate_only=False,
         load_param="none",
@@ -146,6 +148,7 @@ def split_to_cycle_channels(stack_path, out_dir, num_cycles, num_channels):
 
 
 def main(base_stitched_dir: Path, pipeline_config_path: Path):
+    start = datetime.now()
     out_dir = Path("/output")
     reg_results_dir = out_dir / Path("registration_results")
     stack_dir = out_dir / Path("img_stacks")
@@ -179,6 +182,8 @@ def main(base_stitched_dir: Path, pipeline_config_path: Path):
         run_opt_flow_reg(feature_reg_result, ref_channel_name, region_dir, n_workers)
         opt_flow_reg_result = region_dir / "out_opt_flow_registered.tif"
         split_to_cycle_channels(opt_flow_reg_result, final_output, num_cycles, num_channels)
+    fin = datetime.now()
+    print("Total time for registration", str(fin - start))
     return
 
 
