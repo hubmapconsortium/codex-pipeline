@@ -6,11 +6,7 @@ from typing import List
 
 sys.path.append("/opt/")
 from best_z_paths import find_best_z_paths_and_dirs
-from file_manipulation import (
-    copy_dirs,
-    copy_z_planes_to_out_dirs,
-    process_z_planes_and_save_to_out_dirs,
-)
+from file_manipulation import copy_dirs, process_z_planes_and_save_to_out_dirs
 
 from pipeline_utils.pipeline_config_reader import load_dataset_info
 
