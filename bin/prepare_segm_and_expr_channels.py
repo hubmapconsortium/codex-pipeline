@@ -126,21 +126,21 @@ def get_img_listing(
     return img_listing
 
 
-def check_if_unwanted(
+def check_if_needed(
     channel_name: str, channel_names_qc_pass: Dict[str, List[str]], nuclei_channel: str
 ) -> bool:
     if channel_name == nuclei_channel:
-        return False
+        return True
     if channel_names_qc_pass[channel_name] == ["TRUE"]:
         pass
     else:
-        return True
+        return False
     unwanted_ch_patterns = [r"^blank", r"^empty", r"^DAPI", r"^HOECHST"]
     for unwanted_ch_pat in unwanted_ch_patterns:
         if re.match(unwanted_ch_pat, channel_name, re.IGNORECASE):
-            return True
-        else:
             return False
+    else:
+        return True
 
 
 def filter_expr_channels(
@@ -158,8 +158,8 @@ def filter_expr_channels(
             channel_dict = dict()
             for ch, ch_path in listing[region][cycle].items():
                 ch_name = channel_names[n]
-                is_unwanted = check_if_unwanted(ch_name, channel_names_qc_pass, nuclei_channel)
-                if not is_unwanted:
+                is_needed = check_if_needed(ch_name, channel_names_qc_pass, nuclei_channel)
+                if is_needed:
                     channel_dict[ch] = ch_path
                     preserved_channels.append(ch_name)
                 n += 1
