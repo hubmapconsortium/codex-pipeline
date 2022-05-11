@@ -1,3 +1,4 @@
+import sys
 import argparse
 import csv
 import json
@@ -14,6 +15,7 @@ import numpy as np
 import pint
 import psutil
 
+sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
 

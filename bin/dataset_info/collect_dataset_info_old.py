@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import argparse
 import csv
 import datetime
@@ -15,28 +16,19 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import psutil
 
+sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
+
 logger = logging.getLogger(__name__)
-
-
-NONRAW_DIRECTORY_NAME_PIECES = [
-    "processed",
-    "drv",
-    "metadata",
-    "extras",
-    "Overview",
-]
-
-
-# TODO: don't duplicate this in ../cytokit-docker/setup_data_directory.py.
-#   Can't share code easily because these files go to different containers
-RAW_DIR_NAMING_PATTERN = re.compile(r"^cyc(\d+)_(?P<region>reg\d+).*", re.IGNORECASE)
-
-# Checked with .match below, but be extra explicit that we care about
-# the entire string being composed of \x00 characters
-ALL_ZERO_CHANNEL_NAME_PATTERN = re.compile("^\x00+$")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+msg_format = "%(asctime)s - %(levelname)s: %(message)s"
+datefmt = "%H:%M:%S"
+log_format = logging.Formatter(msg_format, datefmt=datefmt)
+handler.setFormatter(log_format)
+logger.addHandler(handler)
 
 
 def find_files(
@@ -54,6 +46,14 @@ def find_files(
     :param ignore_processed_derived_metadata_dirs:
     :return:
     """
+    NONRAW_DIRECTORY_NAME_PIECES = [
+        "processed",
+        "drv",
+        "metadata",
+        "extras",
+        "Overview",
+    ]
+
     file_paths = []
 
     for dirpath, dirnames, filenames in walk(base_directory):
@@ -157,17 +157,7 @@ def calculate_target_shape(magnification: int, tileHeight: int, tileWidth: int):
     return [dims["height"], dims["width"]]
 
 
-def make_DAPI_channel_names_unique(channel_names: List[str]) -> List[str]:
-    """
-    Sometimes DAPI channel names are not unique, e.g. if DAPI was used in every
-    cycle, sometimes each DAPI channel is just named "DAPI", other times they
-    are named "DAPI1", "DAPI2", "DAPI3", etc. The latter is better, because it
-    enables us to select the specific DAPI channel from the correct cycle to
-    use for segmentation and/or for best focus plane selection. So, if there
-    are duplicated channel names, we will append an index, starting at 1, to
-    each occurrence of the channel name.
-    """
-
+def make_ch_names_unique(channel_names: List[str]) -> List[str]:
     unique_names = Counter(channel_names)
     new_names = channel_names.copy()
 
@@ -202,6 +192,14 @@ def highest_file_sort_key(seg_text_file: Path) -> Tuple[int, int]:
 
 
 def find_raw_data_dir(directory: Path) -> Path:
+    NONRAW_DIRECTORY_NAME_PIECES = [
+        "processed",
+        "drv",
+        "metadata",
+        "extras",
+        "Overview",
+    ]
+
     raw_data_dir_possibilities = []
 
     for child in directory.iterdir():
@@ -219,12 +217,13 @@ def find_raw_data_dir(directory: Path) -> Path:
 
 
 def get_region_names_from_directories(base_path: Path) -> List[str]:
+    raw_dir_name_pat = re.compile(r"^cyc(\d+)_(?P<region>reg\d+).*", re.IGNORECASE)
     regions = set()
     for child in base_path.iterdir():
         if not child.is_dir():
             continue
         else:
-            m = RAW_DIR_NAMING_PATTERN.match(child.name)
+            m = raw_dir_name_pat.match(child.name)
             if m:
                 regions.add(m.group("region"))
     return sorted(regions)
@@ -400,18 +399,6 @@ def standardize_metadata(directory: Path):
 
     logger.info("Finished reading segmentation parameters.")
 
-    channel_names_qc_pass: Dict[str, List[str]] = defaultdict(list)
-    if channel_names_report_files:
-        channel_names_report_file = channel_names_report_files[0]
-        with open(channel_names_report_file, newline="") as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=",")
-            for row in csvreader:
-                channel_names_qc_pass[row[0]].append(row[1].lstrip())
-    else:
-        logger.warning(
-            "No channelnames_report.csv file found. Including all channels in final output."
-        )
-
     raw_data_location = find_raw_data_dir(directory)
     logger.info(f"Raw data location: {raw_data_location}")
 
@@ -420,7 +407,6 @@ def standardize_metadata(directory: Path):
     datasetInfo["name"] = directory.name
     datasetInfo["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     datasetInfo["raw_data_location"] = fspath(raw_data_location.relative_to(directory))
-    datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     info_key_mapping = [
         ("emission_wavelengths", ["emission_wavelengths", "wavelengths"]),
@@ -481,6 +467,10 @@ def standardize_metadata(directory: Path):
     except KeyError:
         datasetInfo["per_cycle_channel_names"] = create_cycle_channel_names(exptConfigDict)
 
+    # Checked with .match below, but be extra explicit that we care about
+    # the entire string being composed of \x00 characters
+    all_zero_ch_name_pat = re.compile("^\x00+$")
+
     if channel_names_files:
         channel_names_file = min(
             channel_names_files,
@@ -490,7 +480,7 @@ def standardize_metadata(directory: Path):
         with open(channel_names_file, "r") as channelNamesFile:
             channelNames = channelNamesFile.read().splitlines()
             # HACK: work around odd 0x00 bytes read past where this file should end
-            if ALL_ZERO_CHANNEL_NAME_PATTERN.match(channelNames[-1]):
+            if all_zero_ch_name_pat.match(channelNames[-1]):
                 count = len(channelNames[-1])
                 logger.info(f"Dropping spurious channel name containing {count} \\x00 characters")
                 channelNames = channelNames[:-1]
@@ -502,9 +492,32 @@ def standardize_metadata(directory: Path):
 
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
-    channelNames = make_DAPI_channel_names_unique(channelNames)
+    channelNames = make_ch_names_unique(channelNames)
 
     datasetInfo["channel_names"] = channelNames
+
+    channel_names_qc_pass: Dict[str, List[str]] = defaultdict(list)
+    if channel_names_report_files:
+        channel_names_report_file = channel_names_report_files[0]
+        with open(channel_names_report_file, newline="") as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=",")
+            ch_names_qc = []
+            qc_vals = []
+            for row in csvreader:
+                ch_names_qc.append(row[0])
+                qc_vals.append(row[1].strip())
+        unique_qc_ch_names = make_ch_names_unique(ch_names_qc)
+        for i, ch in enumerate(unique_qc_ch_names):
+            channel_names_qc_pass[ch] = [qc_vals[i]]
+    else:
+        logger.warning(
+            "No channelnames_report.csv file found. Including all channels in final output."
+        )
+        channel_names_qc_pass = dict()
+        for ch in channelNames:
+            channel_names_qc_pass[ch] = ["TRUE"]
+
+    datasetInfo["channel_names_qc_pass"] = dict(channel_names_qc_pass)
 
     datasetInfo["num_cycles"] = int(
         len(channelNames) / len(datasetInfo["per_cycle_channel_names"])
@@ -580,40 +593,43 @@ def standardize_metadata(directory: Path):
         tile_shape, overlap_size, tile_dtype, n_tiles_per_plane
     )
     datasetInfo["num_concurrent_tasks"] = num_concurrent_tasks
+
+    datasetInfo["nuclei_channel_loc"] = {
+        "CycleID": int(nucleiCycle),
+        "ChannelID": int(nucleiChannel),
+    }
+    datasetInfo["membrane_channel_loc"] = {
+        "CycleID": int(membraneCycle),
+        "ChannelID": int(membraneChannel),
+    }
     pprint(datasetInfo)
     return datasetInfo
 
 
-########
-# MAIN #
-########
+def write_pipeline_config(out_path: Path, pipeline_config: dict):
+    with open(out_path, "w") as s:
+        json.dump(pipeline_config, s, indent=4)
+
+
+def main(path_to_dataset: Path):
+    pipeline_config = standardize_metadata(path_to_dataset)
+
+    logger.info("Writing pipeline config")
+
+    out_path = Path("pipelineConfig.json")
+    write_pipeline_config(out_path, pipeline_config)
+    logger.info(f"Written pipeline config to {out_path}")
+
+
 if __name__ == "__main__":
-    # Set up argument parser and parse the command line arguments.
     parser = argparse.ArgumentParser(
         description="Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
     )
     parser.add_argument(
-        "rawDataLocation",
+        "--path_to_dataset",
         help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
         type=Path,
     )
-
-    parser.add_argument(
-        "--outfile",
-        type=Path,
-    )
-
     args = parser.parse_args()
-    data = standardize_metadata(args.rawDataLocation)
 
-    if not args.outfile:
-        args.outfile = Path("pipelineConfig.json")
-
-    ##############################
-    # Write JSON pipeline config #
-    ##############################
-    logger.info("Writing pipeline config")
-    with open(args.outfile, "w") as outfile:
-        json.dump(data, outfile, indent=4)
-
-    logger.info(f"Written pipeline config to {args.outfile}")
+    main(args.path_to_dataset)
