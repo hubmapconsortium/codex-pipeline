@@ -1,6 +1,0 @@
-[submodule "bin/image_registration/opt_flow_reg"]
-	path = bin/image_registration/opt_flow_reg
-	url = https://github.com/BayraktarLab/opt_flow_reg
-[submodule "bin/image_registration/feature_reg"]
-	path = bin/image_registration/feature_reg
-	url = https://github.com/BayraktarLab/feature_reg
