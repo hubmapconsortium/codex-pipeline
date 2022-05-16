@@ -1,0 +1,68 @@
+{
+    "Version": "1.0",
+    "DatasetName": "Some recognizable name",
+    "AcquisitionDate": "2020-02-19T13:51:35.857-05:00[America/New_York]",
+    "AssayType": "CODEX",
+    "AssaySpecificSoftware": "Akoya CODEX Instrument Manager 1.29, Akoya CODEX Processor 1.7.6",
+    "Microscope": "Sony, Nikon, Zeiss",
+    "AcquisitionMode": "Confocal",
+    "ImmersionMedium": "Air",
+    "NominalMagnification": 40,
+    "NumericalAperture": 1.0,
+    "ResolutionX": 300.0,
+    "ResolutionXUnit": "nm",
+    "ResolutionY": 300.0,
+    "ResolutionYUnit": "nm",
+    "ResolutionZ": 100.0,
+    "ResolutionZUnit": "nm",
+    "BitDepth": 16,
+    "NumRegions": 3,
+    "NumCycles": 4,
+    "NumZPlanes": 5,
+    "NumChannels": 6,
+    "RegionWidth": 10,
+    "RegionHeight": 10,
+    "TileWidth": 2048,
+    "TileHeight": 2048,
+    "TileOverlapX": 0.3,
+    "TileOverlapY": 0.3,
+    "TileLayout": "Snake",
+    "NuclearStain": [
+        {"CycleID": 2, "ChannelID": 1}
+    ],
+    "MembraneStain": [
+        {"CycleID": 2, "ChannelID": 3},
+        {"CycleID": 3, "ChannelID": 4}
+    ],
+    "NuclearStainForSegmentation": {"CycleID": 1, "ChannelID": 1},
+    "MembraneStainForSegmentation": {"CycleID": 3, "ChannelID": 4},
+    "ChannelDetails": {
+        "ChannelDetailsArray": [{
+                "Name": "DAPI-01",
+                "ChannelID": 1,
+                "CycleID": 1,
+                "Fluorophore": "DAPI",
+                "PassedQC": true,
+                "QCDetails": "if QC failed why",
+                "ExposureTimeMS": 10.0,
+                "ExcitationWavelengthNM": 350,
+                "EmissionWavelengthNM": 450,
+                "Binning": 1,
+                "Gain": 1.0
+            },
+            {
+                "Name": "CD31",
+                "ChannelID": 2,
+                "CycleID": 1,
+                "Fluorophore": "Cy5",
+                "PassedQC": true,
+                "QCDetails": "None",
+                "ExposureTimeMS": 100.0,
+                "ExcitationWavelengthNM": 650,
+                "EmissionWavelengthNM": 660,
+                "Binning": 1,
+                "Gain": 1.0
+            }
+        ]
+    }
+}
