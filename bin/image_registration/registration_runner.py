@@ -12,6 +12,8 @@ from feature_reg import reg
 from opt_flow_reg import opt_flow_reg
 
 sys.path.append("/opt/")
+sys.path.append("/opt/image_registration")
+
 from pipeline_utils.pipeline_config_reader import load_dataset_info
 
 
@@ -128,7 +130,8 @@ def run_opt_flow_reg(stack_path, ref_channel, out_dir, n_workers):
         n_workers,
         tile_size=1000,
         overlap=100,
-        method="farneback",
+        num_pyr_lvl=3,
+        num_iter=3
     )
 
 

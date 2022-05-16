@@ -5,7 +5,6 @@ from typing import List
 import cv2 as cv
 import numpy as np
 
-sys.path.append("/opt/image_registration")
 from feature_reg.feature_detection import (
     Features,
     find_features_parallelized,

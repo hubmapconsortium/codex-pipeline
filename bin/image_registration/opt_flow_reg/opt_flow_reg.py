@@ -12,228 +12,112 @@ import numpy as np
 import tifffile as tif
 
 sys.path.append("/opt/image_registration")
-from opt_flow_reg.metadata_handling import get_cycle_composition
-from opt_flow_reg.opt_flow_methods import deepflow, denselk, farneback, pcaflow, rlof
-from opt_flow_reg.slicer import split_image_into_tiles_of_size
+from opt_flow_reg.metadata_handling import DatasetStructure
+from opt_flow_reg.pyr_reg_of import PyrRegOF
 from opt_flow_reg.warper import Warper
 
 Image = np.ndarray
 
 
-def convertu8(img: Image) -> Image:
-    u8img = cv.normalize(img, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
-    return u8img
+def read_and_max_project_pages(img_path: str, tiff_pages: List[int]):
+    max_proj = tif.imread(img_path, key=tiff_pages[0])
+    if len(tiff_pages) > 1:
+        del tiff_pages[0]
+        for p in tiff_pages:
+            max_proj = np.maximum(max_proj, tif.imread(img_path, key=p))
+    return cv.normalize(max_proj, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
 
 
-def register_tiles(ref_img: Image, mov_img: Image, method) -> np.ndarray:
-    if method == "farneback":
-        flow = farneback(convertu8(mov_img), convertu8(ref_img))
-    elif method == "denselk":
-        flow = denselk(convertu8(mov_img), convertu8(ref_img))
-    elif method == "deepflow":
-        flow = deepflow(convertu8(mov_img), convertu8(ref_img))
-    elif method == "rlof":
-        flow = rlof(convertu8(mov_img), convertu8(ref_img))
-    elif method == "pcaflow":
-        flow = pcaflow(convertu8(mov_img), convertu8(ref_img))
-    gc.collect()
-    return flow
-
-
-def reg_big_image(
-    ref_img: Image, moving_img: Image, warper, block_width, block_height, overlap, method
-) -> Tuple[Image, List[np.ndarray]]:
-    """Calculates optical flow from moving_img to ref_img.
-    Image is divided into pieces to decrease memory consumption.
-    """
-
-    ref_img_tiles, ref_img_slice_info = split_image_into_tiles_of_size(
-        ref_img, block_width, block_height, overlap
-    )
-    moving_img_tiles, moving_image_slice_info = split_image_into_tiles_of_size(
-        moving_img, block_width, block_height, overlap
-    )
-    reg_task = []
-    for t in range(0, len(ref_img_tiles)):
-        reg_task.append(
-            dask.delayed(register_tiles)(ref_img_tiles[t], moving_img_tiles[t], method)
+def warp_and_save_pages(TW, flow, in_path, meta, pages, warper):
+    for p in pages:
+        warper.image = tif.imread(in_path, key=p)
+        warper.flow = flow
+        warped_img = warper.warp()
+        TW.write(
+            warped_img,
+            contiguous=True,
+            photometric="minisblack",
+            description=meta,
         )
 
-    print(datetime.now(), "registering reference channel tiles")
-    flow_tiles = dask.compute(*reg_task)
-    flow_tiles = list(flow_tiles)
 
-    del ref_img_tiles, ref_img_slice_info
-    gc.collect()
-    print(datetime.now(), "warping reference channel tiles")
-    warper.image_tiles = moving_img_tiles
-    warper.slicer_info = moving_image_slice_info
-    warper.flow_tiles = flow_tiles
-    warped_moving_image = warper.warp()
-    gc.collect()
-    return warped_moving_image, flow_tiles
+def save_pages(TW, in_path, meta, pages):
+    for p in pages:
+        TW.write(
+            tif.imread(in_path, key=p),
+            contiguous=True,
+            photometric="minisblack",
+            description=meta,
+        )
 
 
-def channel_saving_first_cycle(
-    writer, image, ref_position_in_cycle, cycle_size, cycle_number, in_path, meta
-):
-    if ref_position_in_cycle != 0:
-        for c in range(0, ref_position_in_cycle):
-            key = cycle_number * cycle_size + c
-            writer.save(
-                tif.imread(in_path, key=key),
-                contiguous=True,
-                photometric="minisblack",
-                description=meta,
-            )
-            gc.collect()
-    writer.save(image, contiguous=True, photometric="minisblack", description=meta)
-    del image
-    gc.collect()
-
-    # if there are other channels after first ref channel warp and write them
-    if ref_position_in_cycle != cycle_size - 1:
-        for c in range(ref_position_in_cycle + 1, cycle_size):
-            key = cycle_number * cycle_size + c
-            writer.save(
-                tif.imread(in_path, key=key),
-                contiguous=True,
-                photometric="minisblack",
-                description=meta,
-            )
-            gc.collect()
-
-
-def channel_saving(
-    writer,
-    warper,
-    image,
-    flow_tiles,
-    ref_position_in_cycle,
-    cycle_size,
-    cycle_number,
-    in_path,
-    meta,
-):
-    if ref_position_in_cycle != 0:
-        for c in range(0, ref_position_in_cycle):
-            key = cycle_number * cycle_size + c
-            warper.image = tif.imread(in_path, key=key)
-            warper.flow_tiles = flow_tiles
-            warped_image = warper.warp()
-            writer.save(warped_image, contiguous=True, photometric="minisblack", description=meta)
-            gc.collect()
-
-    writer.save(image, contiguous=True, photometric="minisblack", description=meta)
-    del image
-    gc.collect()
-
-    # if there are other channels after first ref channel warp and write them
-    if ref_position_in_cycle != cycle_size - 1:
-        for c in range(ref_position_in_cycle + 1, cycle_size):
-            key = cycle_number * cycle_size + c
-            warper.image = tif.imread(in_path, key=key)
-            warper.flow_tiles = flow_tiles
-            warped_image = warper.warp()
-            writer.save(warped_image, contiguous=True, photometric="minisblack", description=meta)
-            gc.collect()
-
-
-def register(
+def register_and_save(
     in_path: str,
     out_dir: str,
-    cycle_size: int,
-    ncycles: int,
-    ref_position_in_cycle: int,
+    dataset_structure: dict,
+    tile_size: int,
+    overlap: int,
+    num_pyr_lvl: int,
+    num_iter: int,
     meta: str,
-    warper,
-    block_width,
-    block_height,
-    overlap,
-    method,
 ):
     """Read images and register them sequentially: 1<-2, 2<-3, 3<-4 etc.
     It is assumed that there is equal number of channels in each cycle.
     """
+    registrator = PyrRegOF()
+    registrator.tile_size = tile_size
+    registrator.overlap = overlap
+    registrator.num_pyr_lvl = num_pyr_lvl
+    registrator.num_iterations = num_iter
+
+    warper = Warper()
+    warper.tile_size = tile_size
+    warper.overlap = overlap
+
     filename = osp.basename(in_path).replace(".tif", "_opt_flow_registered.tif")
     out_path = osp.join(out_dir, filename)
-    TW_img = tif.TiffWriter(out_path, bigtiff=True)
+    TW = tif.TiffWriter(out_path, bigtiff=True)
 
-    first_ref_id = ref_position_in_cycle
-    for i in range(0, ncycles - 1):
-        this_ref_id = cycle_size * i + ref_position_in_cycle
-        next_ref_id = cycle_size * (i + 1) + ref_position_in_cycle
-        print(
-            "\n{time} Processing cycle {this_cycle}/{total_cycles}".format(
-                time=str(datetime.now()), this_cycle=i + 2, total_cycles=ncycles
-            )
-        )
+    for cyc in dataset_structure:
+        this_cycle = dataset_structure[cyc]
+        ref_ch_id = this_cycle["ref_channel_id"]
+        print(f"Processing cycle {cyc + 1}/{len(dataset_structure)}")
 
-        # first reference channel processed separately from other
-        if this_ref_id == first_ref_id:
-            im1 = tif.imread(in_path, key=this_ref_id)
-            im2 = tif.imread(in_path, key=next_ref_id)
-            # register and warp 2nd ref image and get optical flow
-            im2_warped, flow = reg_big_image(
-                im1, im2, warper, block_width, block_height, overlap, method
-            )
-            del im2
-            gc.collect()
-            print(datetime.now(), "warping and writing to file the rest of the channels")
+        if cyc == 0:
+            for ch in this_cycle["img_structure"]:
+                pages = list(this_cycle["img_structure"][ch].values())
+                save_pages(TW, in_path, meta, pages)
 
-            channel_saving_first_cycle(
-                TW_img, im1, ref_position_in_cycle, cycle_size, i, in_path, meta
-            )
-            channel_saving(
-                TW_img,
-                warper,
-                im2_warped,
-                flow,
-                ref_position_in_cycle,
-                cycle_size,
-                i + 1,
-                in_path,
-                meta,
-            )
-
-            del flow
-            gc.collect()
-
+            ref_pages = list(this_cycle["img_structure"][ref_ch_id].values())
+            ref_img = read_and_max_project_pages(in_path, ref_pages)
         else:
-            im1 = im2_warped  # this_ref_id # reuse warped image from previous cycle
-            im2 = tif.imread(in_path, key=next_ref_id)
-            im2_warped, flow = reg_big_image(
-                im1, im2, warper, block_width, block_height, overlap, method
-            )
-            del im2
-            gc.collect()
-            print(datetime.now(), "warping and writing to file the rest of the channels")
-            channel_saving(
-                TW_img,
-                warper,
-                im2_warped,
-                flow,
-                ref_position_in_cycle,
-                cycle_size,
-                i + 1,
-                in_path,
-                meta,
-            )
+            mov_pages = list(this_cycle["img_structure"][ref_ch_id].values())
+            mov_img = read_and_max_project_pages(in_path, mov_pages)
 
-            del flow
-            gc.collect()
+            registrator.ref_img = ref_img  # comes from previous cycle
+            registrator.mov_img = mov_img
+            flow = registrator.register()
 
-    TW_img.close()
+            warper.image = mov_img
+            warper.flow = flow
+            ref_img = warper.warp()  # will be used in the next cycle
+
+            print(f"Saving channels of cycle {cyc + 1}/{len(dataset_structure)}")
+            for ch in this_cycle["img_structure"]:
+                pages = list(this_cycle["img_structure"][ch].values())
+                warp_and_save_pages(TW, flow, in_path, meta, pages, warper)
+    TW.close()
 
 
 def main(
     in_path: str,
     ref_channel: str,
     out_dir: str,
-    n_workers: int,
-    tile_size: int,
-    overlap: int,
-    method: str,
+    n_workers: int = 1,
+    tile_size: int = 1000,
+    overlap: int = 100,
+    num_pyr_lvl: int = 3,
+    num_iter: int = 3,
 ):
 
     if not osp.exists(out_dir):
@@ -244,43 +128,26 @@ def main(
     else:
         dask.config.set({"num_workers": n_workers, "scheduler": "processes"})
 
-    avail_methods = ("farneback", "denselk", "deepflow", "rlof", "pcaflow")
-    if method not in avail_methods:
-        raise ValueError(
-            "Provided opt flow method is not recognised. "
-            + "\nAvailable methods: "
-            + str(avail_methods)
-        )
-    print("Using method", method)
-
     st = datetime.now()
 
     with tif.TiffFile(in_path, is_ome=True) as stack:
-        ome = stack.ome_metadata
+        ome_meta = stack.ome_metadata
 
-    cycle_size, ncycles, first_ref_position = get_cycle_composition(ome, ref_channel)
-    block_width = tile_size
-    block_height = tile_size
-    overlap = overlap
-
-    warper = Warper()
-    warper.block_w = block_width
-    warper.block_h = block_height
-    warper.overlap = overlap
+    struc = DatasetStructure()
+    struc.ref_channel_name = ref_channel
+    struc.ome_meta_str = ome_meta
+    dataset_structure = struc.get_dataset_structure()
 
     # perform registration of full stack
-    register(
+    register_and_save(
         in_path,
         out_dir,
-        cycle_size,
-        ncycles,
-        first_ref_position,
-        ome,
-        warper,
-        block_width,
-        block_height,
+        dataset_structure,
+        tile_size,
         overlap,
-        method,
+        num_pyr_lvl,
+        num_iter,
+        ome_meta,
     )
 
     fin = datetime.now()
@@ -293,7 +160,10 @@ if __name__ == "__main__":
     parser.add_argument("-c", type=str, required=True, help="channel for registration")
     parser.add_argument("-o", type=str, required=True, help="output dir")
     parser.add_argument(
-        "-n", type=int, default=1, help="multiprocessing: number of processes, default 1"
+        "-n",
+        type=int,
+        default=1,
+        help="multiprocessing: number of processes, default 1",
     )
     parser.add_argument(
         "--tile_size",
@@ -310,11 +180,26 @@ if __name__ == "__main__":
         + "e.g. --overlap 50 = left,right,top,bottom overlaps are 50px each",
     )
     parser.add_argument(
-        "--method",
-        type=str,
-        default="farneback",
-        help="available methods: farneback, denselk, deepflow, rlof, pcaflow",
+        "--num_pyr_lvl",
+        type=int,
+        default=3,
+        help="number of pyramid levels. Default 3, 0 - will not use pyramids",
+    )
+    parser.add_argument(
+        "--num_iter",
+        type=int,
+        default=3,
+        help="number of registration iterations per pyramid level. Default 3",
     )
     args = parser.parse_args()
 
-    main(args.i, args.c, args.o, args.n, args.tile_size, args.overlap, args.method)
+    main(
+        args.i,
+        args.c,
+        args.o,
+        args.n,
+        args.tile_size,
+        args.overlap,
+        args.num_pyr_lvl,
+        args.num_iter,
+    )

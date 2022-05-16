@@ -5,7 +5,8 @@ authors:
   given-names: "Vasyl"
   orcid: "https://orcid.org/0000-0002-4080-4965"
 title: "Feature based registration for fluorescence microscopy images"
-version: 2.0.0
-date-released: 2021-09-11
+version: 2.1.0
+date-released: 2022-05-11
 license: Apache-2.0
 url: "https://github.com/BayraktarLab/feature_reg"
+doi: 10.5281/zenodo.6484010

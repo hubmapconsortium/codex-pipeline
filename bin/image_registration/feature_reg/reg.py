@@ -245,7 +245,7 @@ def main(
     ref_img_id: int,
     ref_channel: str,
     out_dir: str,
-    n_workers: int,
+    n_workers: int = 1,
     tile_size: int = 1000,
     num_pyr_lvl: int = 3,
     num_iter: int = 3,

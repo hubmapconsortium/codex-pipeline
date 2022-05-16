@@ -5,7 +5,8 @@ authors:
   given-names: "Vasyl"
   orcid: "https://orcid.org/0000-0002-4080-4965"
 title: "Optical flow based registration for fluorescence microscopy images"
-version: 1.0.0
-date-released: 2021-09-11
+version: 2.0.2
+date-released: 2022-05-11
 license: Apache-2.0
 url: "https://github.com/BayraktarLab/opt_flow_reg"
+doi: 10.5281/zenodo.5501908

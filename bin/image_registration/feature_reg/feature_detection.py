@@ -100,9 +100,7 @@ def view_tile_without_overlap(img, overlap):
 
 
 def find_features(img: Image, nfeatures_limit: int = 5000) -> Features:
-    processed_img = diff_of_gaus(img)
-
-    if processed_img.max() == 0:
+    if img.max() == 0:
         return Features()
     # default values except for threshold - discard points that have 0 response
     detector = cv.FastFeatureDetector_create(
@@ -119,9 +117,9 @@ def find_features(img: Image, nfeatures_limit: int = 5000) -> Features:
         use_orientation=False,
     )
     overlap = 51
-    kp = detector.detect(view_tile_without_overlap(processed_img, overlap))
+    kp = detector.detect(view_tile_without_overlap(img, overlap))
     kp = sorted(kp, key=lambda x: x.response, reverse=True)[:nfeatures_limit]
-    kp, des = descriptor.compute(processed_img, kp)
+    kp, des = descriptor.compute(img, kp)
 
     if kp is None or len(kp) < 3:
         kp = None
