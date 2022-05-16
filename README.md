@@ -2,18 +2,16 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # codex-pipeline
-A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.akoyabio.com/codextm/technology) image data, using [Cytokit](https://github.com/hammerlab/cytokit).
+A [CWL](https://www.commonwl.org/) pipeline for processing [CODEX](https://www.akoyabio.com/codextm/technology) image data.
 
 ## Pipeline steps
 * Collect required parameters from metadata files.
 * Perform illumination correction with Fiji plugin [BaSiC](https://github.com/VasylVaskivskyi/BaSiC_Mod) 
 * Find sharpest z-plane for each channel, using variation of Laplacian
 * Perform stitching of tiles using Fiji plugin [BigStitcher](https://imagej.net/plugins/bigstitcher/)
-* Create Cytokit YAML config file containing parameters from input metadata
-* Run Cytokit's `processor` command to perform tile pre-processing, and nucleus and cell segmentation.
-* Run Cytokit's `operator` command to extract all antigen fluoresence images (discarding blanks and empty channels).
-* Generate [OME-TIFF](https://docs.openmicroscopy.org/ome-model/6.0.1/ome-tiff/specification.html) versions of TIFFs created by Cytokit.
-* Stitch tiles with segmentation masks
+* Align images across cycles using linear and non-linear registration
+* Segment nuclei and cells using [Segmentations pipeline](https://github.com/hubmapconsortium/segmentations)
+* Generate [OME-TIFF](https://docs.openmicroscopy.org/ome-model/6.0.1/ome-tiff/specification.html)
 * Perform downstream analysis using [SPRM](https://github.com/hubmapconsortium/sprm).
 
 
@@ -35,18 +33,19 @@ If you use Singularity containers add `--singularity`. Example of submission fil
 
 ```
 codex_dataset/
-src_data OR raw
+  raw
+    ├── dataset.json
     ├── channelnames.txt
     ├── channelnames_report.csv
     ├── experiment.json
     ├── exposure_times.txt
     ├── segmentation.json
-    ├── Cyc1_reg1 OR Cyc001_reg001  
+    ├── Cyc001_reg001  
     │     ├── 1_00001_Z001_CH1.tif
     │     ├── 1_00001_Z001_CH2.tif
     │     │              ...
     │     └── 1_0000N_Z00N_CHN.tif
-    └── Cyc1_reg2 OR Cyc001_reg002  
+    └── Cyc001_reg002  
           ├── 2_00001_Z001_CH1.tif
           ├── 2_00001_Z001_CH2.tif
           │             ...
@@ -58,8 +57,12 @@ Images should be separated into directories by cycles and regions using the foll
 The file names must contain region, tile, z-plane and channel ids starting from 1, and follow this pattern 
 `{region:d}_{tile:05d}_Z{zplane:03d}_CH{channel:d}.tif`.
 
-Necessary metadata files that must be present in the input directory:
+The acquisition metadata in either new or old format must be present in the `raw` directory:
 
+### New metadata format
+`dataset.json` - image acquisition parameters. For more details check [metadata repo](https://github.com/hubmapconsortium/codex-common-acquisition-metadata)
+
+### Old metadata format
 * `experiment.json` - acquisition parameters and data structure;
 * `segmentation.json` - which channel from which cycle to use for segmentation;
 * `channelnames.txt` - list of channel names, one per row;
