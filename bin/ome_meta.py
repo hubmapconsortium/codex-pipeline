@@ -26,6 +26,9 @@ class OMEMetaCreator:
 
         img_shape, img_dtype = self._get_img_attributes()
 
+        size_t = 1
+        size_c = len(self.channel_names)
+        size_z = self.pipeline_config["num_z_planes"]
         # Populate it with image metadata.
         omeXml.image().Pixels.set_SizeT(1)
         omeXml.image().Pixels.set_SizeC(len(self.channel_names))
@@ -44,6 +47,7 @@ class OMEMetaCreator:
 
         omeXml = self._add_pixel_size_units(omeXml)
         omeXml = self._add_structured_annotations(omeXml, self.nucleus_channel, self.cell_channel)
+        omeXml = self._add_tiffdata(omeXml, size_t, size_c, size_z)
         return omeXml.to_xml(encoding="utf-8", indent="    ")
 
     def _add_pixel_size_units(self, omeXml: OMEXML):
@@ -106,3 +110,30 @@ class OMEMetaCreator:
             img_shape = TF.series[0].shape
             img_dtype = TF.series[0].dtype
         return img_shape, img_dtype
+
+    def _add_tiffdata(self, omeXml: OMEXML, size_t, size_c, size_z):
+        tiffdata_elements = []
+        ifd = 0
+        for t in range(0, size_t):
+            for c in range(0, size_c):
+                for z in range(0, size_z):
+                    tiffdata_attrib = {
+                        "FirstT": str(t),
+                        "FirstC": str(c),
+                        "FirstZ": str(z),
+                        "IFD": str(ifd),
+                    }
+                    tiffdata = lxml.etree.Element("TiffData", tiffdata_attrib)
+                    tiffdata_elements.append(tiffdata)
+                    ifd += 1
+
+        encoding = "utf-8"
+        omeXmlRoot = lxml.etree.fromstring(omeXml.to_xml(encoding=encoding).encode(encoding))
+
+        namespace_prefix = omeXmlRoot.nsmap[None]
+        image_node = omeXmlRoot.find(f"{{{namespace_prefix}}}Image")
+        pixels_node = image_node.find(f"{{{namespace_prefix}}}Pixels")
+        for td in tiffdata_elements:
+            pixels_node.append(td)
+        omexml_with_tiffdata = OMEXML(xml=lxml.etree.tostring(omeXmlRoot))
+        return omexml_with_tiffdata
