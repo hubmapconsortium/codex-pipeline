@@ -131,7 +131,7 @@ def run_opt_flow_reg(stack_path, ref_channel, out_dir, n_workers):
         tile_size=1000,
         overlap=100,
         num_pyr_lvl=3,
-        num_iter=3
+        num_iter=3,
     )
 
 
