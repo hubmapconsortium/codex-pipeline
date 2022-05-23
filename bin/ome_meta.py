@@ -28,11 +28,11 @@ class OMEMetaCreator:
 
         size_t = 1
         size_c = len(self.channel_names)
-        size_z = self.pipeline_config["num_z_planes"]
+        size_z = 1  # self.pipeline_config["num_z_planes"]
         # Populate it with image metadata.
-        omeXml.image().Pixels.set_SizeT(1)
-        omeXml.image().Pixels.set_SizeC(len(self.channel_names))
-        omeXml.image().Pixels.set_SizeZ(self.pipeline_config["num_z_planes"])
+        omeXml.image().Pixels.set_SizeT(size_t)
+        omeXml.image().Pixels.set_SizeC(size_c)
+        omeXml.image().Pixels.set_SizeZ(size_z)
         omeXml.image().Pixels.set_SizeY(img_shape[0])
         omeXml.image().Pixels.set_SizeX(img_shape[1])
         omeXml.image().Pixels.set_PixelType(str(img_dtype))
