@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 import argparse
 import csv
 import datetime
@@ -7,6 +6,7 @@ import json
 import logging
 import math
 import re
+import sys
 from collections import Counter, defaultdict
 from os import fspath, walk
 from pathlib import Path
@@ -18,7 +18,6 @@ import psutil
 
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
