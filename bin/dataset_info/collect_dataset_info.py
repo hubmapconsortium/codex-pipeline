@@ -9,6 +9,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from os import fspath, walk
 from pathlib import Path
+from pprint import pprint
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -333,6 +334,7 @@ def main(path_to_dataset: Path):
     config_creator.read_metadata()
     pipeline_config = config_creator.create_config()
 
+    pprint(pipeline_config, sort_dicts=False)
     out_path = Path("pipelineConfig.json")
     logger.info("Writing pipeline config")
     write_pipeline_config(out_path, pipeline_config)

@@ -600,7 +600,7 @@ def standardize_metadata(directory: Path):
         "CycleID": int(membraneCycle),
         "ChannelID": int(membraneChannel),
     }
-    pprint(datasetInfo)
+    pprint(datasetInfo, sort_dicts=False)
     return datasetInfo
 
 
@@ -621,7 +621,10 @@ def main(path_to_dataset: Path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Collect information required to perform analysis of a CODEX dataset, from various sources depending on submitted files. This script should be run manually after inspection of submission directories, and is hopefully only a temporary necessity until submission formats have been standardised."
+        description=(
+            "Collect information required to perform analysis of a CODEX dataset, "
+            + "from various sources depending on submitted files. "
+        )
     )
     parser.add_argument(
         "--path_to_dataset",
