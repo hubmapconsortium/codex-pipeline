@@ -135,3 +135,15 @@ def get_tile_shape(dataset_dir: Path):
                     first_plane = list(zplanes.values())[0]
                     plane = tif.imread(path_to_str(first_plane))
                     return plane.shape
+
+
+def get_tile_dtype(dataset_dir: Path):
+    img_dirs = get_img_dirs(dataset_dir)
+    dataset_listing = create_listing_for_each_cycle_region(img_dirs)
+    for cycle in dataset_listing:
+        for region in dataset_listing[cycle]:
+            for channel in dataset_listing[cycle][region]:
+                for tile, zplanes in dataset_listing[cycle][region][channel].items():
+                    first_plane = list(zplanes.values())[0]
+                    plane = tif.imread(path_to_str(first_plane))
+                    return plane.dtype
