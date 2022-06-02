@@ -280,13 +280,13 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List[str]:
 def calc_how_many_big_concurrent_tasks(
     tile_size: Tuple[int, int],
     overlap_size: Tuple[int, int],
-    dtype: np.dtype,
+    dtype: str,
     n_tiles_per_plane: int,
 ) -> int:
     ram_stats = psutil.virtual_memory()
     num_cpus = psutil.cpu_count()
     free_ram_gb = ram_stats.available / 1024**3
-    img_dtype = int(re.search(r"(\d+)", np.dtype(dtype).name).groups()[0])  # int16 -> 16
+    img_dtype = int(re.search(r"(\d+)", dtype).groups()[0])  # int16 -> 16
     nbytes = img_dtype / 8
 
     img_plane_size = (
@@ -310,9 +310,9 @@ def calc_how_many_big_concurrent_tasks(
     return num_of_concurrent_tasks
 
 
-def get_img_dtype(raw_data_location: Path) -> np.dtype:
-    tile_dtype = get_tile_dtype(raw_data_location)
-    return tile_dtype
+def get_img_dtype(raw_data_location: Path) -> str:
+    dtype = str(get_tile_dtype(raw_data_location).name)
+    return dtype
 
 
 def get_tile_shape_no_overlap(
@@ -448,8 +448,8 @@ def standardize_metadata(directory: Path):
     datasetInfo["tile_height"] = tile_shape[0]
     datasetInfo["tile_width"] = tile_shape[1]
 
-    tile_dtype = get_tile_dtype(raw_data_location)
-    datasetInfo["tile_dtype"] = tile_dtype.name
+    dtype = get_img_dtype(raw_data_location)
+    datasetInfo["tile_dtype"] = dtype
 
     # Get tiling mode.
     try:
@@ -588,7 +588,7 @@ def standardize_metadata(directory: Path):
     overlap_size = (datasetInfo["tile_overlap_y"], datasetInfo["tile_overlap_x"])
     n_tiles_per_plane = datasetInfo["region_height"] * datasetInfo["region_width"]
     num_concurrent_tasks = calc_how_many_big_concurrent_tasks(
-        tile_shape, overlap_size, tile_dtype, n_tiles_per_plane
+        tile_shape, overlap_size, dtype, n_tiles_per_plane
     )
     datasetInfo["num_concurrent_tasks"] = num_concurrent_tasks
 

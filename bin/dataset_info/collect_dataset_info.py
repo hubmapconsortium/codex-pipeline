@@ -255,7 +255,7 @@ class ConfigCreator:
         return ch_name
 
     def _get_tile_dtype(self) -> str:
-        tile_dtype = str(get_tile_dtype(self._raw_data_dir))
+        tile_dtype = str(get_tile_dtype(self._raw_data_dir).name)
         return tile_dtype
 
     def _calc_target_shape(self):
@@ -286,7 +286,7 @@ class ConfigCreator:
         num_cpus = psutil.cpu_count()
         free_ram_gb = ram_stats.available / 1024**3
         dtype = self._get_tile_dtype()
-        img_dtype = int(re.search(r"(\d+)", np.dtype(dtype).name).groups()[0])  # int16 -> 16
+        img_dtype = int(re.search(r"(\d+)", dtype).groups()[0])  # int16 -> 16
         nbytes = img_dtype / 8
 
         n_tiles_per_plane = int(self._std_meta["RegionHeight"]) * int(

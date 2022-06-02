@@ -1,9 +1,8 @@
 import argparse
 from pathlib import Path
 
-import collect_dataset_info_old
-
 import collect_dataset_info
+import collect_dataset_info_old
 
 
 def find_raw_data_dir(dataset_dir: Path):

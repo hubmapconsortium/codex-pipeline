@@ -1,9 +1,10 @@
 import argparse
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterable, List, Set, Tuple
 
 import cv2 as cv
 import dask
@@ -233,7 +234,8 @@ def apply_flatfield_and_save(
 
 
 def organize_listing_by_cyc_reg_ch_zplane(
-    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]]
+    listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
+    tile_ids_to_use: Iterable[int],
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]:
     new_arrangemnt = dict()
     for cycle in listing:
@@ -244,18 +246,35 @@ def organize_listing_by_cyc_reg_ch_zplane(
                 new_arrangemnt[cycle][region][channel] = dict()
                 for tile, zplane_dict in listing[cycle][region][channel].items():
                     for zplane, path in zplane_dict.items():
-                        if zplane in new_arrangemnt[cycle][region][channel]:
-                            new_arrangemnt[cycle][region][channel][zplane].append(path)
-                        else:
-                            new_arrangemnt[cycle][region][channel][zplane] = [path]
+                        if tile in tile_ids_to_use:
+                            if zplane in new_arrangemnt[cycle][region][channel]:
+                                new_arrangemnt[cycle][region][channel][zplane].append(path)
+                            else:
+                                new_arrangemnt[cycle][region][channel][zplane] = [path]
     return new_arrangemnt
 
 
+def select_which_tiles_to_use(
+    n_tiles_y: int, n_tiles_x: int, tile_dtype: str, tile_size: Tuple[int, int]
+) -> Set[int]:
+    """Select every n-th tile, keeping the max size of the tile stack at 2GB"""
+    n_tiles = n_tiles_y * n_tiles_x
+
+    img_dtype = int(re.search(r"(\d+)", tile_dtype).groups()[0])  # int16 -> 16
+    nbytes = img_dtype / 8
+
+    # max 2GB
+    single_tile_gb = tile_size[0] * tile_size[1] * nbytes / 1024**3
+    max_num_tiles = round(2.0 // single_tile_gb)
+
+    step = max(n_tiles // max_num_tiles, 1)
+    if step < 2 and n_tiles > max_num_tiles:
+        step = 2
+    tile_ids = set(list(range(0, n_tiles, step)))
+    return tile_ids
+
+
 def main(data_dir: Path, pipeline_config_path: Path):
-    """It is expected that images are separated
-    into different directories per region, cycle, channel
-    e.g. Cyc1_Reg1_Ch1/0001.tif
-    """
     img_stack_dir = Path("/output/image_stacks/")
     macro_dir = Path("/output/basic_macros")
     illum_cor_dir = Path("/output/illumination_correction/")
@@ -266,14 +285,34 @@ def main(data_dir: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(illum_cor_dir)
     make_dir_if_not_exists(corrected_img_dir)
 
-    dask.config.set({"num_workers": 10, "scheduler": "processes"})
-
     dataset_info = load_dataset_info(pipeline_config_path)
+
+    tile_dtype = dataset_info["tile_dtype"]
+
+    num_workers = dataset_info["num_concurrent_tasks"]
+    dask.config.set({"num_workers": num_workers, "scheduler": "processes"})
+
     raw_data_dir = dataset_info["dataset_dir"]
     img_dirs = get_input_img_dirs(Path(data_dir / raw_data_dir))
     print("Getting image listing")
     listing = create_listing_for_each_cycle_region(img_dirs)
-    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing)
+
+    tile_size = (
+        dataset_info["tile_height"] + dataset_info["overlap_y"],
+        dataset_info["tile_width"] + dataset_info["overlap_x"],
+    )
+    n_tiles = dataset_info["num_tiles"]
+    n_tiles_y = dataset_info["num_tiles_y"]
+    n_tiles_x = dataset_info["num_tiles_x"]
+
+    tile_ids_to_use = select_which_tiles_to_use(n_tiles_y, n_tiles_x, tile_dtype, tile_size)
+
+    print(
+        f"tile size: {str(tile_size)}",
+        f"| number of tiles: {str(n_tiles)}",
+        f"| using {str(len(tile_ids_to_use))} tiles to compute illumination correction",
+    )
+    zplane_listing = organize_listing_by_cyc_reg_ch_zplane(listing, tile_ids_to_use)
 
     print("Resaving images as stacks")
     stack_paths = resave_imgs_to_stacks(zplane_listing, img_stack_dir)

@@ -30,6 +30,7 @@ def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
         num_tiles=pipeline_config["region_width"] * pipeline_config["region_height"],
         tile_width=pipeline_config["tile_width"],
         tile_height=pipeline_config["tile_height"],
+        tile_dtype=pipeline_config["tile_dtype"],
         overlap_x=pipeline_config["tile_overlap_x"],
         overlap_y=pipeline_config["tile_overlap_y"],
         overlap_z=1,  # does not matter because we have only one z-plane
