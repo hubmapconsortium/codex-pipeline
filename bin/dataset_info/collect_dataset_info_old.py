@@ -307,7 +307,7 @@ def calc_how_many_big_concurrent_tasks(
         num_of_concurrent_tasks = 1
     if num_of_concurrent_tasks > num_cpus:
         num_of_concurrent_tasks = num_cpus
-    return num_of_concurrent_tasks
+    return int(round(num_of_concurrent_tasks))
 
 
 def get_img_dtype(raw_data_location: Path) -> str:

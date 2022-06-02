@@ -307,7 +307,7 @@ class ConfigCreator:
             num_of_concurrent_tasks = 1
         if num_of_concurrent_tasks > num_cpus:
             num_of_concurrent_tasks = num_cpus
-        return num_of_concurrent_tasks
+        return int(round(num_of_concurrent_tasks))
 
     def _get_tile_shape_no_overlap(self) -> Tuple[int, int]:
         overlap_y = self._get_tile_overlap_y_in_px()

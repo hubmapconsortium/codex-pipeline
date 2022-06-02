@@ -68,7 +68,7 @@ def main(data_dir: Path, pipeline_config_path: Path):
     start = datetime.now()
     print("\nStarted", start)
 
-    dataset_meta = load_dataset_info(pipeline_config_path)
+    dataset_info = load_dataset_info(pipeline_config_path)
 
     out_dir = Path("/output/stitched_images")
     base_channel_dir = Path("/output/channel_dirs")
@@ -76,11 +76,12 @@ def main(data_dir: Path, pipeline_config_path: Path):
     make_dir_if_not_exists(out_dir)
     make_dir_if_not_exists(base_channel_dir)
 
-    dask.config.set({"num_workers": 5, "scheduler": "processes"})
+    num_workers = dataset_info["num_concurrent_tasks"]
+    dask.config.set({"num_workers": num_workers, "scheduler": "processes"})
 
     listing = get_file_listing(data_dir)
     channel_dirs = copy_to_channel_dirs(listing, base_channel_dir)
-    stitched_channel_dirs, stitched_img_shape = stitch_images(channel_dirs, dataset_meta, out_dir)
+    stitched_channel_dirs, stitched_img_shape = stitch_images(channel_dirs, dataset_info, out_dir)
 
     print("\nTime elapsed", datetime.now() - start)
 
