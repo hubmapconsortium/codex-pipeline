@@ -9,10 +9,13 @@ inputs:
     label: "Directory containing CODEX data"
     type: Directory
   gpus:
-    label: >-
-      GPUs to use, represented as a comma-separated list of integers.
+    label: "GPUs to use, represented as a comma-separated list of integers"
     type: string
     default: "0"
+  num_concurrent_tasks:
+    label: "Number of parallel CPU jobs"
+    type: int
+    default: 10
 
 outputs:
   cytokit_config:
@@ -32,6 +35,8 @@ steps:
     in:
       base_directory:
         source: data_dir
+      num_concurrent_tasks:
+        source: num_concurrent_tasks
     out:
       - pipeline_config
     run: illumination_first_stitching/collect_dataset_info.cwl

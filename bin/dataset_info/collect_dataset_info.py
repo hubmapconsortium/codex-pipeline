@@ -23,6 +23,7 @@ from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 class ConfigCreator:
     def __init__(self):
         self.dataset_dir = Path("")
+        self._num_concur_tasks = 10
         self._std_meta = dict()
         self._raw_data_dir = Path("")
 
@@ -101,7 +102,7 @@ class ConfigCreator:
             "nuclei_channel_loc": self._std_meta["NuclearStainForSegmentation"],
             "membrane_channel_loc": self._std_meta["MembraneStainForSegmentation"],
             "target_shape": self._calc_target_shape(),
-            "num_concurrent_tasks": self._get_num_concur_tasks(),
+            "num_concurrent_tasks": self._num_concur_tasks,
         }
         return config
 
@@ -281,33 +282,16 @@ class ConfigCreator:
                 new_dims.append(new_dim)
         return new_dims
 
-    def _get_num_concur_tasks(self) -> int:
-        ram_stats = psutil.virtual_memory()
-        num_cpus = psutil.cpu_count()
-        free_ram_gb = ram_stats.available / 1024**3
-        dtype = self._get_tile_dtype()
-        img_dtype = int(re.search(r"(\d+)", dtype).groups()[0])  # int16 -> 16
-        nbytes = img_dtype / 8
+    @property
+    def num_concurrent_tasks(self) -> int:
+        return self._num_concur_tasks
 
-        n_tiles_per_plane = int(self._std_meta["RegionHeight"]) * int(
-            self._std_meta["RegionWidth"]
-        )
-        n_pixels = int(self._std_meta["TileHeight"]) * int(self._std_meta["TileWidth"])
-        img_plane_size = n_tiles_per_plane * n_pixels * nbytes
-
-        img_plane_size += round(img_plane_size * 0.1)  # 10% overhead
-        img_plane_size_gb = img_plane_size / 1024**3
-
-        num_of_concurrent_tasks = free_ram_gb // img_plane_size_gb
-        if num_of_concurrent_tasks < 1:
-            print(
-                "WARNING: Image plane size is larger than memory. "
-                + "Will try to run large jobs in a single process"
-            )
-            num_of_concurrent_tasks = 1
-        if num_of_concurrent_tasks > num_cpus:
-            num_of_concurrent_tasks = num_cpus
-        return int(round(num_of_concurrent_tasks))
+    @num_concurrent_tasks.setter
+    def num_concurrent_tasks(self, val: int):
+        if val <= 0:
+            self._num_concur_tasks = 10
+        else:
+            self._num_concur_tasks = val
 
     def _get_tile_shape_no_overlap(self) -> Tuple[int, int]:
         overlap_y = self._get_tile_overlap_y_in_px()
@@ -324,12 +308,13 @@ def write_pipeline_config(out_path: Path, pipeline_config: dict):
         json.dump(pipeline_config, s, indent=4)
 
 
-def main(path_to_dataset: Path):
+def main(path_to_dataset: Path, num_concurrent_tasks: int = 10):
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
     logger = logging.getLogger(__name__)
 
     config_creator = ConfigCreator()
     config_creator.dataset_dir = path_to_dataset
+    config_creator.num_concurrent_tasks = num_concurrent_tasks
     config_creator.find_raw_data_dir()
     config_creator.read_metadata()
     pipeline_config = config_creator.create_config()
@@ -350,5 +335,11 @@ if __name__ == "__main__":
         help="Path to directory containing raw data subdirectory (with with cycle and region numbers).",
         type=Path,
     )
+    parser.add_argument(
+        "--num_concurrent_tasks",
+        help="Path to directory containing raw data subdirectory (with with cycle and region numbers).",
+        type=int,
+        default=10,
+    )
     args = parser.parse_args()
-    main(args.path_to_dataset)
+    main(args.path_to_dataset, args.num_concurrent_tasks)

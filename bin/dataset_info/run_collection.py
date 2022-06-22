@@ -38,13 +38,13 @@ def check_new_meta_present(raw_data_dir: Path):
         return False
 
 
-def main(path_to_dataset: Path):
+def main(path_to_dataset: Path, num_concurrent_tasks: int = 10):
     raw_data_dir = find_raw_data_dir(path_to_dataset)
     is_new_meta_present = check_new_meta_present(raw_data_dir)
     if is_new_meta_present:
-        collect_dataset_info.main(path_to_dataset)
+        collect_dataset_info.main(path_to_dataset, num_concurrent_tasks)
     else:
-        collect_dataset_info_old.main(path_to_dataset)
+        collect_dataset_info_old.main(path_to_dataset, num_concurrent_tasks)
 
 
 if __name__ == "__main__":
@@ -56,5 +56,11 @@ if __name__ == "__main__":
         help="Path to directory containing raw data subdirectory (with with cycle and region numbers).",
         type=Path,
     )
+    parser.add_argument(
+        "--num_concurrent_tasks",
+        help="Path to directory containing raw data subdirectory (with with cycle and region numbers).",
+        type=int,
+        default=10,
+    )
     args = parser.parse_args()
-    main(args.path_to_dataset)
+    main(args.path_to_dataset, args.num_concurrent_tasks)

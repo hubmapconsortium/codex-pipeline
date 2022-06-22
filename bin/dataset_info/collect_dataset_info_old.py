@@ -277,37 +277,10 @@ def create_cycle_channel_names(exptConfigDict: Dict) -> List[str]:
     return [f"CH{i}" for i in range(1, num_channels + 1)]
 
 
-def calc_how_many_big_concurrent_tasks(
-    tile_size: Tuple[int, int],
-    overlap_size: Tuple[int, int],
-    dtype: str,
-    n_tiles_per_plane: int,
-) -> int:
-    ram_stats = psutil.virtual_memory()
-    num_cpus = psutil.cpu_count()
-    free_ram_gb = ram_stats.available / 1024**3
-    img_dtype = int(re.search(r"(\d+)", dtype).groups()[0])  # int16 -> 16
-    nbytes = img_dtype / 8
-
-    img_plane_size = (
-        n_tiles_per_plane
-        * (tile_size[0] + overlap_size[0])
-        * (tile_size[1] + overlap_size[1])
-        * nbytes
-    )
-    img_plane_size += round(img_plane_size * 0.1)  # 10% overhead
-    img_plane_size_gb = img_plane_size / 1024**3
-
-    num_of_concurrent_tasks = free_ram_gb // img_plane_size_gb
-    if num_of_concurrent_tasks < 1:
-        print(
-            "WARNING: Image plane size is larger than memory. "
-            + "Will try to run large jobs in a single process"
-        )
-        num_of_concurrent_tasks = 1
-    if num_of_concurrent_tasks > num_cpus:
-        num_of_concurrent_tasks = num_cpus
-    return int(round(num_of_concurrent_tasks))
+def get_num_concur_tasks(num_of_concurrent_tasks) -> int:
+    if num_of_concurrent_tasks <= 0:
+        num_of_concurrent_tasks = 10
+    return num_of_concurrent_tasks
 
 
 def get_img_dtype(raw_data_location: Path) -> str:
@@ -326,7 +299,7 @@ def get_tile_shape_no_overlap(
     return tile_height, tile_width
 
 
-def standardize_metadata(directory: Path):
+def standardize_metadata(directory: Path, num_concurrent_tasks: int):
     experiment_json_files = find_files(
         directory,
         "experiment.json",
@@ -587,10 +560,8 @@ def standardize_metadata(directory: Path):
 
     overlap_size = (datasetInfo["tile_overlap_y"], datasetInfo["tile_overlap_x"])
     n_tiles_per_plane = datasetInfo["region_height"] * datasetInfo["region_width"]
-    num_concurrent_tasks = calc_how_many_big_concurrent_tasks(
-        tile_shape, overlap_size, dtype, n_tiles_per_plane
-    )
-    datasetInfo["num_concurrent_tasks"] = num_concurrent_tasks
+
+    datasetInfo["num_concurrent_tasks"] = get_num_concur_tasks(num_concurrent_tasks)
 
     datasetInfo["nuclei_channel_loc"] = {
         "CycleID": int(nucleiCycle),
@@ -609,8 +580,8 @@ def write_pipeline_config(out_path: Path, pipeline_config: dict):
         json.dump(pipeline_config, s, indent=4)
 
 
-def main(path_to_dataset: Path):
-    pipeline_config = standardize_metadata(path_to_dataset)
+def main(path_to_dataset: Path, num_concurrent_tasks: int = 10):
+    pipeline_config = standardize_metadata(path_to_dataset, num_concurrent_tasks)
 
     logger.info("Writing pipeline config")
 
@@ -631,6 +602,12 @@ if __name__ == "__main__":
         help="Path to directory containing raw data subdirectories (named with cycle and region numbers).",
         type=Path,
     )
-    args = parser.parse_args()
 
-    main(args.path_to_dataset)
+    parser.add_argument(
+        "--num_concurrent_tasks",
+        help="Path to directory containing raw data subdirectory (with with cycle and region numbers).",
+        type=int,
+        default=10,
+    )
+    args = parser.parse_args()
+    main(args.path_to_dataset, args.num_concurrent_tasks)
