@@ -105,41 +105,6 @@ def generate_basic_macro_for_each_stack(
     return macro_paths
 
 
-def run_basic(basic_macro_path: Path):
-    # It is expected that ImageJ is added to system PATH
-    if platform.system() == "Windows":
-        imagej_name = "ImageJ-win64"
-    elif platform.system() == "Linux":
-        imagej_name = "ImageJ-linux64"
-    elif platform.system() == "Darwin":
-        imagej_name = "ImageJ-macosx"
-
-    command = imagej_name + " --headless --console -macro " + str(basic_macro_path)
-    print("Started running BaSiC for", str(basic_macro_path))
-    res = subprocess.run(
-        command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    if res.returncode == 0:
-        print("Finished", str(basic_macro_path))
-    else:
-        raise Exception(
-            "There was an error while running the BaSiC for "
-            + str(basic_macro_path)
-            + "\n"
-            + res.stderr.decode("utf-8")
-        )
-
-
-def run_all_macros(macro_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]):
-    tasks = []
-    for cycle in macro_paths:
-        for region in macro_paths[cycle]:
-            for channel in macro_paths[cycle][region]:
-                for zplane, macro_path in macro_paths[cycle][region][channel].items():
-                    tasks.append(dask.delayed(run_basic)(macro_path))
-    dask.compute(*tasks)
-
-
 def read_flatfield_imgs(
     illum_cor_dir: Path, stack_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
 ) -> Dict[int, Dict[int, Dict[int, Dict[int, ImgStack]]]]:
@@ -251,6 +216,92 @@ def organize_listing_by_cyc_reg_ch_zplane(
     return new_arrangemnt
 
 
+def run_basic(basic_macro_path: Path, log_dir: Path):
+    # It is expected that ImageJ is added to system PATH
+    if platform.system() == "Windows":
+        imagej_name = "ImageJ-win64"
+    elif platform.system() == "Linux":
+        imagej_name = "ImageJ-linux64"
+    elif platform.system() == "Darwin":
+        imagej_name = "ImageJ-macosx"
+
+    command = imagej_name + " --headless --console -macro " + str(basic_macro_path)
+    print("Started running BaSiC for", str(basic_macro_path))
+    res = subprocess.run(
+        command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    if res.returncode == 0:
+        print("Finished", str(basic_macro_path))
+    else:
+        raise Exception(
+            "There was an error while running the BaSiC for "
+            + str(basic_macro_path)
+            + "\n"
+            + res.stderr.decode("utf-8")
+        )
+    macro_filename = basic_macro_path.name
+    run_log = (
+        "Command:\n" + res.args +
+        "\n\nSTDERR:\n" + res.stderr.decode("utf-8") +
+        "\n\nSTDOUT:\n" + res.stdout.decode("utf-8")
+    )
+    log_filename = macro_filename + ".log"
+    log_path = log_dir / log_filename
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(run_log)
+    return
+
+
+def run_all_macros(macro_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]], log_dir: Path):
+    tasks = []
+    for cycle in macro_paths:
+        for region in macro_paths[cycle]:
+            for channel in macro_paths[cycle][region]:
+                for zplane, macro_path in macro_paths[cycle][region][channel].items():
+                    tasks.append(dask.delayed(run_basic)(macro_path, log_dir))
+    dask.compute(*tasks)
+
+
+def check_illum_cor_images(illum_cor_dir: Path, log_dir: Path, zplane_listing: Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]):
+    cor_img_name_template = "{cor_type}_Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif"
+    log_name_template = "Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif.ijm.log"
+    imgs_present = []
+    imgs_missing = []
+    imgs_missing_logs = []
+    for cycle in zplane_listing:
+        for region in zplane_listing[cycle]:
+            for channel in zplane_listing[cycle][region]:
+                for zplane, macro_path in zplane_listing[cycle][region][channel].items():
+                    flatfield_fn = cor_img_name_template.format(
+                        cor_type="flatfield", cyc=cycle, reg=region, ch=channel, z=zplane
+                    )
+                    darkfield_fn = cor_img_name_template.format(
+                        cor_type="darkfield", cyc=cycle, reg=region, ch=channel, z=zplane
+                    )
+                    flatfield_path = illum_cor_dir / "flatfield" / flatfield_fn
+                    darkfield_path = illum_cor_dir / "darkfield" / darkfield_fn
+                    if darkfield_path.exists() and flatfield_path.exists():
+                        imgs_present.append((flatfield_fn, darkfield_fn))
+                    else:
+                        imgs_missing.append((flatfield_fn, darkfield_fn))
+                        log_path = log_dir / log_name_template.format(cyc=cycle, reg=region, ch=channel, z=zplane)
+                        with open(log_path, "r", encoding="utf-8") as f:
+                            log_content = f.read()
+                        imgs_missing_logs.append(log_content)
+    if len(imgs_missing) > 0:
+        msg = ("Probably there was an error while running BaSiC. "
+               + "There is no image in one or more directories.")
+        print(msg)
+
+        for i in range(0, len(imgs_missing)):
+            print("\nOne or both are missing:")
+            print(imgs_missing[i])
+            print("ImageJ log:")
+            print(imgs_missing_logs[i])
+        raise ValueError(msg)
+    return
+
+
 def main(data_dir: Path, pipeline_config_path: Path):
     """It is expected that images are separated
     into different directories per region, cycle, channel
@@ -260,11 +311,13 @@ def main(data_dir: Path, pipeline_config_path: Path):
     macro_dir = Path("/output/basic_macros")
     illum_cor_dir = Path("/output/illumination_correction/")
     corrected_img_dir = Path("/output/corrected_images")
+    log_dir = Path("/output/logs")
 
     make_dir_if_not_exists(img_stack_dir)
     make_dir_if_not_exists(macro_dir)
     make_dir_if_not_exists(illum_cor_dir)
     make_dir_if_not_exists(corrected_img_dir)
+    make_dir_if_not_exists(log_dir)
 
     dask.config.set({"num_workers": 10, "scheduler": "processes"})
 
@@ -280,7 +333,8 @@ def main(data_dir: Path, pipeline_config_path: Path):
     print("Generating BaSiC macros")
     macro_paths = generate_basic_macro_for_each_stack(stack_paths, macro_dir, illum_cor_dir)
     print("Running estimation of illumination")
-    run_all_macros(macro_paths)
+    run_all_macros(macro_paths, log_dir)
+    check_illum_cor_images(illum_cor_dir, log_dir, zplane_listing)
 
     print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
