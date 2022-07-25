@@ -150,20 +150,20 @@ def read_darkfield_imgs(
     return per_zplane_darkfield
 
 
-def apply_illum_cor(img: Image, flatfield: Image, darkfield: Image) -> Image:
+def apply_illum_cor(img: Image, flatfield: Image) -> Image:
     orig_dtype = img.dtype
     dtype_info = np.iinfo(orig_dtype)
     orig_minmax = (dtype_info.min, dtype_info.max)
     imgf = img.astype(np.float32)
 
-    corrected_imgf = (imgf - darkfield) / flatfield
+    corrected_imgf = imgf  / flatfield
 
     corrected_img = np.clip(np.round(corrected_imgf, 0), *orig_minmax).astype(orig_dtype)
     return corrected_img
 
 
-def correct_and_save(img_path: Path, flatfield: Image, darkfield: Image, out_path: Path):
-    corrected_img = apply_illum_cor(tif.imread(str(img_path.absolute())), flatfield, darkfield)
+def correct_and_save(img_path: Path, flatfield: Image, out_path: Path):
+    corrected_img = apply_illum_cor(tif.imread(str(img_path.absolute())), flatfield)
     with tif.TiffWriter(str(out_path.absolute())) as TW:
         TW.write(corrected_img, photometric="minisblack")
     del corrected_img
@@ -172,7 +172,7 @@ def correct_and_save(img_path: Path, flatfield: Image, darkfield: Image, out_pat
 def apply_flatfield_and_save(
     listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
     flatfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
-    darkfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
+    #darkfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
     out_dir: Path,
 ):
     img_dir_template = "Cyc{cyc:03d}_reg{reg:03d}"
@@ -191,9 +191,9 @@ def apply_flatfield_and_save(
                         make_dir_if_not_exists(out_dir_full)
                         out_path = out_dir_full / img_name
                         flatfield = flatfields[cycle][region][channel][zplane]
-                        darkfield = darkfields[cycle][region][channel][zplane]
+                        #darkfield = darkfields[cycle][region][channel][zplane]
                         tasks.append(
-                            dask.delayed(correct_and_save)(path, flatfield, darkfield, out_path)
+                            dask.delayed(correct_and_save)(path, flatfield, out_path)
                         )
     dask.compute(*tasks)
 
@@ -282,11 +282,11 @@ def check_illum_cor_images(illum_cor_dir: Path, log_dir: Path, zplane_listing: D
                         cor_type="darkfield", cyc=cycle, reg=region, ch=channel, z=zplane
                     )
                     flatfield_path = illum_cor_dir / "flatfield" / flatfield_fn
-                    darkfield_path = illum_cor_dir / "darkfield" / darkfield_fn
-                    if darkfield_path.exists() and flatfield_path.exists():
-                        imgs_present.append((flatfield_fn, darkfield_fn))
+                    #darkfield_path = illum_cor_dir / "darkfield" / darkfield_fn
+                    if flatfield_path.exists():
+                        imgs_present.append((flatfield_fn))
                     else:
-                        imgs_missing.append((flatfield_fn, darkfield_fn))
+                        imgs_missing.append((flatfield_fn))
                         log_path = log_dir / log_name_template.format(cyc=cycle, reg=region, ch=channel, z=zplane)
                         with open(log_path, "r", encoding="utf-8") as f:
                             log_content = f.read()
@@ -377,8 +377,8 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
-    darkfields = read_darkfield_imgs(illum_cor_dir, stack_paths)
-    apply_flatfield_and_save(listing, flatfields, darkfields, corrected_img_dir)
+    #darkfields = read_darkfield_imgs(illum_cor_dir, stack_paths)
+    apply_flatfield_and_save(listing, flatfields, corrected_img_dir)
 
 
 if __name__ == "__main__":

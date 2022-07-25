@@ -133,11 +133,8 @@ if __name__ == "__main__":
     operatorExtractChannels = []
 
     for channelName in pipelineConfigInfo["channel_names"]:
-
         # Skip unwanted channels.
-        if blankPattern.match(channelName):
-            continue
-        elif emptyPattern.match(channelName):
+        if emptyPattern.match(channelName):
             continue
         elif dapiChannelPattern.match(channelName):
             if channelName != pipelineConfigInfo["nuclei_channel"]:
@@ -149,7 +146,10 @@ if __name__ == "__main__":
         # Skip channels that failed QC.
         if pipelineConfigInfo["channel_names_qc_pass"]:
             if len(pipelineConfigInfo["channel_names_qc_pass"][channelName]) > 1:
-                raise ValueError(f"More than one {channelName} channel found.")
+                if blankPattern.match(channelName):
+                    continue
+                else:
+                    raise ValueError(f"More than one {channelName} channel found.")
             else:
                 channel_qc_pass = pipelineConfigInfo["channel_names_qc_pass"][channelName][0]
                 if channel_qc_pass.casefold() == "false".casefold():
