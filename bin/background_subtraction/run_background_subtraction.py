@@ -38,18 +38,6 @@ def organize_channels_per_cycle(
     return channels_per_cycle
 
 
-def filter_channels(
-    channels_per_cycle: Dict[int, Dict[int, str]], channel_names_in_stack: List[str]
-) -> Dict[int, Dict[int, str]]:
-    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    channel_names_in_stack_lookup = [ch.lower() for ch in channel_names_in_stack]
-    for cycle in channels_per_cycle:
-        for ch_id, channel_name in channels_per_cycle[cycle].items():
-            if channel_name.lower() in channel_names_in_stack_lookup:
-                filtered_ch_per_cycle[cycle][ch_id] = channel_name
-    return filtered_ch_per_cycle
-
-
 def get_channel_names_in_stack(img_path: Path) -> List[str]:
     with tif.TiffFile(str(img_path.absolute())) as TF:
         ij_meta = TF.imagej_metadata
@@ -57,31 +45,27 @@ def get_channel_names_in_stack(img_path: Path) -> List[str]:
     return channel_names
 
 
-def get_num_bg_ch_per_cycle(
-    channels_per_cycle: Dict[int, List[str]], background_channel: str
-) -> Dict[int, int]:
-    num_bg_ch_per_cyc = {cyc: 0 for cyc in channels_per_cycle.keys()}
-    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
-    for cycle, channels in channels_per_cycle.items():
-        for ch_name in channels:
-            if bg_ch_pattern.match(ch_name):
-                num_bg_ch_per_cyc[cycle] += 1
-    return num_bg_ch_per_cyc
-
-
-def get_stack_ids_of_bg_channels(
+def get_stack_ids_per_cycle(
     channels_per_cycle: Dict[int, Dict[int, str]],
-    background_channel: str,
-) -> Dict[int, Dict[int, int]]:
+    channel_names_in_stack: List[str],
+    bg_ch_name: str,
+) -> Tuple[Dict[int, Dict[int, int]], Dict[int, Dict[int, int]]]:
+    stack_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
+    lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
+
     bg_channel_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    n = 0
-    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
+    bg_ch_pattern = re.compile(r"^" + bg_ch_name, re.IGNORECASE)
+
     for cycle, channels in channels_per_cycle.items():
         for ch_id, ch_name in channels.items():
-            if bg_ch_pattern.match(ch_name):
-                bg_channel_ids_per_cycle[cycle][ch_id] = n
-            n += 1
-    return bg_channel_ids_per_cycle
+            ch_name_low = ch_name.lower()
+            if ch_name_low in lookup_ch_name_list:
+                stack_id = lookup_ch_name_list.index(ch_name_low)
+                lookup_ch_name_list[stack_id] = None
+                stack_ids_per_cycle[cycle][ch_id] = stack_id
+                if bg_ch_pattern.match(ch_name):
+                    bg_channel_ids_per_cycle[cycle][ch_id] = stack_id
+    return stack_ids_per_cycle, bg_channel_ids_per_cycle
 
 
 def select_cycles_with_bg_ch(
@@ -95,59 +79,40 @@ def select_cycles_with_bg_ch(
     return selected_bg_channels_per_cyc
 
 
-def get_stack_ids_for_bg_sub(
-    channels_per_cycle: Dict[int, Dict[int, str]], bg_and_ref_nuc_ch: List[str]
-):
-    other_ex_ch = [ch.lower() for ch in bg_and_ref_nuc_ch]
-    filtered_ch_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    n = 0
-    for cycle, channels in channels_per_cycle.items():
-        for ch_id, ch_name in channels.items():
-            if ch_name.lower() not in other_ex_ch:
-                filtered_ch_per_cycle[cycle][ch_id] = n
-            n += 1
-    return filtered_ch_per_cycle
-
-
-def get_nuc_ch_stack_id(
-    nuc_ch_name: str,
-    channels_per_cycle: Dict[int, Dict[int, str]],
-    stack_ids_per_cycle: Dict[int, Dict[int, int]],
-) -> int:
-    for cycle in channels_per_cycle:
-        for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if ch_name.lower() == nuc_ch_name.lower():
-                nuc_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
-                return nuc_ch_stack_id
-
-
-def get_bg_ch_stack_ids(
-    bg_ch_name: str,
+def get_ch_stack_ids(
+    target_ch_name: str,
     channels_per_cycle: Dict[int, Dict[int, str]],
     stack_ids_per_cycle: Dict[int, Dict[int, int]],
 ) -> List[int]:
-    bg_ch_stack_ids = []
-    bg_ch_pattern = re.compile(r"^" + bg_ch_name, re.IGNORECASE)
+    pat = re.compile(r"^" + target_ch_name, re.IGNORECASE)
+    target_ch_stack_ids = []
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if bg_ch_pattern.match(ch_name):
-                bg_ch_stack_ids.append(stack_ids_per_cycle[cycle][ch_id])
-    return bg_ch_stack_ids
+            if pat.match(ch_name):
+                target_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
+                target_ch_stack_ids.append(target_ch_stack_id)
+    return target_ch_stack_ids
 
 
 def assign_fraction_of_bg_mix_when_one_bg_cyc(
-    cycles_with_bg_channels: Dict[int, Dict[int, int]], cycle_names: List[int]
+    expr_cycles: Dict[int, Dict[int, int]],
+    bg_cycles: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
-    # {3: {1: 1},}
-    cycles = sorted(cycle_names)
-    bg_cycles = list(cycles_with_bg_channels.keys())
-    distance_from_bg_cyc = abs(cycles.index(cycles[-1]) - cycles.index(bg_cycles[0]))
+     # {3: {1: 1},}
+    expr_cycles = sorted(list(expr_cycles.keys()))
+    bg_cycles = sorted(list(bg_cycles.keys()))
+
+    first_bg_cycle = bg_cycles[0]
+    last_expr_cycle = expr_cycles[-1]
+    first_bg_cycle_id = expr_cycles.index(first_bg_cycle)
+    last_expr_cycle_id = expr_cycles.index(last_expr_cycle)
+
     fractions_per_cycle = dict()
-    fractions = [1] * distance_from_bg_cyc
-    cycle_subset = cycles[cycles.index(bg_cycles[0]) + 1 : cycles.index(cycles[-1]) + 1]
-    fractions_per_cycle[bg_cycles[0]] = {bg_cycles[0]: {}}
+
+    cycle_subset = expr_cycles[first_bg_cycle_id + 1 : last_expr_cycle_id + 1]
+    fractions_per_cycle[first_bg_cycle] = {first_bg_cycle: {}}
     for i, cycle in enumerate(cycle_subset):
-        fractions_per_cycle[cycle] = {bg_cycles[0]: fractions[i]}
+        fractions_per_cycle[cycle] = {first_bg_cycle: 1}
     fractions_per_cycle_sorted = {
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
     }
@@ -155,59 +120,46 @@ def assign_fraction_of_bg_mix_when_one_bg_cyc(
 
 
 def assign_fraction_of_bg_mix(
-    cycles_with_bg_channels: Dict[int, Dict[int, int]], cycle_names: List[int]
+    expr_cycles: Dict[int, Dict[int, int]],
+    bg_cycles: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
     # {3: {1: 0.75, 9: 0.25},}
-    cycles = sorted(cycle_names)
-    bg_cycles = list(cycles_with_bg_channels.keys())
-    distance_between_selected_cyc = abs(cycles.index(bg_cycles[1]) - cycles.index(bg_cycles[0]))
+    expr_cycles = sorted(list(expr_cycles.keys()))
+    bg_cycles = sorted(list(bg_cycles.keys()))
+
+    first_bg_cycle = bg_cycles[0]
+    last_bg_cycle = bg_cycles[1]
+    first_bg_cycle_id = expr_cycles.index(first_bg_cycle)
+    last_bg_cycle_id = expr_cycles.index(last_bg_cycle)
+
+    distance_between_bg_cycles = max(1, abs(last_bg_cycle_id - first_bg_cycle_id))
 
     fractions_per_cycle = dict()
-    fractions = [
-        round(i * (1 / distance_between_selected_cyc), 3)
-        for i in range(1, distance_between_selected_cyc)
-    ]
-    cycle_subset = cycles[cycles.index(bg_cycles[0]) + 1 : cycles.index(bg_cycles[1])]
+    fractions = []
+    for i in range(1, distance_between_bg_cycles):
+        fraction = round(i / distance_between_bg_cycles, 3)
+        fractions.append(fraction)
 
-    fractions_per_cycle[bg_cycles[0]] = {bg_cycles[0]: {}, bg_cycles[1]: {}}
-    fractions_per_cycle[bg_cycles[1]] = {bg_cycles[0]: {}, bg_cycles[1]: {}}
+    if distance_between_bg_cycles == 1:
+        expr_cyc = expr_cycles[first_bg_cycle_id + 1: last_bg_cycle_id][0]
+        fractions_per_cycle[expr_cyc] = {first_bg_cycle: expr_cyc, last_bg_cycle: 0}
+    elif distance_between_bg_cycles >= 2:
+        cycle_subset = expr_cycles[first_bg_cycle_id + 2 : last_bg_cycle_id - 1]
+        first_expr_cyc = expr_cycles[first_bg_cycle_id + 1]
+        last_expr_cyc = expr_cycles[last_bg_cycle_id - 1]
+        fractions_per_cycle[first_expr_cyc] = {first_bg_cycle: 1, last_bg_cycle: 0}
+        fractions_per_cycle[last_expr_cyc] = {first_bg_cycle: 0, last_bg_cycle: 1}
+
+    fractions_per_cycle[first_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
+    fractions_per_cycle[last_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
 
     for i, cycle in enumerate(cycle_subset):
-        fractions_per_cycle[cycle] = {bg_cycles[0]: 1 - fractions[i], bg_cycles[1]: fractions[i]}
+        fractions_per_cycle[cycle] = {first_bg_cycle: 1 - fractions[i], last_bg_cycle: fractions[i]}
 
     fractions_per_cycle_sorted = {
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
     }
     return fractions_per_cycle_sorted
-
-
-def create_new_channel_name_order(
-    channels_per_cycle: Dict[int, Dict[int, str]], background_channel: str
-) -> List[str]:
-    channel_names = []
-    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
-    for cycle in channels_per_cycle:
-        for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if bg_ch_pattern.match(ch_name):
-                continue
-            else:
-                channel_names.append("proc_" + ch_name)
-    return channel_names
-
-
-def get_stack_ids_per_cycle(
-    channels_per_cycle: Dict[int, Dict[int, str]], channel_names_in_stack: List[str]
-) -> Dict[int, Dict[int, int]]:
-    stack_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
-
-    for cycle, channels in channels_per_cycle.items():
-        for ch_id, ch_name in channels.items():
-            if ch_name.lower() in lookup_ch_name_list:
-                stack_id = lookup_ch_name_list.index(ch_name.lower())
-                lookup_ch_name_list[stack_id] = None
-                stack_ids_per_cycle[cycle][ch_id] = stack_id
-    return stack_ids_per_cycle
 
 
 def read_stack_and_meta(img_path: Path) -> Tuple[ImgStack, Dict[str, Any]]:
@@ -243,7 +195,13 @@ def modify_initial_ij_meta(
 def do_bg_subtraction(img: Image, bg: Image) -> Image:
     orig_dtype = deepcopy(img.dtype)
     orig_dtype_minmax = (np.iinfo(orig_dtype).min, np.iinfo(orig_dtype).max)
-    return (img.astype(np.int32) - bg).clip(*orig_dtype_minmax).astype(orig_dtype)
+    return np.clip(img.astype(np.int32) - bg, *orig_dtype_minmax).astype(orig_dtype)
+
+
+def sum_bounded(arr_list: List[Image], dtype) -> Image:
+    dtype_minmax = (np.iinfo(dtype).min, np.iinfo(dtype).max)
+    img_sum = np.clip(np.round(np.sum(arr_list, axis=0, dtype=np.float32), 0), *dtype_minmax).astype(dtype)
+    return img_sum
 
 
 def subtract_bg_from_imgs(
@@ -254,43 +212,47 @@ def subtract_bg_from_imgs(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
-    new_channel_name_order: List[str],
+    new_ch_names: List[str],
 ):
     img_stack, ij_meta = read_stack_and_meta(img_path)
     orig_dtype = deepcopy(img_stack.dtype)
     bg_images: Dict[int, Dict[int, Image]] = {cyc: dict() for cyc in cycles_with_bg_ch.keys()}
+
     for cycle, channels in cycles_with_bg_ch.items():
         for ch_id, stack_id in channels.items():
             bg_images[cycle][ch_id] = img_stack[stack_id, :, :]
+    print(bg_images)
     print("Subtracting background from", img_path.name)
     processed_imgs = []
     for cycle, channels in stack_ids_per_cycle.items():
         if channels != {}:
             for ch_id, stack_id in channels.items():
+                print("Cycle", cycle, "Channel id", ch_id, "Stack id", stack_id)
                 if stack_id == nuc_ch_stack_id:
                     processed_imgs.append(img_stack[stack_id, :, :])
                 elif stack_id in bg_ch_stack_ids:
                     continue
                 else:
-                    fractions = fractions_of_bg_per_cycle[cycle]
-                    bg_cycles = list(fractions.keys())
+                    fraction_map = fractions_of_bg_per_cycle[cycle]
+                    bg_cycles = sorted(list(fraction_map.keys()))
+
                     if len(bg_cycles) == 1:
                         bg_img = bg_images[bg_cycles[0]][ch_id]
                     else:
                         bg_imgs = []
-                        for bg_cyc, frac in fractions.items():
+                        for bg_cyc, frac in fraction_map.items():
                             bg = bg_images[bg_cyc][ch_id]
-                            bg_imgs.append(bg * frac)
+                            fbg = bg.astype(np.float32) * frac
+                            bg_imgs.append(fbg)
                         # sum background images from first and last cycle
-                        bg_img = np.round(np.sum(bg_imgs, axis=0)).astype(orig_dtype)
-
+                        bg_img = sum_bounded(bg_imgs, orig_dtype)
                     processed_img = do_bg_subtraction(img_stack[stack_id, :, :], bg_img)
                     processed_imgs.append(processed_img)
     processed_stack = np.stack(processed_imgs, axis=0)
     del processed_imgs, processed_img, img_stack
     out_path = out_dir / img_path.name
 
-    new_ij_meta = modify_initial_ij_meta(ij_meta, new_channel_name_order)
+    new_ij_meta = modify_initial_ij_meta(ij_meta, new_ch_names)
 
     save_stack(out_path, processed_stack, new_ij_meta)
 
@@ -303,10 +265,11 @@ def subtract_bg_from_imgs_parallelized(
     fractions_of_bg_per_cycle: Dict[int, Dict[int, int]],
     nuc_ch_stack_id: int,
     bg_ch_stack_ids: List[int],
-    new_channel_name_order: List[str],
+    new_ch_names: List[str],
 ):
     tasks = []
     for img_path in img_listing:
+        print(img_path)
         task = dask.delayed(subtract_bg_from_imgs)(
             img_path,
             out_dir,
@@ -315,10 +278,27 @@ def subtract_bg_from_imgs_parallelized(
             fractions_of_bg_per_cycle,
             nuc_ch_stack_id,
             bg_ch_stack_ids,
-            new_channel_name_order,
+            new_ch_names,
         )
         tasks.append(task)
     dask.compute(*tasks)
+
+
+def create_new_channel_name_order(
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    channels_in_stack: List[str],
+    background_channel: str
+) -> List[str]:
+    channel_names = []
+    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if bg_ch_pattern.match(ch_name):
+                continue
+            else:
+                if any(re.match(ch_name, ch, re.IGNORECASE) for ch in channels_in_stack):
+                    channel_names.append("proc_" + ch_name)
+    return channel_names
 
 
 def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
@@ -351,30 +331,18 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     )
     print("Channels per cycle\n", channels_per_cycle)
 
-    filtered_channels_per_cycle = filter_channels(channels_per_cycle, channel_names_in_stack)
-    print("Filtered channels per cycle\n", filtered_channels_per_cycle)
-
-    new_channel_name_order = create_new_channel_name_order(
-        filtered_channels_per_cycle, background_ch_name
-    )
-    print("New channel name order", new_channel_name_order)
-
     # channel ids start from 1, stack ids start from 0
-    stack_ids_per_cycle = get_stack_ids_per_cycle(
-        filtered_channels_per_cycle, channel_names_in_stack
+    stack_ids_per_cycle, bg_channel_ids_per_cycle = get_stack_ids_per_cycle(
+        channels_per_cycle, channel_names_in_stack, background_ch_name
     )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
-    bg_channel_ids_per_cycle = get_stack_ids_of_bg_channels(
-        filtered_channels_per_cycle, background_ch_name
-    )
-
-    nuc_ch_stack_id = get_nuc_ch_stack_id(
-        nuclei_channel, filtered_channels_per_cycle, stack_ids_per_cycle
+    nuc_ch_stack_id = get_ch_stack_ids(
+        nuclei_channel, channels_per_cycle, stack_ids_per_cycle
     )
     print("Nucleus ch stack id\n", nuc_ch_stack_id)
-    bg_ch_stack_ids = get_bg_ch_stack_ids(
-        background_ch_name, filtered_channels_per_cycle, stack_ids_per_cycle
+    bg_ch_stack_ids = get_ch_stack_ids(
+        background_ch_name, channels_per_cycle, stack_ids_per_cycle
     )
     print("Background channel stack ids\n", bg_ch_stack_ids)
 
@@ -384,14 +352,21 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         print("NOT ENOUGH BACKGROUND CHANNELS")
         print("WILL SKIP BACKGROUND SUBTRACTION")
         return
-    cycle_names = list(bg_channel_ids_per_cycle.keys())
 
     if len(cycles_with_bg_ch) == 1:
         fractions_of_bg_per_cycle = assign_fraction_of_bg_mix_when_one_bg_cyc(
-            cycles_with_bg_ch, cycle_names
+            stack_ids_per_cycle,
+            cycles_with_bg_ch
         )
     else:
-        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(cycles_with_bg_ch, cycle_names)
+        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(stack_ids_per_cycle, cycles_with_bg_ch)
+
+    print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
+
+    new_channel_names = create_new_channel_name_order(
+        channels_per_cycle, channel_names_in_stack, background_ch_name
+    )
+    print("New channel name order", new_channel_names)
 
     print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
     subtract_bg_from_imgs_parallelized(
@@ -400,9 +375,9 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         stack_ids_per_cycle,
         cycles_with_bg_ch,
         fractions_of_bg_per_cycle,
-        nuc_ch_stack_id,
+        nuc_ch_stack_id[0],
         bg_ch_stack_ids,
-        new_channel_name_order,
+        new_channel_names,
     )
 
 

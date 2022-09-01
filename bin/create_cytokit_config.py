@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from typing import List
+from pprint import pprint
 
 import yaml
 
@@ -147,7 +148,7 @@ if __name__ == "__main__":
         if pipelineConfigInfo["channel_names_qc_pass"]:
             if len(pipelineConfigInfo["channel_names_qc_pass"][channelName]) > 1:
                 if blankPattern.match(channelName):
-                    continue
+                    pass
                 else:
                     raise ValueError(f"More than one {channelName} channel found.")
             else:
@@ -168,5 +169,7 @@ if __name__ == "__main__":
 
     with open(args.outfile, "w") as outFile:
         yaml.safe_dump(cytokitConfig, outFile, encoding="utf-8", default_flow_style=None, indent=2)
+
+    pprint(cytokitConfig, sort_dicts=False)
 
     logger.info("Finished writing Cytokit config.")
