@@ -224,13 +224,11 @@ def subtract_bg_from_imgs(
     for cycle, channels in cycles_with_bg_ch.items():
         for ch_id, stack_id in channels.items():
             bg_images[cycle][ch_id] = img_stack[stack_id, :, :]
-    print(bg_images)
     print("Subtracting background from", img_path.name)
     processed_imgs = []
     for cycle, channels in stack_ids_per_cycle.items():
         if channels != {}:
             for ch_id, stack_id in channels.items():
-                print("Cycle", cycle, "Channel id", ch_id, "Stack id", stack_id)
                 if stack_id == nuc_ch_stack_id:
                     processed_imgs.append(img_stack[stack_id, :, :])
                 elif stack_id in bg_ch_stack_ids:
