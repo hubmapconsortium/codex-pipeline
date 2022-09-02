@@ -1,9 +1,9 @@
 import argparse
+import re
 import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
-import re
 
 import dask
 import numpy as np
@@ -95,10 +95,9 @@ def get_ch_stack_ids(
 
 
 def assign_fraction_of_bg_mix_when_one_bg_cyc(
-    expr_cycles: Dict[int, Dict[int, int]],
-    bg_cycles: Dict[int, Dict[int, int]]
+    expr_cycles: Dict[int, Dict[int, int]], bg_cycles: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
-     # {3: {1: 1},}
+    # {3: {1: 1},}
     expr_cycles = sorted(list(expr_cycles.keys()))
     bg_cycles = sorted(list(bg_cycles.keys()))
 
@@ -120,8 +119,7 @@ def assign_fraction_of_bg_mix_when_one_bg_cyc(
 
 
 def assign_fraction_of_bg_mix(
-    expr_cycles: Dict[int, Dict[int, int]],
-    bg_cycles: Dict[int, Dict[int, int]]
+    expr_cycles: Dict[int, Dict[int, int]], bg_cycles: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
     # {3: {1: 0.75, 9: 0.25},}
     expr_cycles = sorted(list(expr_cycles.keys()))
@@ -141,7 +139,7 @@ def assign_fraction_of_bg_mix(
         fractions.append(fraction)
 
     if distance_between_bg_cycles == 1:
-        expr_cyc = expr_cycles[first_bg_cycle_id + 1: last_bg_cycle_id][0]
+        expr_cyc = expr_cycles[first_bg_cycle_id + 1 : last_bg_cycle_id][0]
         fractions_per_cycle[expr_cyc] = {first_bg_cycle: expr_cyc, last_bg_cycle: 0}
     elif distance_between_bg_cycles >= 2:
         cycle_subset = expr_cycles[first_bg_cycle_id + 2 : last_bg_cycle_id - 1]
@@ -154,7 +152,10 @@ def assign_fraction_of_bg_mix(
     fractions_per_cycle[last_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
 
     for i, cycle in enumerate(cycle_subset):
-        fractions_per_cycle[cycle] = {first_bg_cycle: 1 - fractions[i], last_bg_cycle: fractions[i]}
+        fractions_per_cycle[cycle] = {
+            first_bg_cycle: 1 - fractions[i],
+            last_bg_cycle: fractions[i],
+        }
 
     fractions_per_cycle_sorted = {
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
@@ -200,7 +201,9 @@ def do_bg_subtraction(img: Image, bg: Image) -> Image:
 
 def sum_bounded(arr_list: List[Image], dtype) -> Image:
     dtype_minmax = (np.iinfo(dtype).min, np.iinfo(dtype).max)
-    img_sum = np.clip(np.round(np.sum(arr_list, axis=0, dtype=np.float32), 0), *dtype_minmax).astype(dtype)
+    img_sum = np.clip(
+        np.round(np.sum(arr_list, axis=0, dtype=np.float32), 0), *dtype_minmax
+    ).astype(dtype)
     return img_sum
 
 
@@ -287,7 +290,7 @@ def subtract_bg_from_imgs_parallelized(
 def create_new_channel_name_order(
     channels_per_cycle: Dict[int, Dict[int, str]],
     channels_in_stack: List[str],
-    background_channel: str
+    background_channel: str,
 ) -> List[str]:
     channel_names = []
     bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
@@ -337,13 +340,9 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
-    nuc_ch_stack_id = get_ch_stack_ids(
-        nuclei_channel, channels_per_cycle, stack_ids_per_cycle
-    )
+    nuc_ch_stack_id = get_ch_stack_ids(nuclei_channel, channels_per_cycle, stack_ids_per_cycle)
     print("Nucleus ch stack id\n", nuc_ch_stack_id)
-    bg_ch_stack_ids = get_ch_stack_ids(
-        background_ch_name, channels_per_cycle, stack_ids_per_cycle
-    )
+    bg_ch_stack_ids = get_ch_stack_ids(background_ch_name, channels_per_cycle, stack_ids_per_cycle)
     print("Background channel stack ids\n", bg_ch_stack_ids)
 
     cycles_with_bg_ch = select_cycles_with_bg_ch(bg_channel_ids_per_cycle, num_channels_per_cycle)
@@ -355,11 +354,12 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
 
     if len(cycles_with_bg_ch) == 1:
         fractions_of_bg_per_cycle = assign_fraction_of_bg_mix_when_one_bg_cyc(
-            stack_ids_per_cycle,
-            cycles_with_bg_ch
+            stack_ids_per_cycle, cycles_with_bg_ch
         )
     else:
-        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(stack_ids_per_cycle, cycles_with_bg_ch)
+        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(
+            stack_ids_per_cycle, cycles_with_bg_ch
+        )
 
     print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
 

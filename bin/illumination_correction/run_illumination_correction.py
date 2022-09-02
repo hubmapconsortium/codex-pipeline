@@ -156,7 +156,7 @@ def apply_illum_cor(img: Image, flatfield: Image) -> Image:
     orig_minmax = (dtype_info.min, dtype_info.max)
     imgf = img.astype(np.float32)
 
-    corrected_imgf = imgf  / flatfield
+    corrected_imgf = imgf / flatfield
 
     corrected_img = np.clip(np.round(corrected_imgf, 0), *orig_minmax).astype(orig_dtype)
     return corrected_img
@@ -172,7 +172,7 @@ def correct_and_save(img_path: Path, flatfield: Image, out_path: Path):
 def apply_flatfield_and_save(
     listing: Dict[int, Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]],
     flatfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
-    #darkfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
+    # darkfields: Dict[int, Dict[int, Dict[int, Dict[int, Image]]]],
     out_dir: Path,
 ):
     img_dir_template = "Cyc{cyc:03d}_reg{reg:03d}"
@@ -191,10 +191,8 @@ def apply_flatfield_and_save(
                         make_dir_if_not_exists(out_dir_full)
                         out_path = out_dir_full / img_name
                         flatfield = flatfields[cycle][region][channel][zplane]
-                        #darkfield = darkfields[cycle][region][channel][zplane]
-                        tasks.append(
-                            dask.delayed(correct_and_save)(path, flatfield, out_path)
-                        )
+                        # darkfield = darkfields[cycle][region][channel][zplane]
+                        tasks.append(dask.delayed(correct_and_save)(path, flatfield, out_path))
     dask.compute(*tasks)
 
 
@@ -244,9 +242,12 @@ def run_basic(basic_macro_path: Path, log_dir: Path):
         )
     macro_filename = basic_macro_path.name
     run_log = (
-        "Command:\n" + res.args +
-        "\n\nSTDERR:\n" + res.stderr.decode("utf-8") +
-        "\n\nSTDOUT:\n" + res.stdout.decode("utf-8")
+        "Command:\n"
+        + res.args
+        + "\n\nSTDERR:\n"
+        + res.stderr.decode("utf-8")
+        + "\n\nSTDOUT:\n"
+        + res.stdout.decode("utf-8")
     )
     log_filename = macro_filename + ".log"
     log_path = log_dir / log_filename
@@ -265,7 +266,11 @@ def run_all_macros(macro_paths: Dict[int, Dict[int, Dict[int, Dict[int, Path]]]]
     dask.compute(*tasks)
 
 
-def check_illum_cor_images(illum_cor_dir: Path, log_dir: Path, zplane_listing: Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]]):
+def check_illum_cor_images(
+    illum_cor_dir: Path,
+    log_dir: Path,
+    zplane_listing: Dict[int, Dict[int, Dict[int, Dict[int, List[Path]]]]],
+):
     cor_img_name_template = "{cor_type}_Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif"
     log_name_template = "Cyc{cyc:03d}_Reg{reg:03d}_Ch{ch:03d}_Z{z:03d}.tif.ijm.log"
     imgs_present = []
@@ -282,18 +287,22 @@ def check_illum_cor_images(illum_cor_dir: Path, log_dir: Path, zplane_listing: D
                         cor_type="darkfield", cyc=cycle, reg=region, ch=channel, z=zplane
                     )
                     flatfield_path = illum_cor_dir / "flatfield" / flatfield_fn
-                    #darkfield_path = illum_cor_dir / "darkfield" / darkfield_fn
+                    # darkfield_path = illum_cor_dir / "darkfield" / darkfield_fn
                     if flatfield_path.exists():
                         imgs_present.append((flatfield_fn))
                     else:
                         imgs_missing.append((flatfield_fn))
-                        log_path = log_dir / log_name_template.format(cyc=cycle, reg=region, ch=channel, z=zplane)
+                        log_path = log_dir / log_name_template.format(
+                            cyc=cycle, reg=region, ch=channel, z=zplane
+                        )
                         with open(log_path, "r", encoding="utf-8") as f:
                             log_content = f.read()
                         imgs_missing_logs.append(log_content)
     if len(imgs_missing) > 0:
-        msg = ("Probably there was an error while running BaSiC. "
-               + "There is no image in one or more directories.")
+        msg = (
+            "Probably there was an error while running BaSiC. "
+            + "There is no image in one or more directories."
+        )
         print(msg)
 
         for i in range(0, len(imgs_missing)):
@@ -377,7 +386,7 @@ def main(data_dir: Path, pipeline_config_path: Path):
 
     print("Applying illumination correction")
     flatfields = read_flatfield_imgs(illum_cor_dir, stack_paths)
-    #darkfields = read_darkfield_imgs(illum_cor_dir, stack_paths)
+    # darkfields = read_darkfield_imgs(illum_cor_dir, stack_paths)
     apply_flatfield_and_save(listing, flatfields, corrected_img_dir)
 
 
