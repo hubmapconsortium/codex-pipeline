@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Tuple
 import dask
 import numpy as np
 import tifffile as tif
+from scipy.ndimage import gaussian_filter1d
 
 sys.path.append("/opt/")
 from pipeline_utils.dataset_listing import get_img_listing
@@ -116,6 +117,127 @@ def assign_fraction_of_bg_mix_when_one_bg_cyc(
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
     }
     return fractions_per_cycle_sorted
+
+
+def sort_dict(item: dict):
+    return {k: sort_dict(v) if isinstance(v, dict) else v for k, v in sorted(item.items())}
+
+
+def medq(img: Image, q: float = 0.8) -> float:
+    # returns median of some quantile
+    thr = np.quantile(img, q)
+    medq = np.median(img[img <= thr])
+    return medq
+
+
+def calc_background_median(
+    img_path: Path, stack_ids_per_cycle: Dict[int, Dict[int, int]]
+) -> Dict[int, Dict[int, float]]:
+    stack = tif.imread(img_path)
+    med_per_ch_cyc = dict()
+
+    for cyc in stack_ids_per_cycle:
+        for ch, stack_id in stack_ids_per_cycle[cyc].items():
+            this_ch_img = stack[stack_id, :, :]
+            med80 = medq(this_ch_img)
+            if ch in med_per_ch_cyc:
+                med_per_ch_cyc[ch][cyc] = med80
+            else:
+                med_per_ch_cyc[ch] = {cyc: med80}
+    return med_per_ch_cyc
+
+
+def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]) -> Dict[int, Dict[int, float]]:
+    # most of the operations in this function is just reordering of dictionaries
+    fr_per_ch = dict()
+    cyc_ids_per_ch = dict()
+    for cyc in bg_fractions:
+        for ch, fr in bg_fractions[cyc].items():
+            if ch in fr_per_ch:
+                fr_per_ch[ch].append(fr)
+                cyc_ids_per_ch[ch].append(cyc)
+            else:
+                fr_per_ch[ch] = [fr]
+                cyc_ids_per_ch[ch] = [cyc]
+
+    # gaussian filtering
+    fr_per_ch_filtered = dict()
+    for ch in fr_per_ch:
+        fr_list = fr_per_ch[ch]
+        filtered_fr = gaussian_filter1d(fr_list, sigma=1, mode="reflect").tolist()
+        fr_per_ch_filtered[ch] = filtered_fr
+
+    bg_fractions_per_ch_cor = dict()
+    for ch in fr_per_ch_filtered:
+        this_ch_cyc_fr = {k: v for k, v in zip(cyc_ids_per_ch[ch], fr_per_ch_filtered[ch])}
+        bg_fractions_per_ch_cor[ch] = this_ch_cyc_fr
+
+    bg_fractions_filtered = dict()
+    for ch in bg_fractions_per_ch_cor:
+        for cyc, fr in bg_fractions_per_ch_cor[ch].items():
+            if cyc in bg_fractions_filtered:
+                bg_fractions_filtered[cyc].update({ch: fr})
+            else:
+                bg_fractions_filtered[cyc] = {ch: fr}
+    return bg_fractions_filtered
+
+
+def estimate_background_fraction_when_one_bg_cycle(
+    img_listing: List[Path], stack_ids_per_cycle: Dict[int, Dict[int, int]]
+) -> Dict[int, Dict[int, float]]:
+    tasks = []
+    for img_path in img_listing:
+        task = dask.delayed(calc_background_median)(img_path, stack_ids_per_cycle)
+        tasks.append(task)
+    meds_per_img_ch_cyc = dask.compute(*tasks)
+
+    med_per_ch_cyc_across_imgs = dict()
+    for med_per_ch_cyc in meds_per_img_ch_cyc:
+        for ch in med_per_ch_cyc:
+
+            if ch in med_per_ch_cyc_across_imgs:
+                pass
+            else:
+                med_per_ch_cyc_across_imgs[ch] = dict()
+
+            for cyc, med in med_per_ch_cyc[ch].items():
+                if cyc in med_per_ch_cyc_across_imgs[ch]:
+                    med_per_ch_cyc_across_imgs[ch][cyc].append(med)
+                else:
+                    med_per_ch_cyc_across_imgs[ch].update({cyc: [med]})
+
+    med_per_ch_cyc_final = dict()
+    for ch in med_per_ch_cyc_across_imgs:
+        med_per_ch_cyc_final[ch] = dict()
+        for cyc, meds in med_per_ch_cyc_across_imgs[ch].items():
+
+            med_med = np.median(meds)
+
+            if ch in med_per_ch_cyc_final:
+                med_per_ch_cyc_final[ch][cyc] = med_med
+            else:
+                med_per_ch_cyc_final[ch].update({cyc: med_med})
+
+    bg_fractions = dict()
+    for ch in med_per_ch_cyc_final:
+        first_cyc = min(list(med_per_ch_cyc_final[ch].keys()))
+        for cyc, this_cyc_med in med_per_ch_cyc_final[ch].items():
+            if cyc in bg_fractions:
+                pass
+            else:
+                bg_fractions[cyc] = dict()
+            first_cyc_med = med_per_ch_cyc_final[ch][first_cyc]
+            bg_fraction = round(first_cyc_med / this_cyc_med, 3)
+
+            if cyc in bg_fractions:
+                bg_fractions[cyc][ch] = bg_fraction
+            else:
+                bg_fractions[cyc].update({ch: bg_fraction})
+    bg_fractions = sort_dict(bg_fractions)
+
+    bg_ractions_filtered = filter_bg_fractions(bg_fractions)
+
+    return bg_ractions_filtered
 
 
 def assign_fraction_of_bg_mix(
@@ -235,10 +357,19 @@ def subtract_bg_from_imgs(
                     continue
                 else:
                     fraction_map = fractions_of_bg_per_cycle[cycle]
-                    bg_cycles = sorted(list(fraction_map.keys()))
+                    # fraction_map has different structure
+                    # depending on the number of bg cycles.
+                    # If there is 1 bg cycle, then  fraction_map = {cyc: {ch: frac}}
+                    # If there are 2 bg cycles, then fraction_map = {cyc: {bg_cyc: frac}}
 
-                    if len(bg_cycles) == 1:
-                        bg_img = bg_images[bg_cycles[0]][ch_id]
+                    if len(cycles_with_bg_ch) == 1:
+                        bg_cycles = sorted(list(cycles_with_bg_ch.keys()))
+                        first_bg_cyc = bg_cycles[0]
+                        bg_frac = fraction_map[ch_id]
+                        inv_frac = round(1 / bg_frac, 3)
+                        bg_img = (
+                            bg_images[first_bg_cyc][ch_id].astype(np.float32) * inv_frac
+                        ).astype(orig_dtype)
                     else:
                         bg_imgs = []
                         for bg_cyc, frac in fraction_map.items():
@@ -351,8 +482,8 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         return
 
     if len(cycles_with_bg_ch) == 1:
-        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix_when_one_bg_cyc(
-            stack_ids_per_cycle, cycles_with_bg_ch
+        fractions_of_bg_per_cycle = estimate_background_fraction_when_one_bg_cycle(
+            img_listing, stack_ids_per_cycle
         )
     else:
         fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(
