@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Tuple
 import dask
 import numpy as np
 import tifffile as tif
-from scipy.ndimage import gaussian_filter1d
+#from scipy.ndimage import gaussian_filter1d
+from skimage.filters import threshold_otsu
 
 sys.path.append("/opt/")
 from pipeline_utils.dataset_listing import get_img_listing
@@ -123,11 +124,25 @@ def sort_dict(item: dict):
     return {k: sort_dict(v) if isinstance(v, dict) else v for k, v in sorted(item.items())}
 
 
-def medq(img: Image, q: float = 0.8) -> float:
+def get_medq(img: Image, q: float = 0.8) -> float:
     # returns median of some quantile
     thr = np.quantile(img, q)
     medq = np.median(img[img <= thr])
     return medq
+
+
+def get_otsu_bg_val(img: Image) -> float:
+    thresh = threshold_otsu(img)
+    below_th = img <= thresh
+    below_med = np.nanmedian(img[below_th])
+    return below_med
+
+
+def lin_fit(y, deg=1) -> np.ndarray:
+    ids = np.arange(1, len(y)+1)
+    coef = np.polyfit(ids, y, deg)
+    poly1d_fn = np.poly1d(coef)
+    return poly1d_fn(ids)
 
 
 def calc_background_median(
@@ -139,11 +154,11 @@ def calc_background_median(
     for cyc in stack_ids_per_cycle:
         for ch, stack_id in stack_ids_per_cycle[cyc].items():
             this_ch_img = stack[stack_id, :, :]
-            med80 = medq(this_ch_img)
+            bg_val = get_otsu_bg_val(this_ch_img)
             if ch in med_per_ch_cyc:
-                med_per_ch_cyc[ch][cyc] = med80
+                med_per_ch_cyc[ch][cyc] = bg_val
             else:
-                med_per_ch_cyc[ch] = {cyc: med80}
+                med_per_ch_cyc[ch] = {cyc: bg_val}
     return med_per_ch_cyc
 
 
@@ -160,11 +175,11 @@ def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]) -> Dict[int, 
                 fr_per_ch[ch] = [fr]
                 cyc_ids_per_ch[ch] = [cyc]
 
-    # gaussian filtering
+    # linear fitting
     fr_per_ch_filtered = dict()
     for ch in fr_per_ch:
         fr_list = fr_per_ch[ch]
-        filtered_fr = gaussian_filter1d(fr_list, sigma=1, mode="reflect").tolist()
+        filtered_fr = lin_fit(fr_list).tolist()
         fr_per_ch_filtered[ch] = filtered_fr
 
     bg_fractions_per_ch_cor = dict()
