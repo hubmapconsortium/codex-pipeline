@@ -35,6 +35,7 @@ steps:
         source: cytokit_config
     out:
       - bg_sub_tiles
+      - bg_sub_config
     run: ometiff_second_stitching/background_subtraction.cwl
 
   ome_tiff_creation:
@@ -55,7 +56,7 @@ steps:
   second_stitching:
     in:
       pipeline_config:
-        source: slicing_pipeline_config
+        source: background_subtraction/bg_sub_config
       ometiff_dir:
         source: ome_tiff_creation/ome_tiffs
     out:

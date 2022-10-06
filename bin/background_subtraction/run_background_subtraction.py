@@ -4,6 +4,7 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+import json
 
 import dask
 import numpy as np
@@ -142,7 +143,9 @@ def lin_fit(y, deg=1) -> np.ndarray:
     ids = np.arange(1, len(y)+1)
     coef = np.polyfit(ids, y, deg)
     poly1d_fn = np.poly1d(coef)
-    return poly1d_fn(ids)
+    slope, intercept = coef
+    fit = poly1d_fn(ids)
+    return fit, slope, intercept
 
 
 def calc_background_median(
@@ -162,7 +165,8 @@ def calc_background_median(
     return med_per_ch_cyc
 
 
-def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]) -> Dict[int, Dict[int, float]]:
+def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]
+) -> Tuple[Dict[int, Dict[int, float]], Dict[int, float], Dict[int, float]]:
     # most of the operations in this function is just reordering of dictionaries
     fr_per_ch = dict()
     cyc_ids_per_ch = dict()
@@ -176,11 +180,15 @@ def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]) -> Dict[int, 
                 cyc_ids_per_ch[ch] = [cyc]
 
     # linear fitting
+    slope_per_ch = dict()
+    intercept_per_ch = dict()
     fr_per_ch_filtered = dict()
     for ch in fr_per_ch:
         fr_list = fr_per_ch[ch]
-        filtered_fr = lin_fit(fr_list).tolist()
+        filtered_fr, slope, intercept = lin_fit(fr_list)
         fr_per_ch_filtered[ch] = filtered_fr
+        slope_per_ch[ch] = slope
+        intercept_per_ch[ch] = intercept
 
     bg_fractions_per_ch_cor = dict()
     for ch in fr_per_ch_filtered:
@@ -194,12 +202,12 @@ def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]) -> Dict[int, 
                 bg_fractions_filtered[cyc].update({ch: fr})
             else:
                 bg_fractions_filtered[cyc] = {ch: fr}
-    return bg_fractions_filtered
+    return bg_fractions_filtered, slope_per_ch, intercept_per_ch
 
 
 def estimate_background_fraction_when_one_bg_cycle(
     img_listing: List[Path], stack_ids_per_cycle: Dict[int, Dict[int, int]]
-) -> Dict[int, Dict[int, float]]:
+) -> Tuple[Dict[int, Dict[int, float]], Dict[int, float], Dict[int, float]]:
     tasks = []
     for img_path in img_listing:
         task = dask.delayed(calc_background_median)(img_path, stack_ids_per_cycle)
@@ -250,17 +258,16 @@ def estimate_background_fraction_when_one_bg_cycle(
                 bg_fractions[cyc].update({ch: bg_fraction})
     bg_fractions = sort_dict(bg_fractions)
 
-    bg_ractions_filtered = filter_bg_fractions(bg_fractions)
-
-    return bg_ractions_filtered
+    bg_fractions_filtered, slope_per_ch, intercept_per_ch = filter_bg_fractions(bg_fractions)
+    return bg_fractions_filtered, slope_per_ch, intercept_per_ch
 
 
 def assign_fraction_of_bg_mix(
-    expr_cycles: Dict[int, Dict[int, int]], bg_cycles: Dict[int, Dict[int, int]]
+    stack_ids_per_cycle: Dict[int, Dict[int, int]], cycles_with_bg_ch: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
     # {3: {1: 0.75, 9: 0.25},}
-    expr_cycles = sorted(list(expr_cycles.keys()))
-    bg_cycles = sorted(list(bg_cycles.keys()))
+    expr_cycles = sorted(list(stack_ids_per_cycle.keys()))
+    bg_cycles = sorted(list(cycles_with_bg_ch.keys()))
 
     first_bg_cycle = bg_cycles[0]
     last_bg_cycle = bg_cycles[1]
@@ -297,7 +304,14 @@ def assign_fraction_of_bg_mix(
     fractions_per_cycle_sorted = {
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
     }
-    return fractions_per_cycle_sorted
+
+    fit, slope, intercept = lin_fit(fractions)
+    slope_per_ch = dict()
+    intercept_per_ch = dict()
+    for ch in stack_ids_per_cycle[expr_cycles[0]]:
+        slope_per_ch[ch] = slope
+        intercept_per_ch[ch] = intercept
+    return fractions_per_cycle_sorted, slope_per_ch, intercept_per_ch
 
 
 def read_stack_and_meta(img_path: Path) -> Tuple[ImgStack, Dict[str, Any]]:
@@ -448,12 +462,30 @@ def create_new_channel_name_order(
     return channel_names
 
 
+def write_bg_info_to_config(pipeline_config_path: Path,
+                            out_dir: Path,
+                            slope_per_ch,
+                            interception_per_ch,
+                            num_bg_cyc):
+    with open(pipeline_config_path, "r") as s:
+        config = json.load(s)
+    config["background_info"] = {"num_background_cycles": num_bg_cyc,
+                                 "slope_per_channel": slope_per_ch,
+                                 "interception_per_channel": interception_per_ch,
+                                 }
+    with open(out_dir / "pipelineConfig.json", "w") as s:
+        json.dump(config, s, sort_keys=False, indent=4)
+    return
+
+
 def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     """Input images are expected to be stack outputs of cytokit processing
     and have names R001_X001_Y001.tif
     """
     out_dir = Path("/output/background_subtraction")
+    config_out_dir = Path("/output/config")
     make_dir_if_not_exists(out_dir)
+    make_dir_if_not_exists(config_out_dir)
 
     dataset_info = load_dataset_info(pipeline_config_path)
     nuclei_channel = dataset_info["nuclei_channel"]
@@ -491,38 +523,44 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
 
     cycles_with_bg_ch = select_cycles_with_bg_ch(bg_channel_ids_per_cycle, num_channels_per_cycle)
     print("Cycles with background channels\n", cycles_with_bg_ch)
+
     if len(cycles_with_bg_ch) == 0:
         print("NOT ENOUGH BACKGROUND CHANNELS")
         print("WILL SKIP BACKGROUND SUBTRACTION")
-        return
-
-    if len(cycles_with_bg_ch) == 1:
-        fractions_of_bg_per_cycle = estimate_background_fraction_when_one_bg_cycle(
+        slope_per_ch = "None"
+        intercept_per_ch = "None"
+        do_bg_sub = False
+    elif len(cycles_with_bg_ch) == 1:
+        fractions_of_bg_per_cycle, slope_per_ch, intercept_per_ch = estimate_background_fraction_when_one_bg_cycle(
             img_listing, stack_ids_per_cycle
         )
+        do_bg_sub = True
     else:
-        fractions_of_bg_per_cycle = assign_fraction_of_bg_mix(
+        fractions_of_bg_per_cycle, slope_per_ch, intercept_per_ch = assign_fraction_of_bg_mix(
             stack_ids_per_cycle, cycles_with_bg_ch
         )
+        do_bg_sub = True
 
-    print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
+    if do_bg_sub:
+        print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
 
-    new_channel_names = create_new_channel_name_order(
-        channels_per_cycle, channel_names_in_stack, background_ch_name
-    )
-    print("New channel name order", new_channel_names)
+        new_channel_names = create_new_channel_name_order(
+            channels_per_cycle, channel_names_in_stack, background_ch_name
+        )
+        print("New channel name order", new_channel_names)
 
-    print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
-    subtract_bg_from_imgs_parallelized(
-        img_listing,
-        out_dir,
-        stack_ids_per_cycle,
-        cycles_with_bg_ch,
-        fractions_of_bg_per_cycle,
-        nuc_ch_stack_id[0],
-        bg_ch_stack_ids,
-        new_channel_names,
-    )
+        print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
+        subtract_bg_from_imgs_parallelized(
+            img_listing,
+            out_dir,
+            stack_ids_per_cycle,
+            cycles_with_bg_ch,
+            fractions_of_bg_per_cycle,
+            nuc_ch_stack_id[0],
+            bg_ch_stack_ids,
+            new_channel_names,
+        )
+    write_bg_info_to_config(pipeline_config_path, config_out_dir, slope_per_ch, intercept_per_ch, len(cycles_with_bg_ch))
 
 
 if __name__ == "__main__":
