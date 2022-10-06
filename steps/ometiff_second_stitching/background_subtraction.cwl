@@ -31,3 +31,8 @@ outputs:
     type: Directory
     outputBinding:
       glob: "/output/background_subtraction"
+
+  bg_sub_config:
+    type: File
+    outputBinding:
+      glob: "/output/config/pipelineConfig.json"
