@@ -9,12 +9,13 @@ from typing import List, Tuple
 
 import lxml.etree
 import numpy as np
+import pandas as pd
 import yaml
 from aicsimageio import AICSImage
 from aicsimageio.vendor.omexml import OMEXML
 from aicsimageio.writers import ome_tiff_writer
 from tifffile import TiffFile
-
+from ome_types import to_xml
 from utils import print_directory_tree
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
@@ -28,8 +29,51 @@ SEGMENTATION_CHANNEL_NAMES = [
     "nucleus_boundaries",
 ]
 
-TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+mapping_format_string = """<StructuredAnnotations>
+<XMLAnnotation ID="Annotation:0">
+    <Value>
+        <OriginalMetadata>
+            <Key>ProteinIDMap</Key>
+            <Value>
+                MAP_LINES
+            </Value>
+        </OriginalMetadata>
+    </Value>
+</XMLAnnotation>
+</StructuredAnnotations>"""
 
+def add_structured_annotations(xml_string):
+    maybe_metadata_file = find_metadata_file(directory)
+    if maybe_metadata_file and maybe_metadata_file.is_file():
+        df = pd.read_csv(maybe_metadata_file, delimiter='\t')
+        structured_annotation = mapping_format_string.replace("MAP_LINES", create_map_lines(df))
+        end_index = xml_string.find("</OME>")
+        xml_string = xml_string[:end_index] + structured_annotation + xml_string[end_index:]
+    return xml_string
+
+def create_map_lines(df):
+    map_lines = []
+    for i in df.index:
+        line = f"""< Channel ID = "{df.at[i, 'channel_id']}", ChannelName = "{get_analyte_name(df.at[i, 'antibody_name'])}",
+         UniprotID = "{df.at[i, 'uniprot_accession_number']}", RRID = "{df.at[i, 'rr_id']}" >"""
+        map_lines.append(line)
+    return "\n".join(map_lines)
+
+TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
+
+def get_analyte_name(antibody_name):
+    return antibody_name.replace("Anti-", "").replace(" antibody", "")
+
+def find_metadata_file(directory: Path) -> Optional[Path]:
+    """
+    Finds and returns the first metadata file for a HuBMAP data set.
+    Does not check whether the dataset ID (32 hex characters) matches
+    the directory name, nor whether there might be multiple metadata files.
+    """
+    for file_path in directory.iterdir():
+        if metadata_filename_pattern.match(file_path.name):
+            return file_path
 
 def collect_tiff_file_list(directory: Path, TIFF_FILE_NAMING_PATTERN: re.Pattern) -> List[Path]:
     """
@@ -77,6 +121,13 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
+
+    maybe_metadata_file = find_metadata_file(directory)
+    if maybe_metadata_file and maybe_metadata_file.is_file():
+        df = pd.read_csv(maybe_metadata_file, delimiter='\t')
+        df = df.set_index('channel_id', inplace=False)
+        channelList = [df.at[channel_name, "antibody_name"].replace("Anti-", "").replace(" antibody", "") for channel_name in channelList]
+
     return channelList
 
 
@@ -132,6 +183,9 @@ def convert_tiff_file(funcArgs: Tuple[Path, Path, List, float]):
     for i in range(0, len(channelNames)):
         omeXml.image().Pixels.Channel(i).Name = channelNames[i]
         omeXml.image().Pixels.Channel(i).ID = "Channel:0:" + str(i)
+
+    #Convert and manipulate OME metadata as string here
+    omeXml = add_structured_annotations(omeXml.to_xml('utf-8'))
 
     with ome_tiff_writer.OmeTiffWriter(ometiffFile) as ome_writer:
         ome_writer.save(
