@@ -15,7 +15,6 @@ from aicsimageio import AICSImage
 from aicsimageio.vendor.omexml import OMEXML
 from aicsimageio.writers import ome_tiff_writer
 from tifffile import TiffFile
-from ome_types import to_xml
 from utils import print_directory_tree
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
