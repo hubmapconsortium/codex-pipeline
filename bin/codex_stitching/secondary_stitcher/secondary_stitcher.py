@@ -43,9 +43,14 @@ def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_chann
     ET.SubElement(segmentation_channels_value, "Cell").text = cell_channel
     sa_str = ET.tostring(structured_annotation, encoding="utf-8").decode("utf-8")
 
-    closed_image_node_position = omexml_str.find("</Image>") + len("</Image>")
+    if "StructuredAnnotations" in omexml_str:
+        sa_placement = omexml_str.find("<StructuredAnnotations>") + len("<StructuredAnnotations>")
+        sa_str = re.sub(r"</?StructuredAnnotations>", "", sa_str)
+    else:
+        sa_placement = omexml_str.find("</Image>") + len("</Image>")
+
     omexml_str_with_sa = (
-        omexml_str[:closed_image_node_position] + sa_str + omexml_str[closed_image_node_position:]
+        omexml_str[:sa_placement] + sa_str + omexml_str[sa_placement:]
     )
     return omexml_str_with_sa
 

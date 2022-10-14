@@ -11,6 +11,8 @@ inputs:
     type: File
   cytokit_output:
     type: Directory
+  data_dir:
+    type: Directory
 
 outputs:
   stitched_images:
@@ -29,6 +31,8 @@ steps:
         source: cytokit_output
       cytokit_config:
         source: cytokit_config
+      input_data_dir:
+        source: data_dir
     out:
       - ome_tiffs
     run: ometiff_second_stitching/ome_tiff_creation.cwl
