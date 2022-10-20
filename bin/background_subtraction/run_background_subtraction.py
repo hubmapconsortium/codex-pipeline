@@ -1,15 +1,16 @@
 import argparse
+import json
 import re
 import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
-import json
 
 import dask
 import numpy as np
 import tifffile as tif
-#from scipy.ndimage import gaussian_filter1d
+
+# from scipy.ndimage import gaussian_filter1d
 from skimage.filters import threshold_otsu
 
 sys.path.append("/opt/")
@@ -140,7 +141,7 @@ def get_otsu_bg_val(img: Image) -> float:
 
 
 def lin_fit(y, deg=1) -> np.ndarray:
-    ids = np.arange(1, len(y)+1)
+    ids = np.arange(1, len(y) + 1)
     coef = np.polyfit(ids, y, deg)
     poly1d_fn = np.poly1d(coef)
     slope, intercept = coef
@@ -165,7 +166,8 @@ def calc_background_median(
     return med_per_ch_cyc
 
 
-def filter_bg_fractions(bg_fractions: Dict[int, Dict[int, float]]
+def filter_bg_fractions(
+    bg_fractions: Dict[int, Dict[int, float]]
 ) -> Tuple[Dict[int, Dict[int, float]], Dict[int, float], Dict[int, float]]:
     # most of the operations in this function is just reordering of dictionaries
     fr_per_ch = dict()
@@ -462,17 +464,16 @@ def create_new_channel_name_order(
     return channel_names
 
 
-def write_bg_info_to_config(pipeline_config_path: Path,
-                            out_dir: Path,
-                            slope_per_ch,
-                            interception_per_ch,
-                            num_bg_cyc):
+def write_bg_info_to_config(
+    pipeline_config_path: Path, out_dir: Path, slope_per_ch, interception_per_ch, num_bg_cyc
+):
     with open(pipeline_config_path, "r") as s:
         config = json.load(s)
-    config["background_info"] = {"num_background_cycles": num_bg_cyc,
-                                 "slope_per_channel": slope_per_ch,
-                                 "interception_per_channel": interception_per_ch,
-                                 }
+    config["background_info"] = {
+        "num_background_cycles": num_bg_cyc,
+        "slope_per_channel": slope_per_ch,
+        "interception_per_channel": interception_per_ch,
+    }
     with open(out_dir / "pipelineConfig.json", "w") as s:
         json.dump(config, s, sort_keys=False, indent=4)
     return
@@ -531,9 +532,11 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
         intercept_per_ch = "None"
         do_bg_sub = False
     elif len(cycles_with_bg_ch) == 1:
-        fractions_of_bg_per_cycle, slope_per_ch, intercept_per_ch = estimate_background_fraction_when_one_bg_cycle(
-            img_listing, stack_ids_per_cycle
-        )
+        (
+            fractions_of_bg_per_cycle,
+            slope_per_ch,
+            intercept_per_ch,
+        ) = estimate_background_fraction_when_one_bg_cycle(img_listing, stack_ids_per_cycle)
         do_bg_sub = True
     else:
         fractions_of_bg_per_cycle, slope_per_ch, intercept_per_ch = assign_fraction_of_bg_mix(
@@ -560,7 +563,13 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
             bg_ch_stack_ids,
             new_channel_names,
         )
-    write_bg_info_to_config(pipeline_config_path, config_out_dir, slope_per_ch, intercept_per_ch, len(cycles_with_bg_ch))
+    write_bg_info_to_config(
+        pipeline_config_path,
+        config_out_dir,
+        slope_per_ch,
+        intercept_per_ch,
+        len(cycles_with_bg_ch),
+    )
 
 
 if __name__ == "__main__":
