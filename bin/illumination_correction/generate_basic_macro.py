@@ -9,7 +9,7 @@ def fill_in_basic_macro_template(path_to_stack: Path, out_dir: Path) -> str:
         " dark-field_image_path=[]" +
         " output_dir={out_dir}" +
         " shading_estimation=[Estimate shading profiles]" +
-        " shading_model=[Estimate both flat-field and dark-field]" +
+        " shading_model=[Estimate flat-field only (ignore dark-field)]" +
         " setting_regularisation_parameters=Automatic" +
         " temporal_drift=Ignore" +
         " correction_options=[Compute shading only]" +

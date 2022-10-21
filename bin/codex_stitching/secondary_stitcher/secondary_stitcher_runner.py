@@ -106,7 +106,7 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     final_pipeline_config = pipeline_config
     final_pipeline_config.update({"report": total_report})
     print("\nfinal_pipeline_config")
-    pprint(final_pipeline_config)
+    pprint(final_pipeline_config, sort_dicts=False)
     write_pipeline_config(final_pipeline_config_path, final_pipeline_config)
 
 

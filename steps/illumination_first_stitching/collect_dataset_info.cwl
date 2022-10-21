@@ -4,15 +4,21 @@ label: Collect dataset info for Cytokit
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.3
+    dockerPull: hubmap/codex-scripts
 
-baseCommand: ["python", "/opt/collect_dataset_info.py"]
+baseCommand: ["python", "/opt/dataset_info/run_collection.py"]
 
 inputs:
   base_directory:
     type: Directory
     inputBinding:
-      position: 1
+      prefix: "--path_to_dataset"
+
+  num_concurrent_tasks:
+    type: int
+    inputBinding:
+      prefix: "--num_concurrent_tasks"
+
 outputs:
   pipeline_config:
     type: File

@@ -12,10 +12,13 @@ inputs:
     label: "Directory containing CODEX data"
     type: Directory
   gpus:
-    label: >-
-      GPUs to use, represented as a comma-separated list of integers.
+    label: "GPUs to use, represented as a comma-separated list of integers"
     type: string
     default: "0"
+  num_concurrent_tasks:
+    label: "Number of parallel CPU jobs"
+    type: int
+    default: 10
 
 outputs:
   experiment_config:
@@ -42,6 +45,8 @@ steps:
         source: data_dir
       gpus:
         source: gpus
+      num_concurrent_tasks:
+        source: num_concurrent_tasks
     out:
       - slicing_pipeline_config
       - cytokit_config

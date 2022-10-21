@@ -30,6 +30,7 @@ def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
         num_tiles=pipeline_config["region_width"] * pipeline_config["region_height"],
         tile_width=pipeline_config["tile_width"],
         tile_height=pipeline_config["tile_height"],
+        tile_dtype=pipeline_config["tile_dtype"],
         overlap_x=pipeline_config["tile_overlap_x"],
         overlap_y=pipeline_config["tile_overlap_y"],
         overlap_z=1,  # does not matter because we have only one z-plane
@@ -38,10 +39,19 @@ def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
         pixel_distance_z=pipeline_config["axial_resolution"],
         reference_channel=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
         + 1,  # id of nuclei channel
+        reference_cycle=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
+        // (len(pipeline_config["channel_names"]) // pipeline_config["num_cycles"])
+        + 1,
         nuclei_channel=pipeline_config["nuclei_channel"],
+        membrane_channel=pipeline_config["membrane_channel"],
+        nuclei_channel_loc=pipeline_config["nuclei_channel_loc"],
+        membrane_channel_loc=pipeline_config["membrane_channel_loc"],
         tiling_mode=_convert_tiling_mode(pipeline_config["tiling_mode"]),
         num_z_planes=pipeline_config["num_z_planes"],
         channel_names=pipeline_config["channel_names"],
+        channel_names_qc_pass=pipeline_config["channel_names_qc_pass"],
+        num_concurrent_tasks=pipeline_config["num_concurrent_tasks"],
+        lateral_resolution=pipeline_config["lateral_resolution"],
     )
     return pipeline_config_dict
 

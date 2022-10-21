@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import re
+from pprint import pprint
 from typing import List
 
 import yaml
@@ -133,11 +134,8 @@ if __name__ == "__main__":
     operatorExtractChannels = []
 
     for channelName in pipelineConfigInfo["channel_names"]:
-
         # Skip unwanted channels.
-        if blankPattern.match(channelName):
-            continue
-        elif emptyPattern.match(channelName):
+        if emptyPattern.match(channelName):
             continue
         elif dapiChannelPattern.match(channelName):
             if channelName != pipelineConfigInfo["nuclei_channel"]:
@@ -149,7 +147,10 @@ if __name__ == "__main__":
         # Skip channels that failed QC.
         if pipelineConfigInfo["channel_names_qc_pass"]:
             if len(pipelineConfigInfo["channel_names_qc_pass"][channelName]) > 1:
-                raise ValueError(f"More than one {channelName} channel found.")
+                if blankPattern.match(channelName):
+                    pass
+                else:
+                    raise ValueError(f"More than one {channelName} channel found.")
             else:
                 channel_qc_pass = pipelineConfigInfo["channel_names_qc_pass"][channelName][0]
                 if channel_qc_pass.casefold() == "false".casefold():
@@ -168,5 +169,7 @@ if __name__ == "__main__":
 
     with open(args.outfile, "w") as outFile:
         yaml.safe_dump(cytokitConfig, outFile, encoding="utf-8", default_flow_style=None, indent=2)
+
+    pprint(cytokitConfig, sort_dicts=False)
 
     logger.info("Finished writing Cytokit config.")
