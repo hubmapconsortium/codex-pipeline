@@ -1,0 +1,12 @@
+[
+	{
+		"pattern": "stitched/expressions/reg(?P<region>\\d+)_stitched_expressions\\.ome\\.tiff",
+		"description": "Cytokit expression output for region {region}, in OME-TIFF format",
+		"edam_ontology_term": "EDAM_1.24.format_3727"
+	},
+	{
+		"pattern": "stitched/mask/reg(?P<region>\\d+)_stitched_mask\\.ome\\.tiff",
+		"description": "Segmentation mask for region {region}, in OME-TIFF format",
+		"edam_ontology_term": "EDAM_1.24.format_3727"
+	}
+]
