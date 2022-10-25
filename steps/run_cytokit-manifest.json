@@ -1,0 +1,7 @@
+[
+	{
+		"pattern": "experiment.json",
+		"description": "File containing Cytokit's calculations from deconvolution, drift compensation, and focal plan selection, in JSON format",
+		"edam_ontology_term": "EDAM_1.24.format_3464"
+	}
+]
