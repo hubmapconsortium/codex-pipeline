@@ -1,7 +1,6 @@
 import json
-import os
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def load_pipeline_config(pipeline_config_path: Path) -> dict:
@@ -20,39 +19,55 @@ def _convert_tiling_mode(tiling_mode: str):
     return new_tiling_mode
 
 
-def _get_dataset_info_from_config(pipeline_config: dict) -> dict:
+def _get_dataset_info_from_config(pipeline_config: dict) -> Dict[str, Any]:
+    required_fields: List[Tuple[str, Optional[str]]] = [
+        ("num_cycles", None),
+        ("num_tiles_x", "region_width"),
+        ("num_tiles_y", "region_height"),
+        ("tile_width", None),
+        ("tile_height", None),
+        ("tile_dtype", None),
+        ("overlap_x", "tile_overlap_x"),
+        ("overlap_y", "tile_overlap_y"),
+        ("pixel_distance_x", "lateral_resolution"),
+        ("pixel_distance_y", "lateral_resolution"),
+        ("pixel_distance_z", "axial_resolution"),
+        ("nuclei_channel", None),
+        ("membrane_channel", None),
+        ("nuclei_channel_loc", None),
+        ("membrane_channel_loc", None),
+        ("num_z_planes", None),
+        ("channel_names", None),
+        ("channel_names_qc_pass", None),
+        ("num_concurrent_tasks", None),
+        ("lateral_resolution", None),
+    ]
+    optional_fields: List[Tuple[str, Optional[str]]] = [
+        ("membrane_channel", None),
+    ]
     pipeline_config_dict = dict(
         dataset_dir=Path(pipeline_config["raw_data_location"]),
-        num_cycles=pipeline_config["num_cycles"],
         num_channels=len(pipeline_config["channel_names"]) // pipeline_config["num_cycles"],
-        num_tiles_x=pipeline_config["region_width"],
-        num_tiles_y=pipeline_config["region_height"],
         num_tiles=pipeline_config["region_width"] * pipeline_config["region_height"],
-        tile_width=pipeline_config["tile_width"],
-        tile_height=pipeline_config["tile_height"],
-        tile_dtype=pipeline_config["tile_dtype"],
-        overlap_x=pipeline_config["tile_overlap_x"],
-        overlap_y=pipeline_config["tile_overlap_y"],
-        overlap_z=1,  # does not matter because we have only one z-plane
-        pixel_distance_x=pipeline_config["lateral_resolution"],
-        pixel_distance_y=pipeline_config["lateral_resolution"],
-        pixel_distance_z=pipeline_config["axial_resolution"],
+        # does not matter because we have only one z-plane:
+        overlap_z=1,
+        # id of nuclei channel:
         reference_channel=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
-        + 1,  # id of nuclei channel
+        + 1,
         reference_cycle=pipeline_config["channel_names"].index(pipeline_config["nuclei_channel"])
         // (len(pipeline_config["channel_names"]) // pipeline_config["num_cycles"])
         + 1,
-        nuclei_channel=pipeline_config["nuclei_channel"],
-        membrane_channel=pipeline_config["membrane_channel"],
-        nuclei_channel_loc=pipeline_config["nuclei_channel_loc"],
-        membrane_channel_loc=pipeline_config["membrane_channel_loc"],
         tiling_mode=_convert_tiling_mode(pipeline_config["tiling_mode"]),
-        num_z_planes=pipeline_config["num_z_planes"],
-        channel_names=pipeline_config["channel_names"],
-        channel_names_qc_pass=pipeline_config["channel_names_qc_pass"],
-        num_concurrent_tasks=pipeline_config["num_concurrent_tasks"],
-        lateral_resolution=pipeline_config["lateral_resolution"],
     )
+    for field, source in required_fields:
+        if source is None:
+            source = field
+        pipeline_config_dict[field] = pipeline_config[source]
+    for field, source in optional_fields:
+        if source is None:
+            source = field
+        if source in pipeline_config:
+            pipeline_config_dict[field] = pipeline_config[source]
     return pipeline_config_dict
 
 
