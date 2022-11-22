@@ -46,6 +46,9 @@ def arrange_listing_by_channel_tile_zplane(
         digits = extract_digits_from_string(file_path.name)
         tile = digits[1]
         zplane = digits[2]
+        if len(digits) < 4:
+            # Overlay image
+            continue
         channel = digits[3]
         if channel in tile_arrangement:
             if tile in tile_arrangement[channel]:
