@@ -267,47 +267,44 @@ def estimate_background_fraction_when_one_bg_cycle(
 def assign_fraction_of_bg_mix(
     stack_ids_per_cycle: Dict[int, Dict[int, int]], cycles_with_bg_ch: Dict[int, Dict[int, int]]
 ) -> Dict[int, Dict[int, int]]:
-    # {3: {1: 0.75, 9: 0.25},}
+    """
+    The interpolation used here assumes that the background (due to autofluourescence) varies
+    linearly with time, and that each cycle takes the same amount of time.  The coordinates for
+    the interpolation place the zero point of time at the center of the first cycle.
+    """
     expr_cycles = sorted(list(stack_ids_per_cycle.keys()))
     bg_cycles = sorted(list(cycles_with_bg_ch.keys()))
 
     first_bg_cycle = bg_cycles[0]
-    last_bg_cycle = bg_cycles[1]
+    last_bg_cycle = bg_cycles[-1]
+    assert len(bg_cycles) <= 2, 'More than 2 background cycles are not supported'
     first_bg_cycle_id = expr_cycles.index(first_bg_cycle)
     last_bg_cycle_id = expr_cycles.index(last_bg_cycle)
+    first_cycle_id = expr_cycles.index(expr_cycles[0])
+    last_cycle_id = expr_cycles.index(expr_cycles[-1])
+    if not all(a+1 == b for a, b in zip(range(last_cycle_id + 1), expr_cycles)):
+        raise AssertionError('Not all cycles appear in the stack?')
+    slope, intercept = np.polyfit(
+        [float(first_bg_cycle_id), float(last_bg_cycle_id)],
+        [0.0, 1.0],
+        deg=1
+    )
 
-    distance_between_bg_cycles = max(1, abs(last_bg_cycle_id - first_bg_cycle_id))
-
-    fractions_per_cycle = dict()
-    fractions = []
-    for i in range(1, distance_between_bg_cycles):
-        fraction = round(i / distance_between_bg_cycles, 3)
-        fractions.append(fraction)
-
-    if distance_between_bg_cycles == 1:
-        expr_cyc = expr_cycles[first_bg_cycle_id + 1 : last_bg_cycle_id][0]
-        fractions_per_cycle[expr_cyc] = {first_bg_cycle: expr_cyc, last_bg_cycle: 0}
-    elif distance_between_bg_cycles >= 2:
-        cycle_subset = expr_cycles[first_bg_cycle_id + 2 : last_bg_cycle_id - 1]
-        first_expr_cyc = expr_cycles[first_bg_cycle_id + 1]
-        last_expr_cyc = expr_cycles[last_bg_cycle_id - 1]
-        fractions_per_cycle[first_expr_cyc] = {first_bg_cycle: 1, last_bg_cycle: 0}
-        fractions_per_cycle[last_expr_cyc] = {first_bg_cycle: 0, last_bg_cycle: 1}
-
+    fractions_per_cycle = {}
+    for idx in range(last_cycle_id + 1):
+        frac = intercept + float(idx) * slope
+        fractions_per_cycle[idx + 1] = {
+            first_bg_cycle: 1.0 - frac,
+            last_bg_cycle: frac
+        }
     fractions_per_cycle[first_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
     fractions_per_cycle[last_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
 
-    for i, cycle in enumerate(cycle_subset):
-        fractions_per_cycle[cycle] = {
-            first_bg_cycle: 1 - fractions[i],
-            last_bg_cycle: fractions[i],
-        }
-
+    # Does this bit actually accomplish anything?  It is a dict, after all.
     fractions_per_cycle_sorted = {
         k: v for k, v in sorted(fractions_per_cycle.items(), key=lambda item: item[0])
     }
 
-    fit, slope, intercept = lin_fit(fractions)
     slope_per_ch = dict()
     intercept_per_ch = dict()
     for ch in stack_ids_per_cycle[expr_cycles[0]]:
