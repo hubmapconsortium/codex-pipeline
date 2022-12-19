@@ -272,8 +272,8 @@ def assign_fraction_of_bg_mix(
     linearly with time, and that each cycle takes the same amount of time.  The coordinates for
     the interpolation place the zero point of time at the center of the first cycle.
     """
-    expr_cycles = sorted(list(stack_ids_per_cycle.keys()))
-    bg_cycles = sorted(list(cycles_with_bg_ch.keys()))
+    expr_cycles = sorted(stack_ids_per_cycle)
+    bg_cycles = sorted(cycles_with_bg_ch)
 
     first_bg_cycle = bg_cycles[0]
     last_bg_cycle = bg_cycles[-1]
