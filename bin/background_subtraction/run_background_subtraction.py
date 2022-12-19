@@ -277,17 +277,17 @@ def assign_fraction_of_bg_mix(
 
     first_bg_cycle = bg_cycles[0]
     last_bg_cycle = bg_cycles[-1]
-    assert len(bg_cycles) <= 2, 'More than 2 background cycles are not supported'
+    assert len(bg_cycles) <= 2, "More than 2 background cycles are not supported"
     first_bg_cycle_id = expr_cycles.index(first_bg_cycle)
     last_bg_cycle_id = expr_cycles.index(last_bg_cycle)
     first_cycle_id = expr_cycles.index(expr_cycles[0])
     last_cycle_id = expr_cycles.index(expr_cycles[-1])
-    if not all(a+1 == b for a, b in zip(range(last_cycle_id + 1), expr_cycles)):
-        raise AssertionError('Not all cycles appear in the stack?')
+    if not all(a + 1 == b for a, b in zip(range(last_cycle_id + 1), expr_cycles)):
+        raise AssertionError("Not all cycles appear in the stack?")
     slope, intercept = np.polyfit(
         [float(first_bg_cycle_id), float(last_bg_cycle_id)],
         [0.0, 1.0],
-        deg=1
+        deg=1,
     )
 
     fractions_per_cycle = {}
@@ -295,7 +295,7 @@ def assign_fraction_of_bg_mix(
         frac = intercept + float(idx) * slope
         fractions_per_cycle[idx + 1] = {
             first_bg_cycle: 1.0 - frac,
-            last_bg_cycle: frac
+            last_bg_cycle: frac,
         }
     fractions_per_cycle[first_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
     fractions_per_cycle[last_bg_cycle] = {first_bg_cycle: {}, last_bg_cycle: {}}
