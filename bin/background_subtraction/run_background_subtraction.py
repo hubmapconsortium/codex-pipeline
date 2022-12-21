@@ -85,14 +85,16 @@ def select_cycles_with_bg_ch(
 
 def get_ch_stack_ids(
     target_ch_name: str,
+    channel_names_in_stack: List[str],
     channels_per_cycle: Dict[int, Dict[int, str]],
     stack_ids_per_cycle: Dict[int, Dict[int, int]],
 ) -> List[int]:
     pat = re.compile(r"^" + target_ch_name, re.IGNORECASE)
     target_ch_stack_ids = []
+    channel_names_in_stack = set(channel_names_in_stack)
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
-            if pat.match(ch_name):
+            if pat.match(ch_name) and ch_name.lower() in channel_names_in_stack:
                 target_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
                 target_ch_stack_ids.append(target_ch_stack_id)
     return target_ch_stack_ids
@@ -514,9 +516,19 @@ def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
     )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
-    nuc_ch_stack_id = get_ch_stack_ids(nuclei_channel, channels_per_cycle, stack_ids_per_cycle)
+    nuc_ch_stack_id = get_ch_stack_ids(
+        target_ch_name=nuclei_channel,
+        channel_names_in_stack=channel_names_in_stack,
+        channels_per_cycle=channels_per_cycle,
+        stack_ids_per_cycle=stack_ids_per_cycle,
+    )
     print("Nucleus ch stack id\n", nuc_ch_stack_id)
-    bg_ch_stack_ids = get_ch_stack_ids(background_ch_name, channels_per_cycle, stack_ids_per_cycle)
+    bg_ch_stack_ids = get_ch_stack_ids(
+        target_ch_name=background_ch_name,
+        channel_names_in_stack=channel_names_in_stack,
+        channels_per_cycle=channels_per_cycle,
+        stack_ids_per_cycle=stack_ids_per_cycle,
+    )
     print("Background channel stack ids\n", bg_ch_stack_ids)
 
     cycles_with_bg_ch = select_cycles_with_bg_ch(bg_channel_ids_per_cycle, num_channels_per_cycle)
