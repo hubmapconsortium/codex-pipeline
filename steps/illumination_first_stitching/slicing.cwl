@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.4.2-stack-id-fix
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
 baseCommand: ["python", "/opt/slicing/run_slicing.py"]
