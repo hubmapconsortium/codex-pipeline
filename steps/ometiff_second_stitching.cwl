@@ -33,6 +33,10 @@ steps:
         source: slicing_pipeline_config
       cytokit_config:
         source: cytokit_config
+      num_concurrent_tasks:
+        type: int
+        inputBinding:
+        prefix: "--num_concurrent_tasks"
     out:
       - bg_sub_tiles
       - bg_sub_config
