@@ -26,6 +26,12 @@ inputs:
     inputBinding:
       prefix: "--cytokit_config_path"
 
+  num_concurrent_tasks:
+    type: int
+    default: 10
+    inputBinding:
+      prefix: "--num_concurrent_tasks"
+
 outputs:
   bg_sub_tiles:
     type: Directory

@@ -3,6 +3,7 @@ import json
 import re
 import sys
 from copy import deepcopy
+from multiprocessing.pool import Pool
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -478,12 +479,17 @@ def write_bg_info_to_config(
     return
 
 
-def main(data_dir: Path, pipeline_config_path: Path, cytokit_config_path: Path):
+def main(
+    data_dir: Path,
+    pipeline_config_path: Path,
+    cytokit_config_path: Path,
+    out_base_dir: Path = Path("/output"),
+):
     """Input images are expected to be stack outputs of cytokit processing
     and have names R001_X001_Y001.tif
     """
-    out_dir = Path("/output/background_subtraction")
-    config_out_dir = Path("/output/config")
+    out_dir = out_base_dir / "background_subtraction"
+    config_out_dir = out_base_dir / "config"
     make_dir_if_not_exists(out_dir)
     make_dir_if_not_exists(config_out_dir)
 
@@ -588,5 +594,18 @@ if __name__ == "__main__":
         "--pipeline_config_path", type=Path, help="path to pipelineConfig.json file"
     )
     parser.add_argument("--cytokit_config_path", type=Path, help="path to experiment.yaml file")
+    parser.add_argument(
+        "--out_base_dir", type=Path, help="base path for output", default="/output"
+    )
+    parser.add_argument(
+        "--num_concurrent_tasks", type=int, help="How many worker threads", default=None
+    )
     args = parser.parse_args()
-    main(args.data_dir, args.pipeline_config_path, args.cytokit_config_path)
+    if args.num_concurrent_tasks is not None:
+        dask.config.set(pool=Pool(args.num_concurrent_tasks))
+    main(
+        args.data_dir,
+        args.pipeline_config_path,
+        args.cytokit_config_path,
+        out_base_dir=args.out_base_dir,
+    )
