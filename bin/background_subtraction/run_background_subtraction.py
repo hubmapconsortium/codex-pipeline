@@ -483,15 +483,13 @@ def main(
     data_dir: Path,
     pipeline_config_path: Path,
     cytokit_config_path: Path,
-    out_base_dir: Path = None,
+    out_base_dir: Path = Path("/output"),
 ):
     """Input images are expected to be stack outputs of cytokit processing
     and have names R001_X001_Y001.tif
     """
-    if out_base_dir is None:
-        out_base_dir = ""  # resulting in output directly below /
-    out_dir = Path(f"{out_base_dir}/output/background_subtraction")
-    config_out_dir = Path(f"{out_base_dir}/output/config")
+    out_dir = out_base_dir / "background_subtraction"
+    config_out_dir = out_base_dir / "config"
     make_dir_if_not_exists(out_dir)
     make_dir_if_not_exists(config_out_dir)
 
@@ -596,7 +594,9 @@ if __name__ == "__main__":
         "--pipeline_config_path", type=Path, help="path to pipelineConfig.json file"
     )
     parser.add_argument("--cytokit_config_path", type=Path, help="path to experiment.yaml file")
-    parser.add_argument("--out_base_dir", type=Path, help="base path for output", default=None)
+    parser.add_argument(
+        "--out_base_dir", type=Path, help="base path for output", default="/output"
+    )
     parser.add_argument(
         "--num_concurrent_tasks", type=int, help="How many worker threads", default=None
     )
