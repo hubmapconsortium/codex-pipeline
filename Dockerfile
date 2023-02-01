@@ -10,7 +10,7 @@ RUN apt-get -qq update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh -O /tmp/miniconda.sh \
     && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
     && rm /tmp/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
