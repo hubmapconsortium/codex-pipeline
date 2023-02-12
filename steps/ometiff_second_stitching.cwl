@@ -11,6 +11,10 @@ inputs:
     type: File
   cytokit_output:
     type: Directory
+  num_concurrent_tasks:
+    label: "Number of parallel CPU jobs"
+    type: int
+    default: 10
 
 outputs:
   stitched_images:
@@ -31,6 +35,10 @@ steps:
         source: slicing_pipeline_config
       cytokit_config:
         source: cytokit_config
+      num_concurrent_tasks:
+        type: int
+        inputBinding:
+        prefix: "--num_concurrent_tasks"
     out:
       - bg_sub_tiles
       - bg_sub_config
