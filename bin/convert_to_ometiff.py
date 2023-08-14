@@ -116,14 +116,23 @@ def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
     return antb_path
 
 
-def get_ch_info_from_antibodies_meta(antb_path: Path) -> Optional[pd.DataFrame]:
-    if antb_path is not None:
-        df = pd.read_csv(antb_path, delimiter='\t')
-        #df = df.set_index("channel_id", inplace=False)
-        antb_names = df["antibody_name"].to_list()
-        antb_targets = [get_analyte_name(antb) for antb in antb_names]
-        df["target"] = antb_targets
-        return df
+def sort_by_cycle(antb_path: Path):
+    df = pd.read_table(antb_path)
+    cycle_channel_pattern = re.compile(r'cycle(?P<cycle>\d+)_ch(?P<channel>\d+)', re.IGNORECASE)
+    searches = [cycle_channel_pattern.search(v) for v in df['channel_id']]
+    cycles = [int(s.group('cycle')) for s in searches]
+    channels = [int(s.group('channel')) for s in searches]
+    df.index = [cycles, channels]
+    df = df.sort_index()
+    return df
+
+
+def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]:
+    #df = df.set_index("channel_id", inplace=False)
+    antb_names = df["antibody_name"].to_list()
+    antb_targets = [get_analyte_name(antb) for antb in antb_names]
+    df["target"] = antb_targets
+    return df
 
 
 def replace_provider_ch_names_with_antb(provider_ch_names: List[str], antb_ch_info: pd.DataFrame):
@@ -396,7 +405,8 @@ if __name__ == "__main__":
         # For the extract, pull the correctly ordered list of channel names from
         # one of the files, as they aren't guaranteed to be in the same order as
         # the YAML config.
-        antb_info = get_ch_info_from_antibodies_meta(antb_path)
+        df = sort_by_cycle(antb_path)
+        antb_info = get_ch_info_from_antibodies_meta(df)
         extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
         ch_names = replace_provider_ch_names_with_antb(extractChannelNames, antb_info)
         struct_annot = generate_structured_annotations(ch_names, antb_info)
