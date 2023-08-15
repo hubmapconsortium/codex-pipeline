@@ -327,7 +327,7 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "--cytokit_output",
+        "cytokit_output",
         help="Path to output of `cytokit processor`",
         type=Path,
     )
@@ -337,17 +337,12 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
-        "bg_sub_tiles",
-        help="Path to tiles with subtracted background",
-        type=Path,
-    )
-    parser.add_argument(
-        "--cytokit_config",
+        "cytokit_config",
         help="Path to Cytokit YAML config file",
         type=Path,
     )
     parser.add_argument(
-        "--input_data_dir",
+        "input_data_dir",
         help="Path to the input dataset",
         type=Path,
     )

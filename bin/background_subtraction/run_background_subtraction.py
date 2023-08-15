@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import sys
+import shutil
 from copy import deepcopy
 from multiprocessing.pool import Pool
 from pathlib import Path
@@ -578,6 +579,8 @@ def main(
             bg_ch_stack_ids,
             new_channel_names,
         )
+    else: 
+        shutil.copytree(expr_dir, out_dir, dirs_exist_ok = True)
     write_bg_info_to_config(
         pipeline_config_path,
         config_out_dir,
