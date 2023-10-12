@@ -38,8 +38,7 @@ steps:
       cytokit_config:
         source: cytokit_config
       num_concurrent_tasks:
-        inputBinding:
-        prefix: "--num_concurrent_tasks"
+        source: num_concurrent_tasks
     out:
       - bg_sub_tiles
       - bg_sub_config
