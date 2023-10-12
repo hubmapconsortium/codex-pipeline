@@ -11,8 +11,10 @@ inputs:
     type: File
   cytokit_output:
     type: Directory
-  data_dir:
-    type: Directory
+  num_concurrent_tasks:
+    label: "Number of parallel CPU jobs"
+    type: int
+    default: 10
 
 outputs:
   stitched_images:
