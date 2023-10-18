@@ -1,20 +1,17 @@
 import argparse
-import csv
 import json
 import logging
 import math
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
-from os import fspath, walk
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pint
-import psutil
 
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape

@@ -1,8 +1,7 @@
-import argparse
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd

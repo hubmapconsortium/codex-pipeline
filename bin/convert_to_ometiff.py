@@ -1,14 +1,12 @@
 import argparse
-import json
 import logging
 import re
 from multiprocessing import Pool
 from os import walk
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
 import lxml.etree
-import numpy as np
 import pandas as pd
 import yaml
 from aicsimageio import AICSImage
