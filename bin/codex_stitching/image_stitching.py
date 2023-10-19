@@ -62,26 +62,19 @@ def run_bigstitcher(bigstitcher_macro_path: Path):
     else:
         raise ValueError(f"unsupported platform: {platform.system()}")
 
-    stdout_log = bigstitcher_macro_path.parent / "stdout.txt"
-    stderr_log = stdout_log.with_name("stderr.txt")
-
     command = imagej_name + " --headless --console -macro " + str(bigstitcher_macro_path)
-    print(
-        "Started running BigStitcher for",
-        bigstitcher_macro_path,
-        "with logs",
-        stdout_log,
-        "and",
-        stderr_log,
+    print("Started running BigStitcher for", str(bigstitcher_macro_path))
+    res = subprocess.run(
+        command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
-    with open(stdout_log, "wb") as so, open(stderr_log, "wb") as se:
-        res = subprocess.run(command, shell=True, check=True, stdout=so, stderr=se)
     if res.returncode == 0:
         print("Finished", str(bigstitcher_macro_path))
     else:
         raise Exception(
-            f"There was an error while running the BigStitcher for"
-            f" {bigstitcher_macro_path}; check logs at {stdout_log} and {stderr_log}"
+            "There was an error while running the BigStitcher for "
+            + str(bigstitcher_macro_path)
+            + "\n"
+            + res.stderr.decode("utf-8")
         )
 
 
