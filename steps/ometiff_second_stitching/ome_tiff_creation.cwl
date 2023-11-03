@@ -20,7 +20,12 @@ inputs:
   cytokit_config:
     type: File
     inputBinding:
-      position: 3
+      position: 2
+  input_data_dir:
+    type: Directory
+    inputBinding:
+        position: 3
+
 outputs:
   ome_tiffs:
     type: Directory

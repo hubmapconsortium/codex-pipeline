@@ -59,6 +59,8 @@ def run_bigstitcher(bigstitcher_macro_path: Path):
         imagej_name = "ImageJ-linux64"
     elif platform.system() == "Darwin":
         imagej_name = "ImageJ-macosx"
+    else:
+        raise ValueError(f"unsupported platform: {platform.system()}")
 
     command = imagej_name + " --headless --console -macro " + str(bigstitcher_macro_path)
     print("Started running BigStitcher for", str(bigstitcher_macro_path))

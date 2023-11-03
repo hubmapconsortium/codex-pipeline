@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import shutil
 import sys
 from copy import deepcopy
 from multiprocessing.pool import Pool
@@ -222,7 +223,6 @@ def estimate_background_fraction_when_one_bg_cycle(
     med_per_ch_cyc_across_imgs = dict()
     for med_per_ch_cyc in meds_per_img_ch_cyc:
         for ch in med_per_ch_cyc:
-
             if ch in med_per_ch_cyc_across_imgs:
                 pass
             else:
@@ -238,7 +238,6 @@ def estimate_background_fraction_when_one_bg_cycle(
     for ch in med_per_ch_cyc_across_imgs:
         med_per_ch_cyc_final[ch] = dict()
         for cyc, meds in med_per_ch_cyc_across_imgs[ch].items():
-
             med_med = np.median(meds)
 
             if ch in med_per_ch_cyc_final:
@@ -578,6 +577,8 @@ def main(
             bg_ch_stack_ids,
             new_channel_names,
         )
+    else:
+        shutil.copytree(expr_dir, out_dir, dirs_exist_ok=True)
     write_bg_info_to_config(
         pipeline_config_path,
         config_out_dir,
