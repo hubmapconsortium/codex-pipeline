@@ -27,39 +27,38 @@ SEGMENTATION_CHANNEL_NAMES = [
     "nucleus_boundaries",
 ]
 
-structured_annotation_template = """<StructuredAnnotations>
-<XMLAnnotation ID="Annotation:1">
+
+mapping_format_string = """<StructuredAnnotations>
+<XMLAnnotation ID="Annotation:0">
     <Value>
         <OriginalMetadata>
             <Key>ProteinIDMap</Key>
             <Value>
-                {protein_id_map_sa}
+                MAP_LINES
             </Value>
         </OriginalMetadata>
     </Value>
 </XMLAnnotation>
 </StructuredAnnotations>"""
 
-
-def add_structured_annotations(xml_string: str, sa_str: str) -> str:
-    sa_placement = xml_string.find("</Image>") + len("</Image>")
-    xml_string = xml_string[:sa_placement] + sa_str + xml_string[sa_placement:]
+def add_structured_annotations(xml_string, antibodies_df):
+    structured_annotation = mapping_format_string.replace("MAP_LINES", create_map_lines(antibodies_df))
+    end_index = xml_string.find("</OME>")
+    xml_string = xml_string[:end_index] + structured_annotation + xml_string[end_index:]
     return xml_string
 
 
 def create_map_lines(df):
     map_lines = []
     for i in df.index:
-        ch_id = df.at[i, "channel_id"]
-        ch_name = get_analyte_name(df.at[i, "antibody_name"])
-        uniprot_id = df.at[i, "uniprot_accession_number"]
-        rr_id = df.at[i, "rr_id"]
-        line = f'<Channel ID="{ch_id}" Name="{ch_name}" UniprotID="{uniprot_id}" RRID="{rr_id}"/>'
+        line = f"""< Channel ID = "{df.at[i, 'channel_id']}", ChannelName = "{get_analyte_name(df.at[i, 'antibody_name'])}",
+         UniprotID = "{df.at[i, 'uniprot_accession_number']}", RRID = "{df.at[i, 'rr_id']}" >"""
         map_lines.append(line)
     return "\n".join(map_lines)
 
 
 TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
 
 def generate_sa_ch_info(ch_name: str, antb_info: Optional[pd.DataFrame]) -> str:
@@ -86,14 +85,12 @@ def generate_structured_annotations(ch_names: List[str], antb_info: Optional[pd.
         ch_info = generate_sa_ch_info(ch_name, antb_info)
         ch_infos.append(ch_info)
     ch_sa = "\n".join(ch_infos)
-    sa = structured_annotation_template.format(protein_id_map_sa=ch_sa)
+    sa = mapping_format_string.format(protein_id_map_sa=ch_sa)
     return sa
 
 
-def get_analyte_name(antibody_name: str) -> str:
-    antb = re.sub(r"Anti-", "", antibody_name)
-    antb = re.sub(r"\s+antibody", "", antb)
-    return antb
+def get_analyte_name(antibody_name):
+    return antibody_name.replace("Anti-", "").replace(" antibody", "")
 
 
 def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
@@ -102,7 +99,7 @@ def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
     Does not check whether the dataset ID (32 hex characters) matches
     the directory name, nor whether there might be multiple metadata files.
     """
-    # possible_dirs = [input_dir, input_dir / "extras"]
+    #possible_dirs = [input_dir, input_dir / "extras"]
     metadata_filename_pattern = re.compile(r"^[0-9A-Za-z\-_]*antibodies\.tsv$")
     found_files = []
     for dirpath, dirnames, filenames in walk(input_dir):
@@ -116,6 +113,7 @@ def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
     else:
         antb_path = found_files[0]
     return antb_path
+
 
 
 def sort_by_cycle(antb_path: Path):
@@ -137,17 +135,18 @@ def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]
     return df
 
 
-def replace_provider_ch_names_with_antb(provider_ch_names: List[str], antb_ch_info: pd.DataFrame):
-    targets = antb_ch_info["target"].to_list()
-    corrected_ch_names = []
-    for ch in provider_ch_names:
-        new_ch_name = ch
-        for t in targets:
-            if re.match(ch, t, re.IGNORECASE):
-                new_ch_name = t
-                break
-        corrected_ch_names.append(new_ch_name)
-    return corrected_ch_names
+# def replace_provider_ch_names_with_antb(provider_ch_names: List[str], antb_ch_info: pd.DataFrame):
+#     targets = antb_ch_info["target"].to_list()
+#     corrected_ch_names = []
+#     for ch in provider_ch_names:
+#         new_ch_name = ch
+#         for t in targets:
+#             if re.match(ch, t, re.IGNORECASE):
+#                 new_ch_name = t
+#                 break
+#         corrected_ch_names.append(new_ch_name)
+#     print("Corrected channel names: (from antibodies.tsv) ", corrected_ch_names)
+#     return corrected_ch_names
 
 
 def collect_tiff_file_list(directory: Path, TIFF_FILE_NAMING_PATTERN: re.Pattern) -> List[Path]:
@@ -178,7 +177,7 @@ def get_lateral_resolution(cytokit_config_filename: Path) -> float:
     return float("%0.2f" % cytokit_config["acquisition"]["lateral_resolution"])
 
 
-def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
+def collect_expressions_extract_channels(extractFile: Path, antidbodies_df: pd.DataFrame) -> List[str]:
     """
     Given a TIFF file path, read file with TiffFile to get Labels attribute from
     ImageJ metadata. Return a list of the channel names in the same order as they
@@ -191,10 +190,13 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
         ij_meta = TF.imagej_metadata
     numChannels = int(ij_meta["channels"])
     channelList = ij_meta["Labels"][0:numChannels]
+    print(antidbodies_df.head())
+    print(channelList)
 
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
+    channelList = [antidbodies_df.at[channel_name, "antibody_name"].replace("Anti-", "").replace(" antibody", "") for channel_name in channelList]
     return channelList
 
 
@@ -246,13 +248,12 @@ def convert_tiff_file(funcArgs):
     omeXml.image().Pixels.set_PhysicalSizeY(lateral_resolution)
 
     omeXml = add_pixel_size_units(omeXml)
-
+    # print("Channel names (should match antibodies.tsv):", channelNames)
     for i in range(0, len(channelNames)):
         omeXml.image().Pixels.Channel(i).Name = channelNames[i]
         omeXml.image().Pixels.Channel(i).ID = "Channel:0:" + str(i)
-
-    if struct_annot is not None:
-        omeXml = add_structured_annotations(omeXml.to_xml("utf-8"), struct_annot)
+    #Convert and manipulate OME metadata as string here
+    omeXml = add_structured_annotations(omeXml.to_xml('utf-8'))
 
     with ome_tiff_writer.OmeTiffWriter(ometiffFile) as ome_writer:
         ome_writer.save(
@@ -396,8 +397,7 @@ if __name__ == "__main__":
         # the YAML config.
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
-        extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
-        ch_names = replace_provider_ch_names_with_antb(extractChannelNames, antb_info)
+        ch_names = collect_expressions_extract_channels(extractFileList[0], antb_info)
         struct_annot = generate_structured_annotations(ch_names, antb_info)
         print(struct_annot)
         create_ome_tiffs(
