@@ -210,6 +210,40 @@ def find_raw_data_dir(directory: Path) -> Path:
     return raw_data_dir_possibilities[0]
 
 
+def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
+    """
+    Finds and returns the first metadata file for a HuBMAP data set.
+    Does not check whether the dataset ID (32 hex characters) matches
+    the directory name, nor whether there might be multiple metadata files.
+    """
+    # possible_dirs = [input_dir, input_dir / "extras"]
+    metadata_filename_pattern = re.compile(r"^[0-9A-Za-z\-_]*antibodies\.tsv$")
+    found_files = []
+    for dirpath, dirnames, filenames in walk(input_dir):
+        for filename in filenames:
+            if metadata_filename_pattern.match(filename):
+                found_files.append(Path(dirpath) / filename)
+
+    if len(found_files) == 0:
+        logger.warning("No antibody.tsv file found")
+        antb_path = None
+    else:
+        antb_path = found_files[0]
+    return antb_path
+
+
+def read_antibodies_tsv(antibodies_path: Path) -> List[str]:
+    """
+    Read channel names from antibodies.tsv file.
+    """
+    channel_names = []
+    with open(antibodies_path, newline="") as csvfile:
+        csvreader = csv.reader(csvfile, delimiter="\t")
+        for row in csvreader:
+            channel_names.append(row[0])
+    return channel_names
+
+
 def get_region_names_from_directories(base_path: Path) -> List[str]:
     raw_dir_name_pat = re.compile(r"^cyc(\d+)_(?P<region>reg\d+).*", re.IGNORECASE)
     regions = set()
@@ -454,10 +488,22 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
         channelNames = collect_attribute(["channelNamesArray"], exptConfigDict["channelNames"])
     else:
         raise ValueError("Cannot find data for channel_names field.")
+        # Find the antibodies.tsv file
 
+    antibodies_path = find_antibodies_meta(directory)
+
+    if antibodies_path:
+        # Read channel names from antibodies.tsv
+        channelNames = read_antibodies_tsv(antibodies_path)
+        logger.info(f"Reading channel names from {antibodies_path}")
+    else:
+        # If antibodies.tsv is not found, use the existing channel names
+        channelNames = datasetInfo["channel_names"]
+        logger.warning("No antibodies.tsv file found. Using existing channel names.")
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
     channelNames = make_ch_names_unique(channelNames)
+    print(channelNames)
 
     datasetInfo["channel_names"] = channelNames
 
