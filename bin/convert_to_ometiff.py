@@ -394,12 +394,12 @@ if __name__ == "__main__":
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
         original_ch_names = collect_expressions_extract_channels(extractFileList[0])
-        struct_annot = generate_structured_annotations(ch_names, antb_info)
+        struct_annot = generate_structured_annotations(original_ch_names, antb_info)
         print(struct_annot)
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",
-            ch_names,
+            list(antb_info.target),
             lateral_resolution,
             args.processes,
             struct_annot,
