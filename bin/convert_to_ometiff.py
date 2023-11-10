@@ -80,6 +80,9 @@ def generate_structured_annotations(
     original_ch_names: List[str], antb_info: Optional[pd.DataFrame]
 ) -> str:
     ch_infos = []
+    print("Original channel names len vs antibodies df info", len(original_ch_names), antb_info.info())
+    print("Original channel names: ", original_ch_names)
+    print("antibodies.tsv channel names:", antb_info.target)
     for i, original_ch_name in enumerate(original_ch_names):
         ch_info = generate_sa_ch_info(original_ch_name, antb_info.iloc[i, :])
         ch_infos.append(ch_info)
