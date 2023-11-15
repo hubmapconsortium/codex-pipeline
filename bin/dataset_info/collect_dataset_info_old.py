@@ -171,10 +171,6 @@ def add_cycle_channel_numbers(channel_names: List[str]) -> List[str]:
     return new_names
 
 
-# def add_cycle_channel_numbers(channel_names: List[str]) -> List[str]:
-
-
-
 def warn_if_multiple_files(paths: List[Path], label: str):
     if len(paths) > 1:
         message_pieces = [f"Found multiple {label} files:"]
