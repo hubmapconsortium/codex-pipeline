@@ -47,7 +47,7 @@ def organize_channels_per_cycle(
 def get_channel_names_in_stack(img_path: Path) -> List[str]:
     with tif.TiffFile(str(img_path.absolute())) as TF:
         ij_meta = TF.imagej_metadata
-    channel_names = [ch_name.lstrip("proc_").lower() for ch_name in ij_meta["Labels"]]
+    channel_names = [ch_name.removeprefix("proc_").lower() for ch_name in ij_meta["Labels"]]
     return channel_names
 
 
@@ -60,7 +60,7 @@ def get_stack_ids_per_cycle(
     lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
 
     bg_channel_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    bg_ch_pattern = re.compile(r"^" + bg_ch_name, re.IGNORECASE)
+    bg_ch_pattern = re.compile(r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + bg_ch_name, re.IGNORECASE)
 
     for cycle, channels in channels_per_cycle.items():
         for ch_id, ch_name in channels.items():
@@ -91,7 +91,7 @@ def get_ch_stack_ids(
     channels_per_cycle: Dict[int, Dict[int, str]],
     stack_ids_per_cycle: Dict[int, Dict[int, int]],
 ) -> List[int]:
-    pat = re.compile(r"^" + target_ch_name, re.IGNORECASE)
+    pat = re.compile(r"^cyc(\d+)_ch(\d+)_orig" + target_ch_name, re.IGNORECASE)
     target_ch_stack_ids = []
     channel_names_in_stack = set(channel_names_in_stack)
     for cycle in channels_per_cycle:
@@ -403,6 +403,7 @@ def subtract_bg_from_imgs(
                     else:
                         bg_imgs = []
                         for bg_cyc, frac in fraction_map.items():
+                            print("frac:", frac)
                             bg = bg_images[bg_cyc][ch_id]
                             fbg = bg.astype(np.float32) * frac
                             bg_imgs.append(fbg)
@@ -452,7 +453,7 @@ def create_new_channel_name_order(
     background_channel: str,
 ) -> List[str]:
     channel_names = []
-    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
+    bg_ch_pattern = re.compile(r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + background_channel, re.IGNORECASE)
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
             if bg_ch_pattern.match(ch_name):
