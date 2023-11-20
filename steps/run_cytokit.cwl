@@ -7,7 +7,7 @@ baseCommand: ["sh", "run_cytokit.sh"]
 requirements:
   DockerRequirement:
     dockerPull: hubmap/cytokit:latest
-  DockerGpuRequirement: {}
+ #DockerGpuRequirement: {}
 
   InitialWorkDirRequirement:
     listing:
