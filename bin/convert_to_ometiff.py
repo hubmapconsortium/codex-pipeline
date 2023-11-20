@@ -153,7 +153,6 @@ def replace_provider_ch_names_with_antb(og_ch_names_df: pd.DataFrame, antibodies
             updated_channel_names.append(target)
         else:
             updated_channel_names.append(original_name)
-    print("updated channel names:", updated_channel_names)
     return updated_channel_names
 
 
@@ -208,7 +207,6 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     og_ch_names_df = pd.DataFrame(channelList, columns=["Original_Channel_Name"])
     og_ch_names_df[['Cycle', 'Channel', 'channel_name']] = og_ch_names_df['Original_Channel_Name'].str.extract(cyc_ch_pattern)
     og_ch_names_df['channel_id'] = 'cycle' + og_ch_names_df['Cycle'] + '_ch' + og_ch_names_df['Channel']
-    print("original channel names df:", og_ch_names_df)
 
     return og_ch_names_df
 
@@ -275,7 +273,6 @@ def convert_tiff_file(funcArgs):
             dimension_order="TCZYX",
             channel_names=channelNames,
         )
-        print(ome_writer.size_c())
 
     logger.info(f"OME-TIFF file created: { ometiffFile }")
 
@@ -418,7 +415,6 @@ if __name__ == "__main__":
         original_ch_names_df = collect_expressions_extract_channels(extractFileList[0])
         struct_annot = generate_structured_annotations(original_ch_names_df['channel_name'], antb_info)
         updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
-        print(struct_annot)
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",

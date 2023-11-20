@@ -85,13 +85,30 @@ def select_cycles_with_bg_ch(
     return selected_bg_channels_per_cyc
 
 
-def get_ch_stack_ids(
+def get_bg_stack_ids(
     target_ch_name: str,
     channel_names_in_stack: List[str],
     channels_per_cycle: Dict[int, Dict[int, str]],
     stack_ids_per_cycle: Dict[int, Dict[int, int]],
 ) -> List[int]:
     pat = re.compile(r"^cyc(\d+)_ch(\d+)_orig" + target_ch_name, re.IGNORECASE)
+    target_ch_stack_ids = []
+    channel_names_in_stack = set(channel_names_in_stack)
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if pat.match(ch_name) and ch_name.lower() in channel_names_in_stack:
+                target_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
+                target_ch_stack_ids.append(target_ch_stack_id)
+    return target_ch_stack_ids
+
+
+def get_nuc_stack_ids(
+    target_ch_name: str,
+    channel_names_in_stack: List[str],
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    stack_ids_per_cycle: Dict[int, Dict[int, int]],
+) -> List[int]:
+    pat = re.compile(r"^" + target_ch_name, re.IGNORECASE)
     target_ch_stack_ids = []
     channel_names_in_stack = set(channel_names_in_stack)
     for cycle in channels_per_cycle:
@@ -403,7 +420,6 @@ def subtract_bg_from_imgs(
                     else:
                         bg_imgs = []
                         for bg_cyc, frac in fraction_map.items():
-                            print("frac:", frac)
                             bg = bg_images[bg_cyc][ch_id]
                             fbg = bg.astype(np.float32) * frac
                             bg_imgs.append(fbg)
@@ -522,14 +538,14 @@ def main(
     )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
-    nuc_ch_stack_id = get_ch_stack_ids(
+    nuc_ch_stack_id = get_nuc_stack_ids(
         target_ch_name=nuclei_channel,
         channel_names_in_stack=channel_names_in_stack,
         channels_per_cycle=channels_per_cycle,
         stack_ids_per_cycle=stack_ids_per_cycle,
     )
     print("Nucleus ch stack id\n", nuc_ch_stack_id)
-    bg_ch_stack_ids = get_ch_stack_ids(
+    bg_ch_stack_ids = get_bg_stack_ids(
         target_ch_name=background_ch_name,
         channel_names_in_stack=channel_names_in_stack,
         channels_per_cycle=channels_per_cycle,
