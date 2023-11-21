@@ -469,7 +469,9 @@ def create_new_channel_name_order(
     background_channel: str,
 ) -> List[str]:
     channel_names = []
-    bg_ch_pattern = re.compile(r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + background_channel, re.IGNORECASE)
+    bg_ch_pattern = re.compile(
+        r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + background_channel, re.IGNORECASE
+    )
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
             if bg_ch_pattern.match(ch_name):

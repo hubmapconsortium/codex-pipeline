@@ -66,7 +66,6 @@ def main(data_dir: str):
     # Collect raw data file names in a dictionary, indexed by directory name.
     sourceDataFiles = {}
     for sdir in sourceDataDirs:
-
         fileList = os.listdir(os.path.join(data_dir, sdir))
 
         # Validate naming pattern of raw data files according to pattern
@@ -109,7 +108,6 @@ def main(data_dir: str):
     logger.info("Cytokit data directory created at %s" % targetDirectory)
 
     for sdir in sourceDataFiles:
-
         dirMatch = rawDirNamingPattern.match(sdir)
 
         cycle, region = dirMatch.group(1, 2)
@@ -120,7 +118,6 @@ def main(data_dir: str):
 
         # Create symlinks for TIFF files.
         for tifFileName in sourceDataFiles[sdir]:
-
             # Replace the region number at the start because sometimes it's wrong.
             linkTifFileName = rawFileRegionPattern.sub(region, tifFileName)
 
@@ -140,7 +137,6 @@ def main(data_dir: str):
 # MAIN #
 ########
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="Create a directory and populate directory with directories containing symlinks to the raw image data."
     )

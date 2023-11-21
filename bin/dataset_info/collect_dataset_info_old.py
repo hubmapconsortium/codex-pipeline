@@ -13,7 +13,6 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple
 
-
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
@@ -110,7 +109,6 @@ def infer_channel_name_from_index(
     channelNames: List[str],
     channelsPerCycle: int,
 ) -> Optional[str]:
-
     # If there is no cycle+channel set for a particular measurement, then the
     # cycle (or channel?) index is set to "-1". E.g. if no membrane stain
     # channel exists, the membraneStainCycle can be set to "-1". Just return
@@ -228,7 +226,6 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
 
 
 def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: Dict) -> int:
-
     if target_key != "tile_overlap_x" and target_key != "tile_overlap_y":
         raise ValueError(f"Invalid target_key for looking up tile overlap: {target_key}")
 
@@ -261,7 +258,6 @@ def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: 
 
 
 def collect_tiling_mode(exptConfigDict: Dict) -> str:
-
     tiling_mode = collect_attribute(["tilingMode"], exptConfigDict)
 
     if re.search("snake", tiling_mode, re.IGNORECASE):
