@@ -40,15 +40,14 @@ structured_annotation_template="""<StructuredAnnotations>
 </XMLAnnotation>
 </StructuredAnnotations>"""
 
+TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
+
 
 def add_structured_annotations(xml_string: str, sa_str: str) -> str:
     sa_placement = xml_string.find("</Image>") + len("</Image>")
     xml_string = xml_string[:sa_placement] + sa_str + xml_string[sa_placement:]
     return xml_string
-
-
-TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
-metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
 
 def generate_sa_ch_info(ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id) -> str:
@@ -72,16 +71,6 @@ def generate_sa_ch_info(ch_name: str, og_name: str, antb_info: Optional[pd.DataF
         else:
             ch_info = empty_ch_info
     return ch_info
-
-
-def generate_structured_annotations(ch_names: List[str], antb_info: Optional[pd.DataFrame], channel_id) -> str:
-    ch_infos = []
-    for ch_name in ch_names:
-        ch_info = generate_sa_ch_info(ch_name, antb_info, channel_id)
-        ch_infos.append(ch_info)
-    ch_sa = "\n".join(ch_infos)
-    sa = structured_annotation_template.format(protein_id_map_sa=ch_sa)
-    return sa
 
 
 def get_analyte_name(antibody_name: str) -> str:
