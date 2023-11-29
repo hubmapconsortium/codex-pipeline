@@ -4,7 +4,7 @@ label: Collect dataset info for Cytokit
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts
+    dockerPull: hubmap/codex-scripts:2.5
 
 baseCommand: ["python", "/opt/dataset_info/run_collection.py"]
 
