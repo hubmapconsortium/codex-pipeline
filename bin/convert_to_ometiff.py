@@ -411,11 +411,12 @@ if __name__ == "__main__":
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
         # Remove prefix
-        segmentation_channel_names = [re.sub(r"cyc\d+_ch\d+_orig", "", ch) for ch in SEGMENTATION_CHANNEL_NAMES]
+        prefix = re.compile(r"cyc\d+_ch\d+_orig")
+        segmentation_channel_names_stripped = [ch.removeprefix for ch in SEGMENTATION_CHANNEL_NAMES]
         create_ome_tiffs(
             segmentationFileList,
             output_dir / cytometry_tile_dir_piece / "ome-tiff",
-            segmentation_channel_names,
+            segmentation_channel_names_stripped,
             lateral_resolution,
             args.processes,
             antb_info,
