@@ -19,7 +19,10 @@ inputs:
     label: "Number of parallel CPU jobs"
     type: int
     default: 10
-
+  perform_stitching:
+    label: "If the phenocycler output requires stitching. This should be set to false for the new version"
+    type: boolean
+    default: true
 outputs:
   experiment_config:
     outputSource: illumination_first_stitching/cytokit_config
@@ -47,6 +50,8 @@ steps:
         source: gpus
       num_concurrent_tasks:
         source: num_concurrent_tasks
+      perform_stitching:
+        source: perform_stitching
     out:
       - slicing_pipeline_config
       - cytokit_config

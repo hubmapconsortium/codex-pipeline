@@ -16,6 +16,9 @@ inputs:
     label: "Number of parallel CPU jobs"
     type: int
     default: 10
+  perform_stitching:
+    type: boolean
+    default: false
 
 outputs:
   cytokit_config:

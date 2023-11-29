@@ -21,6 +21,11 @@ inputs:
     inputBinding:
       prefix: "--pipeline_config_path"
 
+  perform_stitching:
+    type: boolean
+    inputBinding:
+      prefix: "--perform_stitching"
+
 outputs:
   stitched_images:
     type: Directory

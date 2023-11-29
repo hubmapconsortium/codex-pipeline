@@ -17,11 +17,11 @@ from directory_management import (
 )
 from image_stitching import stitch_images
 
-from pipeline_utils.dataset_listing import (
+from ..pipeline_utils.dataset_listing import (
     create_listing_for_each_cycle_region,
     get_img_dirs,
 )
-from pipeline_utils.pipeline_config_reader import load_dataset_info
+from ..pipeline_utils.pipeline_config_reader import load_dataset_info
 
 
 def print_img_dirs(img_dirs: List[Path]):
@@ -64,7 +64,7 @@ def copy_to_channel_dirs(listing, base_channel_dir: Path) -> Dict[int, Dict[int,
     return channel_dirs
 
 
-def main(data_dir: Path, pipeline_config_path: Path):
+def main(data_dir: Path, pipeline_config_path: Path, perform_stitching: bool=True):
     start = datetime.now()
     print("\nStarted", start)
 
@@ -92,7 +92,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pipeline_config_path", type=Path, help="path to pipelineConfig.json file"
     )
+    parser.add_argument("--perform_stitching", type=bool, help="Perform stitching", default=True)
 
     args = parser.parse_args()
 
-    main(args.data_dir, args.pipeline_config_path)
+    main(args.data_dir, args.pipeline_config_path, args.perform_stitching)
