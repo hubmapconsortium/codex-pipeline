@@ -11,6 +11,12 @@ inputs:
     type: File
   cytokit_output:
     type: Directory
+  data_dir:
+    type: Directory
+  num_concurrent_tasks:
+    label: "Number of parallel CPU jobs"
+    type: int
+    default: 10
 
 outputs:
   stitched_images:
@@ -31,6 +37,8 @@ steps:
         source: slicing_pipeline_config
       cytokit_config:
         source: cytokit_config
+      num_concurrent_tasks:
+        source: num_concurrent_tasks
     out:
       - bg_sub_tiles
       - bg_sub_config
@@ -44,6 +52,8 @@ steps:
           source: background_subtraction/bg_sub_tiles
       cytokit_config:
         source: cytokit_config
+      input_data_dir:
+        source: data_dir
     out:
       - ome_tiffs
     run: ometiff_second_stitching/ome_tiff_creation.cwl

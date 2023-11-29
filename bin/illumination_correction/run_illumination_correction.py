@@ -49,7 +49,12 @@ def get_input_img_dirs(data_dir: Path):
 def read_imgs_to_stack(img_paths: List[Path]) -> ImgStack:
     imgs = []
     for path in img_paths:
-        imgs.append(tif.imread(str(path.absolute())))
+        try:
+            this_image = tif.imread(str(path.absolute()))
+        except Exception as excp:
+            # do not raise from excp because the main process cannot instantiate excp
+            raise RuntimeError(f"Error reading tiff image {path}: {excp}")
+        imgs.append(this_image)
     img_stack = np.stack(imgs, axis=0)
     return img_stack
 
