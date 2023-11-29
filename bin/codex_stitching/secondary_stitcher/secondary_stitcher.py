@@ -30,6 +30,11 @@ def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_chann
     </StructuredAnnotations>
     """
 
+    
+    # Remove some prefixes 
+    nucleus_channel = re.sub(r"cyc(\d+)_ch(\d+)_orig(.*)", r"\3", nucleus_channel)
+    cell_channel = re.sub(r"cyc(\d+)_ch(\d+)_orig(.*)", r"\3", cell_channel)
+
     structured_annotation = ET.Element("StructuredAnnotations")
     annotation = ET.SubElement(structured_annotation, "XMLAnnotation", {"ID": "Annotation:0"})
     annotation_value = ET.SubElement(annotation, "Value")
