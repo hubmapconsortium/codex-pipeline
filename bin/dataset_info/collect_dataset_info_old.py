@@ -13,9 +13,6 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
-import psutil
-
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
 
@@ -112,7 +109,6 @@ def infer_channel_name_from_index(
     channelNames: List[str],
     channelsPerCycle: int,
 ) -> Optional[str]:
-
     # If there is no cycle+channel set for a particular measurement, then the
     # cycle (or channel?) index is set to "-1". E.g. if no membrane stain
     # channel exists, the membraneStainCycle can be set to "-1". Just return
@@ -156,18 +152,20 @@ def calculate_target_shape(magnification: int, tileHeight: int, tileWidth: int):
     return [dims["height"], dims["width"]]
 
 
-def make_ch_names_unique(channel_names: List[str]) -> List[str]:
-    unique_names = Counter(channel_names)
-    new_names = channel_names.copy()
+def add_cycle_channel_numbers(channel_names: List[str]) -> List[str]:
+    new_names = []
+    cycle_count = 1
+    channel_count = 1
 
-    for unique_ch, count in unique_names.items():
-        if count > 1:
-            this_ch_count = 1
-            for i, ch_name in enumerate(channel_names):
-                if ch_name == unique_ch:
-                    new_name = f"{ch_name}_{this_ch_count}"
-                    new_names[i] = new_name
-                    this_ch_count += 1
+    for original_name in channel_names:
+        new_name = f"cyc{cycle_count}_ch{channel_count}_orig{original_name}"
+        new_names.append(new_name)
+
+        channel_count += 1
+        if channel_count > 4:  # Assuming 4 channels per cycle, modify accordingly
+            channel_count = 1
+            cycle_count += 1
+
     return new_names
 
 
@@ -228,7 +226,6 @@ def get_region_names_from_directories(base_path: Path) -> List[str]:
 
 
 def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: Dict) -> int:
-
     if target_key != "tile_overlap_x" and target_key != "tile_overlap_y":
         raise ValueError(f"Invalid target_key for looking up tile overlap: {target_key}")
 
@@ -261,7 +258,6 @@ def calculate_pixel_overlaps_from_proportional(target_key: str, exptConfigDict: 
 
 
 def collect_tiling_mode(exptConfigDict: Dict) -> str:
-
     tiling_mode = collect_attribute(["tilingMode"], exptConfigDict)
 
     if re.search("snake", tiling_mode, re.IGNORECASE):
@@ -463,7 +459,8 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
 
     # If there are identical channel names, make them unique by adding
     # incremental numbers to the end.
-    channelNames = make_ch_names_unique(channelNames)
+    channelNames = add_cycle_channel_numbers(channelNames)
+    print(channelNames)
 
     datasetInfo["channel_names"] = channelNames
 
@@ -477,7 +474,7 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
             for row in csvreader:
                 ch_names_qc.append(row[0])
                 qc_vals.append(row[1].strip())
-        unique_qc_ch_names = make_ch_names_unique(ch_names_qc)
+        unique_qc_ch_names = add_cycle_channel_numbers(ch_names_qc)
         for i, ch in enumerate(unique_qc_ch_names):
             channel_names_qc_pass[ch] = [qc_vals[i]]
     else:

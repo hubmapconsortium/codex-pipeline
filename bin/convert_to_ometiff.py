@@ -1,14 +1,13 @@
 import argparse
-import json
 import logging
 import re
 from multiprocessing import Pool
 from os import walk
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional
 
 import lxml.etree
-import numpy as np
+import pandas as pd
 import yaml
 from aicsimageio import AICSImage
 from aicsimageio.vendor.omexml import OMEXML
@@ -28,11 +27,133 @@ SEGMENTATION_CHANNEL_NAMES = [
     "nucleus_boundaries",
 ]
 
+structured_annotation_template = """<StructuredAnnotations>
+<XMLAnnotation ID="Annotation:1">
+    <Value>
+        <OriginalMetadata>
+            <Key>ProteinIDMap</Key>
+            <Value>
+                {protein_id_map_sa}
+            </Value>
+        </OriginalMetadata>
+    </Value>
+</XMLAnnotation>
+</StructuredAnnotations>"""
+
 TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
 
-def check_dir_is_empty(dir_path: Path):
-    return not any(dir_path.iterdir())
+def add_structured_annotations(xml_string: str, sa_str: str) -> str:
+    sa_placement = xml_string.find("</Image>") + len("</Image>")
+    xml_string = xml_string[:sa_placement] + sa_str + xml_string[sa_placement:]
+    return xml_string
+
+
+def generate_sa_ch_info(
+    ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id
+) -> str:
+    empty_ch_info = f'<Channel ID="{channel_id}" Name="{ch_name}" OriginalName="None" UniprotID="None" RRID="None" AntibodiesTsvID="None"/>'
+    if antb_info is None:
+        ch_info = empty_ch_info
+    else:
+        if ch_name in antb_info["target"].to_list():
+            ch_ind = antb_info[antb_info["target"] == ch_name].index[0]
+            new_ch_name = antb_info.at[ch_ind, "target"]
+            uniprot_id = antb_info.at[ch_ind, "uniprot_accession_number"]
+            rr_id = antb_info.at[ch_ind, "rr_id"]
+            antb_id = antb_info.at[ch_ind, "channel_id"]
+            original_name = og_name
+            ch_info = f'<Channel ID="{channel_id}" Name="{new_ch_name}" OriginalName="{original_name}" UniprotID="{uniprot_id}" RRID="{rr_id}" AntibodiesTsvID="{antb_id}"/>'
+            return ch_info
+        else:
+            ch_info = empty_ch_info
+    return ch_info
+
+
+def get_analyte_name(antibody_name: str) -> str:
+    antb = re.sub(r"Anti-", "", antibody_name)
+    antb = re.sub(r"\s+antibody", "", antb)
+    return antb
+
+
+def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
+    """
+    Finds and returns the first metadata file for a HuBMAP data set.
+    Does not check whether the dataset ID (32 hex characters) matches
+    the directory name, nor whether there might be multiple metadata files.
+    """
+    # possible_dirs = [input_dir, input_dir / "extras"]
+    metadata_filename_pattern = re.compile(r"^[0-9A-Za-z\-_]*antibodies\.tsv$")
+    found_files = []
+    for dirpath, dirnames, filenames in walk(input_dir):
+        for filename in filenames:
+            if metadata_filename_pattern.match(filename):
+                found_files.append(Path(dirpath) / filename)
+
+    if len(found_files) == 0:
+        logger.warning("No antibody.tsv file found")
+        antb_path = None
+    else:
+        antb_path = found_files[0]
+    return antb_path
+
+
+def sort_by_cycle(antb_path: Path):
+    df = pd.read_table(antb_path)
+    cycle_channel_pattern = re.compile(r"cycle(?P<cycle>\d+)_ch(?P<channel>\d+)", re.IGNORECASE)
+    searches = [cycle_channel_pattern.search(v) for v in df["channel_id"]]
+    cycles = [int(s.group("cycle")) for s in searches]
+    channels = [int(s.group("channel")) for s in searches]
+    df.index = [cycles, channels]
+    df = df.sort_index()
+    return df
+
+
+def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]:
+    # df = df.set_index("channel_id", inplace=False)
+    antb_names = df["antibody_name"].to_list()
+    antb_targets = [get_analyte_name(antb) for antb in antb_names]
+    df["target"] = antb_targets
+    return df
+
+
+def map_cycles_and_channels(antibodies_df: pd.DataFrame) -> dict:
+    channel_mapping = {
+        channel_id.lower(): target
+        for channel_id, target in zip(antibodies_df["channel_id"], antibodies_df["target"])
+    }
+    return channel_mapping
+
+
+def replace_provider_ch_names_with_antb(
+    og_ch_names_df: pd.DataFrame, antibodies_df: pd.DataFrame
+) -> List[str]:
+    updated_channel_names = []
+    mapping = map_cycles_and_channels(antibodies_df)
+    for i in og_ch_names_df.index:
+        channel_id = og_ch_names_df.at[i, "channel_id"].lower()
+        original_name = og_ch_names_df.at[i, "channel_name"]
+        target = mapping.get(channel_id, None)
+        if target is not None:
+            updated_channel_names.append(target)
+        else:
+            updated_channel_names.append(original_name)
+    return updated_channel_names
+
+
+def get_original_names(og_ch_names_df: pd.DataFrame, antibodies_df: pd.DataFrame) -> List[str]:
+    mapping = map_cycles_and_channels(antibodies_df)
+    original_channel_names = []
+    for i in og_ch_names_df.index:
+        channel_id = og_ch_names_df.at[i, "channel_id"].lower()
+        original_name = og_ch_names_df.at[i, "channel_name"]
+        target = mapping.get(channel_id, None)
+        if target is not None:
+            original_channel_names.append(original_name)
+        else:
+            original_channel_names.append("None")
+    return original_channel_names
 
 
 def collect_tiff_file_list(directory: Path, TIFF_FILE_NAMING_PATTERN: re.Pattern) -> List[Path]:
@@ -57,7 +178,6 @@ def collect_tiff_file_list(directory: Path, TIFF_FILE_NAMING_PATTERN: re.Pattern
 
 
 def get_lateral_resolution(cytokit_config_filename: Path) -> float:
-
     with open(cytokit_config_filename) as cytokit_config_file:
         cytokit_config = yaml.safe_load(cytokit_config_file)
 
@@ -81,7 +201,18 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
-    return channelList
+
+    # Separate channel and cycle info from channel names and remove "orig"
+    cyc_ch_pattern = re.compile(r"cyc(\d+)_ch(\d+)_orig(.*)")
+    og_ch_names_df = pd.DataFrame(channelList, columns=["Original_Channel_Name"])
+    og_ch_names_df[["Cycle", "Channel", "channel_name"]] = og_ch_names_df[
+        "Original_Channel_Name"
+    ].str.extract(cyc_ch_pattern)
+    og_ch_names_df["channel_id"] = (
+        "cycle" + og_ch_names_df["Cycle"] + "_ch" + og_ch_names_df["Channel"]
+    )
+
+    return og_ch_names_df
 
 
 def add_pixel_size_units(omeXml):
@@ -101,19 +232,18 @@ def add_pixel_size_units(omeXml):
     return omexml_with_pixel_units
 
 
-def convert_tiff_file(funcArgs: Tuple[Path, Path, List, float]):
+def convert_tiff_file(funcArgs):
     """
     Given a tuple containing a source TIFF file path, a destination OME-TIFF path,
     a list of channel names, a float value for the lateral resolution in
     nanometres, convert the source TIFF file to OME-TIFF format, containing
     polygons for segmented cell shapes in the "ROI" OME-XML element.
     """
-    sourceFile, ometiffFile, channelNames, lateral_resolution = funcArgs
+    sourceFile, ometiffFile, channelNames, lateral_resolution, antb_info, og_ch_names_df = funcArgs
 
-    logger.info(f"Converting file: { str( sourceFile ) }")
+    logger.info(f"Converting file: {str(sourceFile)}")
 
     image = AICSImage(sourceFile)
-
     imageDataForOmeTiff = image.get_image_data("TCZYX")
 
     # Create a template OME-XML object.
@@ -133,19 +263,28 @@ def convert_tiff_file(funcArgs: Tuple[Path, Path, List, float]):
 
     omeXml = add_pixel_size_units(omeXml)
 
+    channel_ids = [f"Channel:0:{i}" for i in range(len(channelNames))]
+    original_channel_names = get_original_names(og_ch_names_df, antb_info)
+    full_ch_info = ""
     for i in range(0, len(channelNames)):
         omeXml.image().Pixels.Channel(i).Name = channelNames[i]
-        omeXml.image().Pixels.Channel(i).ID = "Channel:0:" + str(i)
-
+        channel_id = channel_ids[i]
+        omeXml.image().Pixels.Channel(i).ID = channel_id
+        # Extract channel information for structured annotations
+        ch_name = channelNames[i]
+        original_name = original_channel_names[i]
+        ch_info = generate_sa_ch_info(ch_name, original_name, antb_info, channel_id)
+        full_ch_info = full_ch_info + ch_info
+    struct_annot = add_structured_annotations(omeXml.to_xml("utf-8"), full_ch_info)
     with ome_tiff_writer.OmeTiffWriter(ometiffFile) as ome_writer:
         ome_writer.save(
             imageDataForOmeTiff,
-            ome_xml=omeXml,
+            ome_xml=struct_annot,
             dimension_order="TCZYX",
             channel_names=channelNames,
         )
 
-    logger.info(f"OME-TIFF file created: { ometiffFile }")
+    logger.info(f"OME-TIFF file created: {ometiffFile}")
 
 
 def create_ome_tiffs(
@@ -154,6 +293,8 @@ def create_ome_tiffs(
     channel_names: List[str],
     lateral_resolution: float,
     subprocesses: int,
+    antb_info: Optional[pd.DataFrame] = None,
+    og_ch_names_df: Optional[pd.DataFrame] = None,
 ):
     """
     Given:
@@ -168,7 +309,6 @@ def create_ome_tiffs(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     args_for_conversion = []
-
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
 
@@ -178,9 +318,11 @@ def create_ome_tiffs(
                 ome_tiff_file,
                 channel_names,
                 lateral_resolution,
+                antb_info,
+                og_ch_names_df,
             )
         )
-
+    # Uncomment the next line to run as a series, comment the plural line
     # for argtuple in args_for_conversion :
     #    convert_tiff_file( argtuple )
 
@@ -198,7 +340,6 @@ def check_dir_is_empty(dir_path: Path):
 # MAIN #
 ########
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description=(
             "Convert Cytokit's output TIFFs containing segmentation and extraction "
@@ -223,19 +364,17 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
+        "input_data_dir",
+        help="Path to the input dataset",
+        type=Path,
+    )
+    parser.add_argument(
         "-p",
         "--processes",
         help="Number of parallel OME-TIFF conversions to perform at once",
         type=int,
         default=8,
     )
-    """
-    # Commented out until this file is available
-    parser.add_argument(
-            "antibody_info",
-            help = "Path to file containing antibody information"
-    )
-    """
 
     args = parser.parse_args()
 
@@ -264,8 +403,13 @@ if __name__ == "__main__":
 
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)
     extractFileList = collect_tiff_file_list(extractDir, TIFF_FILE_NAMING_PATTERN)
+    antb_path = find_antibodies_meta(args.input_data_dir)
 
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
+    df = sort_by_cycle(antb_path)
+    antb_info = get_ch_info_from_antibodies_meta(df)
+    original_ch_names_df = collect_expressions_extract_channels(extractFileList[0])
+    updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
@@ -275,19 +419,18 @@ if __name__ == "__main__":
             SEGMENTATION_CHANNEL_NAMES,
             lateral_resolution,
             args.processes,
+            antb_info,
+            original_ch_names_df,
         )
 
     # Create the extract OME-TIFFs.
     if extractFileList:
-        # For the extract, pull the correctly ordered list of channel names from
-        # one of the files, as they aren't guaranteed to be in the same order as
-        # the YAML config.
-        extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
-
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",
-            extractChannelNames,
+            updated_channel_names,
             lateral_resolution,
             args.processes,
+            antb_info,
+            original_ch_names_df,
         )

@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import shutil
 import sys
 from copy import deepcopy
 from multiprocessing.pool import Pool
@@ -46,7 +47,7 @@ def organize_channels_per_cycle(
 def get_channel_names_in_stack(img_path: Path) -> List[str]:
     with tif.TiffFile(str(img_path.absolute())) as TF:
         ij_meta = TF.imagej_metadata
-    channel_names = [ch_name.lstrip("proc_").lower() for ch_name in ij_meta["Labels"]]
+    channel_names = [ch_name.removeprefix("proc_").lower() for ch_name in ij_meta["Labels"]]
     return channel_names
 
 
@@ -59,7 +60,7 @@ def get_stack_ids_per_cycle(
     lookup_ch_name_list = [ch.lower() for ch in channel_names_in_stack]
 
     bg_channel_ids_per_cycle = {cyc: dict() for cyc in channels_per_cycle.keys()}
-    bg_ch_pattern = re.compile(r"^" + bg_ch_name, re.IGNORECASE)
+    bg_ch_pattern = re.compile(r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + bg_ch_name, re.IGNORECASE)
 
     for cycle, channels in channels_per_cycle.items():
         for ch_id, ch_name in channels.items():
@@ -84,7 +85,24 @@ def select_cycles_with_bg_ch(
     return selected_bg_channels_per_cyc
 
 
-def get_ch_stack_ids(
+def get_bg_stack_ids(
+    target_ch_name: str,
+    channel_names_in_stack: List[str],
+    channels_per_cycle: Dict[int, Dict[int, str]],
+    stack_ids_per_cycle: Dict[int, Dict[int, int]],
+) -> List[int]:
+    pat = re.compile(r"^cyc(\d+)_ch(\d+)_orig" + target_ch_name, re.IGNORECASE)
+    target_ch_stack_ids = []
+    channel_names_in_stack = set(channel_names_in_stack)
+    for cycle in channels_per_cycle:
+        for ch_id, ch_name in channels_per_cycle[cycle].items():
+            if pat.match(ch_name) and ch_name.lower() in channel_names_in_stack:
+                target_ch_stack_id = stack_ids_per_cycle[cycle][ch_id]
+                target_ch_stack_ids.append(target_ch_stack_id)
+    return target_ch_stack_ids
+
+
+def get_nuc_stack_ids(
     target_ch_name: str,
     channel_names_in_stack: List[str],
     channels_per_cycle: Dict[int, Dict[int, str]],
@@ -222,7 +240,6 @@ def estimate_background_fraction_when_one_bg_cycle(
     med_per_ch_cyc_across_imgs = dict()
     for med_per_ch_cyc in meds_per_img_ch_cyc:
         for ch in med_per_ch_cyc:
-
             if ch in med_per_ch_cyc_across_imgs:
                 pass
             else:
@@ -238,7 +255,6 @@ def estimate_background_fraction_when_one_bg_cycle(
     for ch in med_per_ch_cyc_across_imgs:
         med_per_ch_cyc_final[ch] = dict()
         for cyc, meds in med_per_ch_cyc_across_imgs[ch].items():
-
             med_med = np.median(meds)
 
             if ch in med_per_ch_cyc_final:
@@ -453,7 +469,9 @@ def create_new_channel_name_order(
     background_channel: str,
 ) -> List[str]:
     channel_names = []
-    bg_ch_pattern = re.compile(r"^" + background_channel, re.IGNORECASE)
+    bg_ch_pattern = re.compile(
+        r"^cyc(\d+)_ch(\d+)_orig([^_]*)" + background_channel, re.IGNORECASE
+    )
     for cycle in channels_per_cycle:
         for ch_id, ch_name in channels_per_cycle[cycle].items():
             if bg_ch_pattern.match(ch_name):
@@ -522,14 +540,14 @@ def main(
     )
     print("Stack ids per cycle\n", stack_ids_per_cycle)
 
-    nuc_ch_stack_id = get_ch_stack_ids(
+    nuc_ch_stack_id = get_nuc_stack_ids(
         target_ch_name=nuclei_channel,
         channel_names_in_stack=channel_names_in_stack,
         channels_per_cycle=channels_per_cycle,
         stack_ids_per_cycle=stack_ids_per_cycle,
     )
     print("Nucleus ch stack id\n", nuc_ch_stack_id)
-    bg_ch_stack_ids = get_ch_stack_ids(
+    bg_ch_stack_ids = get_bg_stack_ids(
         target_ch_name=background_ch_name,
         channel_names_in_stack=channel_names_in_stack,
         channels_per_cycle=channels_per_cycle,
@@ -578,6 +596,8 @@ def main(
             bg_ch_stack_ids,
             new_channel_names,
         )
+    else:
+        shutil.copytree(expr_dir, out_dir, dirs_exist_ok=True)
     write_bg_info_to_config(
         pipeline_config_path,
         config_out_dir,
