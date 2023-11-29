@@ -410,10 +410,12 @@ if __name__ == "__main__":
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
+        # Remove prefix
+        segmentation_channel_names = [re.sub(r"cyc\d+_ch\d+_orig", "", ch) for ch in SEGMENTATION_CHANNEL_NAMES]
         create_ome_tiffs(
             segmentationFileList,
             output_dir / cytometry_tile_dir_piece / "ome-tiff",
-            SEGMENTATION_CHANNEL_NAMES,
+            segmentation_channel_names,
             lateral_resolution,
             args.processes,
             antb_info,
@@ -422,13 +424,6 @@ if __name__ == "__main__":
 
     # Create the extract OME-TIFFs.
     if extractFileList:
-        # For the extract, pull the correctly ordered list of channel names from
-        # one of the files, as they aren't guaranteed to be in the same order as
-        # the YAML config.
-        # df = sort_by_cycle(antb_path)
-        # antb_info = get_ch_info_from_antibodies_meta(df)
-        # original_ch_names_df = collect_expressions_extract_channels(extractFileList[0])
-        # updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",
