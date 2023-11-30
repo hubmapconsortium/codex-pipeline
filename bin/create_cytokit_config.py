@@ -126,10 +126,10 @@ if __name__ == "__main__":
     # Create operator section to extract channels collapsed in one time point,
     # leaving out blank/empty channels and only including the nuclear stain
     # channel used for segmentation.
-    blankPattern = re.compile(r"^blank", re.IGNORECASE)
-    emptyPattern = re.compile(r"^empty", re.IGNORECASE)
-    dapiChannelPattern = re.compile(r"^DAPI", re.IGNORECASE)
-    hoechstChannelPattern = re.compile(r"^HOECHST", re.IGNORECASE)
+    blankPattern = re.compile(r"cyc(\d+)_ch(\d+)_orig([^_]*)blank", re.IGNORECASE)
+    emptyPattern = re.compile(r"cyc(\d+)_ch(\d+)_orig([^_]*)empty", re.IGNORECASE)
+    dapiChannelPattern = re.compile(r"cyc(\d+)_ch(\d+)_orig([^_]*)DAPI", re.IGNORECASE)
+    hoechstChannelPattern = re.compile(r"cyc(\d+)_ch(\d+)_orig([^_]*)HOECHST", re.IGNORECASE)
 
     operatorExtractChannels = []
 

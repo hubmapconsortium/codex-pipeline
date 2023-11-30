@@ -145,7 +145,6 @@ def generate_dataset_xml(
     out_path: Path,
     is_snake=True,
 ):
-
     num_tiles = x_ntiles * y_ntiles
 
     loc_array = np.arange(0, y_ntiles * x_ntiles).reshape(y_ntiles, x_ntiles)

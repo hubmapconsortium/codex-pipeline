@@ -74,6 +74,8 @@ steps:
         source: illumination_first_stitching/slicing_pipeline_config
       cytokit_config:
         source: illumination_first_stitching/cytokit_config
+      data_dir:
+        source: data_dir
     out:
       - stitched_images
       - final_pipeline_config

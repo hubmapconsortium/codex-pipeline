@@ -154,7 +154,6 @@ def find_and_remove_overlapping_labels_in_first_channel(
     n = 0
     for i in range(0, y_ntiles):
         for j in range(0, x_ntiles):
-
             label_remove_mode = ""
             if i == 0:
                 label_remove_mode += " bottom "
@@ -264,7 +263,6 @@ def find_and_replace_overlapping_border_labels_in_first_channel(
     n = 0
     for i in range(0, y_ntiles):
         for j in range(0, x_ntiles):
-
             tile = tiles[n]
             tile = tile.astype(dtype)
             this_tile_max = tile.max()
@@ -427,7 +425,6 @@ def stitch_mask(
     overlap: int,
     padding: dict,
 ) -> Image:
-
     y_axis = -2
     x_axis = -1
 

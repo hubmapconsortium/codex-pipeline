@@ -57,7 +57,6 @@ def merge_reports(mask_report: Report, expr_report: Report) -> Report:
 
 
 def main(pipeline_config_path: Path, ometiff_dir: Path):
-
     pipeline_config = read_pipeline_config(pipeline_config_path)
     slicer_meta = pipeline_config["slicer"]
     nucleus_channel = pipeline_config.get("nuclei_channel", "None")

@@ -43,7 +43,6 @@ def collect_files_by_tile(
     *,
     allow_empty_tiles: bool = False,
 ) -> Dict[str, List[Path]]:
-
     files_by_tile: Dict[str, List[Path]] = defaultdict(list)
 
     for tile in tile_names:

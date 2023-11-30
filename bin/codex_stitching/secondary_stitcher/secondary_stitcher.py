@@ -1,8 +1,7 @@
-import argparse
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -31,6 +30,10 @@ def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_chann
     </StructuredAnnotations>
     """
 
+    # Remove some prefixes
+    nucleus_channel = re.sub(r"cyc(\d+)_ch(\d+)_orig(.*)", r"\3", nucleus_channel)
+    cell_channel = re.sub(r"cyc(\d+)_ch(\d+)_orig(.*)", r"\3", cell_channel)
+
     structured_annotation = ET.Element("StructuredAnnotations")
     annotation = ET.SubElement(structured_annotation, "XMLAnnotation", {"ID": "Annotation:0"})
     annotation_value = ET.SubElement(annotation, "Value")
@@ -43,10 +46,13 @@ def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_chann
     ET.SubElement(segmentation_channels_value, "Cell").text = cell_channel
     sa_str = ET.tostring(structured_annotation, encoding="utf-8").decode("utf-8")
 
-    closed_image_node_position = omexml_str.find("</Image>") + len("</Image>")
-    omexml_str_with_sa = (
-        omexml_str[:closed_image_node_position] + sa_str + omexml_str[closed_image_node_position:]
-    )
+    if "StructuredAnnotations" in omexml_str:
+        sa_placement = omexml_str.find("<StructuredAnnotations>") + len("<StructuredAnnotations>")
+        sa_str = re.sub(r"</?StructuredAnnotations>", "", sa_str)
+    else:
+        sa_placement = omexml_str.find("</Image>") + len("</Image>")
+
+    omexml_str_with_sa = omexml_str[:sa_placement] + sa_str + omexml_str[sa_placement:]
     return omexml_str_with_sa
 
 
@@ -189,7 +195,6 @@ def stitch_plane(
     overlap: int,
     padding: dict,
 ) -> Image:
-
     y_axis = -2
     x_axis = -1
 
@@ -234,7 +239,6 @@ def main(
     nucleus_channel: str,
     cell_channel: str,
 ):
-
     padding_int = [int(i) for i in padding_str.split(",")]
     padding = {
         "left": padding_int[0],

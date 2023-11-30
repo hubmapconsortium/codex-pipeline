@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.4.3
+    dockerPull: hubmap/codex-scripts
     dockerOutputDirectory: "/output"
 
 baseCommand: ["python", "/opt/background_subtraction/run_background_subtraction.py"]
@@ -25,6 +25,12 @@ inputs:
     type: File
     inputBinding:
       prefix: "--cytokit_config_path"
+
+  num_concurrent_tasks:
+    type: int
+    default: 10
+    inputBinding:
+      prefix: "--num_concurrent_tasks"
 
 outputs:
   bg_sub_tiles:

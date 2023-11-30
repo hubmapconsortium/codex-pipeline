@@ -101,7 +101,6 @@ def _select_best_z_plane_paths(
             for channel in listing[cycle][region]:
                 best_z_plane_paths[cycle][region][channel] = dict()
                 for tile, zplane_dict in listing[cycle][region][channel].items():
-
                     this_tile_best_z_ids = this_region_best_z_planes[tile]
                     this_tile_best_z_src_paths = []
                     for _id in this_tile_best_z_ids:

@@ -1,6 +1,3 @@
-import argparse
-import copy
-import os
 import os.path as osp
 
 import dask
@@ -94,7 +91,6 @@ def slice_img(
     channel: int,
     zplane: int,
 ):
-
     this_plane_tiles, this_plane_img_names = split_by_size(
         tif.imread(in_path),
         region=region,
