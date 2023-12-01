@@ -10,16 +10,17 @@ dependencies:
     - scipy>=1.4.0
     - pandas>=0.25
     - dask>=2.6.0
-    - imagecodecs>=2020.5.30
+    - imagecodecs=2023.9.18
     - pip:
-        - tifffile==2021.2.1
-        - PyYAML>=5.3.0
-        - aicsimageio==3.3.7
-        - lxml~=4.5.1
+        - tifffile==2023.9.18
+        - PyYAML>=6.0.1
+        - aicsimageio==4.12.1
+        - lxml>4.6,<5
         - matplotlib>=3.2.1
         - scikit-image>=0.17.2
         - scikit-learn>=0.23.1
-        - shapely~=1.7.0
+        - shapely~=2.0.1
         - opencv-contrib-python-headless>4.0,<5.0
-        - pint==0.18
-        - jsonschema==4.4.0
+        - pint==0.22
+        - jsonschema==4.19.0
+        - git+https://github.com/hubmapconsortium/antibodies-tsv-util.git
