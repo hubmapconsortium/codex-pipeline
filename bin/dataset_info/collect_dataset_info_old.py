@@ -12,6 +12,7 @@ from os import fspath, walk
 from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple
+from antibodies_tsv_util import add_cycle_channel_numbers
 
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
@@ -150,23 +151,6 @@ def calculate_target_shape(magnification: int, tileHeight: int, tileWidth: int):
             dims[dimension] = newDim
 
     return [dims["height"], dims["width"]]
-
-
-def add_cycle_channel_numbers(channel_names: List[str]) -> List[str]:
-    new_names = []
-    cycle_count = 1
-    channel_count = 1
-
-    for original_name in channel_names:
-        new_name = f"cyc{cycle_count}_ch{channel_count}_orig{original_name}"
-        new_names.append(new_name)
-
-        channel_count += 1
-        if channel_count > 4:  # Assuming 4 channels per cycle, modify accordingly
-            channel_count = 1
-            cycle_count += 1
-
-    return new_names
 
 
 def warn_if_multiple_files(paths: List[Path], label: str):
