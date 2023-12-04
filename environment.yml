@@ -10,16 +10,16 @@ dependencies:
     - scipy>=1.4.0
     - pandas>=0.25
     - dask>=2.6.0
-    - imagecodecs=2023.9.18
+    - imagecodecs==2023.9.18
     - pip:
         - tifffile==2023.9.18
         - PyYAML>=6.0.1
-        - aicsimageio==4.12.1
-        - lxml>4.6,<5
+        - aicsimageio==4.14.0
+        - lxml==4.9.3
         - matplotlib>=3.2.1
         - scikit-image>=0.17.2
         - scikit-learn>=0.23.1
-        - shapely~=2.0.1
+        - shapely==2.0.1
         - opencv-contrib-python-headless>4.0,<5.0
         - pint==0.22
         - jsonschema==4.19.0
