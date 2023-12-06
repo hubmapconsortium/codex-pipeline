@@ -12,7 +12,6 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
 from ome_types import from_xml
-from ome_types.model import OME, Image, Pixels, Pixels_DimensionOrder, PixelType, UnitsLength, StructuredAnnotations
 from tifffile import TiffFile
 import antibodies_tsv_util as antb_tools
 
