@@ -6,14 +6,14 @@ from os import walk
 from pathlib import Path
 from typing import List, Optional
 
+import antibodies_tsv_util as antb_tools
 import lxml.etree
 import pandas as pd
 import yaml
 from aicsimageio import AICSImage
-from aicsimageio.vendor.omexml import OMEXML
-from aicsimageio.writers import ome_tiff_writer
+from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
+from ome_types import from_xml
 from tifffile import TiffFile
-import antibodies_tsv_util as antb_tools
 
 from utils import print_directory_tree
 
@@ -27,20 +27,6 @@ SEGMENTATION_CHANNEL_NAMES = [
     "cell_boundaries",
     "nucleus_boundaries",
 ]
-
-structured_annotation_template = """<StructuredAnnotations>
-<XMLAnnotation ID="Annotation:1">
-    <Value>
-        <OriginalMetadata>
-            <Key>ProteinIDMap</Key>
-            <Value>
-                {protein_id_map_sa}
-            </Value>
-        </OriginalMetadata>
-    </Value>
-</XMLAnnotation>
-</StructuredAnnotations>"""
-
 TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
 metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
@@ -145,25 +131,8 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
-    
+
     return channelList
-
-
-def add_pixel_size_units(omeXml):
-    # Don't take any chances about locale environment variables in Docker containers
-    # and headless server systems; be explicit about using UTF-8
-    encoding = "utf-8"
-    omeXmlRoot = lxml.etree.fromstring(omeXml.to_xml(encoding=encoding).encode(encoding))
-
-    namespace_prefix = omeXmlRoot.nsmap[None]
-    image_node = omeXmlRoot.find(f"{{{namespace_prefix}}}Image")
-    pixels_node = image_node.find(f"{{{namespace_prefix}}}Pixels")
-
-    pixels_node.set("PhysicalSizeXUnit", "nm")
-    pixels_node.set("PhysicalSizeYUnit", "nm")
-
-    omexml_with_pixel_units = OMEXML(xml=lxml.etree.tostring(omeXmlRoot))
-    return omexml_with_pixel_units
 
 
 def convert_tiff_file(funcArgs):
@@ -179,38 +148,38 @@ def convert_tiff_file(funcArgs):
 
     image = AICSImage(sourceFile)
     imageDataForOmeTiff = image.get_image_data("TCZYX")
+    imageName = f"Image: {sourceFile.name}"
 
-    # Create a template OME-XML object.
-    omeXml = OMEXML()
-
-    # Populate it with image metadata.
-    omeXml.image().Pixels.set_SizeT(image.size_t)
-    omeXml.image().Pixels.set_SizeC(image.size_c)
-    omeXml.image().Pixels.set_SizeZ(image.size_z)
-    omeXml.image().Pixels.set_SizeY(image.size_y)
-    omeXml.image().Pixels.set_SizeX(image.size_x)
-    omeXml.image().Pixels.set_PixelType(str(imageDataForOmeTiff.dtype))
-    omeXml.image().Pixels.set_DimensionOrder("XYZCT")
-    omeXml.image().Pixels.channel_count = len(channelNames)
-    omeXml.image().Pixels.set_PhysicalSizeX(lateral_resolution)
-    omeXml.image().Pixels.set_PhysicalSizeY(lateral_resolution)
-
-    omeXml = add_pixel_size_units(omeXml)
+    # Create OME-XML metadata using build_ome
+    ome_writer = OmeTiffWriter()
+    omeXml = ome_writer.build_ome(
+        data_shapes=(image.dims.T, image.dims.C, image.dims.Z, image.dims.Y, image.dims.X),
+        data_types=[image.data.dtype],
+        dimension_order=["T", "C", "Z", "Y", "X"],
+        channel_names=[channelNames],
+        image_name=[imageName],
+        physical_pixel_sizes=[
+            image.physical_pixel_sizes.Z,
+            image.physical_pixel_sizes.Y,
+            image.physical_pixel_sizes.X,
+        ],
+    )
 
     channel_ids = [f"Channel:0:{i}" for i in range(len(channelNames))]
     original_channel_names = get_original_names(og_ch_names_df, antb_info)
     full_ch_info = ""
     for i in range(0, len(channelNames)):
-        omeXml.image().Pixels.Channel(i).Name = channelNames[i]
+        omeXml.image.pixels.channel(i).name = channelNames[i]
         channel_id = channel_ids[i]
-        omeXml.image().Pixels.Channel(i).ID = channel_id
+        omeXml.image.pixels.channel(i).id = channel_id
         # Extract channel information for structured annotations
         ch_name = channelNames[i]
         original_name = original_channel_names[i]
         ch_info = generate_sa_ch_info(ch_name, original_name, antb_info, channel_id)
         full_ch_info = full_ch_info + ch_info
     struct_annot = add_structured_annotations(omeXml.to_xml("utf-8"), full_ch_info)
-    with ome_tiff_writer.OmeTiffWriter(ometiffFile) as ome_writer:
+
+    with ome_writer:
         ome_writer.save(
             imageDataForOmeTiff,
             ome_xml=struct_annot,
@@ -344,7 +313,9 @@ if __name__ == "__main__":
     antb_info = antb_tools.get_ch_info_from_antibodies_meta(df)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = antb_tools.create_original_channel_names_df(extractChannelNames)
-    updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
+    updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(
+        original_ch_names_df, antb_info
+    )
     # original_channel_names = get_original_names(original_ch_names_df, antb_info)
     # channel_ids = antb_tools.generate_channel_ids(updated_channel_names)
 
