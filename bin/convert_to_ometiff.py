@@ -6,6 +6,7 @@ from os import walk
 from pathlib import Path
 from typing import List, Optional
 
+import antibodies_tsv_util as antb_tools
 import lxml.etree
 import pandas as pd
 import yaml
@@ -13,7 +14,6 @@ from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
 from ome_types import from_xml
 from tifffile import TiffFile
-import antibodies_tsv_util as antb_tools
 
 from utils import print_directory_tree
 
@@ -131,7 +131,7 @@ def collect_expressions_extract_channels(extractFile: Path) -> List[str]:
     # Remove "proc_" from the start of the channel names.
     procPattern = re.compile(r"^proc_(.*)")
     channelList = [procPattern.match(channel).group(1) for channel in channelList]
-    
+
     return channelList
 
 
@@ -158,7 +158,11 @@ def convert_tiff_file(funcArgs):
         dimension_order=["T", "C", "Z", "Y", "X"],
         channel_names=[channelNames],
         image_name=[imageName],
-        physical_pixel_sizes=[image.physical_pixel_sizes.Z, image.physical_pixel_sizes.Y, image.physical_pixel_sizes.X],
+        physical_pixel_sizes=[
+            image.physical_pixel_sizes.Z,
+            image.physical_pixel_sizes.Y,
+            image.physical_pixel_sizes.X,
+        ],
     )
 
     channel_ids = [f"Channel:0:{i}" for i in range(len(channelNames))]
@@ -174,7 +178,7 @@ def convert_tiff_file(funcArgs):
         ch_info = generate_sa_ch_info(ch_name, original_name, antb_info, channel_id)
         full_ch_info = full_ch_info + ch_info
     struct_annot = add_structured_annotations(omeXml.to_xml("utf-8"), full_ch_info)
-    
+
     with ome_writer:
         ome_writer.save(
             imageDataForOmeTiff,
@@ -309,7 +313,9 @@ if __name__ == "__main__":
     antb_info = antb_tools.get_ch_info_from_antibodies_meta(df)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = antb_tools.create_original_channel_names_df(extractChannelNames)
-    updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
+    updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(
+        original_ch_names_df, antb_info
+    )
     # original_channel_names = get_original_names(original_ch_names_df, antb_info)
     # channel_ids = antb_tools.generate_channel_ids(updated_channel_names)
 
