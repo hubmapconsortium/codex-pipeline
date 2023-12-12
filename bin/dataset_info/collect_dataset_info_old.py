@@ -13,8 +13,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple
 
-import importlib
-antb_tools = importlib.import_module("antibodies-tsv-util")
+from antibodies_tsv_util import antibodies_tsv_util as antb_tools
 
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
@@ -460,7 +459,7 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
             for row in csvreader:
                 ch_names_qc.append(row[0])
                 qc_vals.append(row[1].strip())
-        unique_qc_ch_names =antb_tools.add_cycle_channel_numbers(ch_names_qc)
+        unique_qc_ch_names = antb_tools.add_cycle_channel_numbers(ch_names_qc)
         for i, ch in enumerate(unique_qc_ch_names):
             channel_names_qc_pass[ch] = [qc_vals[i]]
     else:
