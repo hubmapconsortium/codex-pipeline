@@ -6,7 +6,6 @@ from os import walk
 from pathlib import Path
 from typing import List, Optional
 
-import antibodies_tsv_util as antb_tools
 import lxml.etree
 import pandas as pd
 import yaml
@@ -16,6 +15,8 @@ from ome_types import from_xml
 from tifffile import TiffFile
 
 from utils import print_directory_tree
+import importlib
+antb_tools = importlib.import_module("antibodies-tsv-util")
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-7s - %(message)s")
 logger = logging.getLogger(__name__)
