@@ -34,6 +34,7 @@ def generate_sa_ch_info(
 ) -> Optional[MapAnnotation]:
     if antb_info is None:
         return None
+    # TODO: make these columns of integers in antibodies_tsv_util.create_original_channel_names_df
     cycle, channel = int(og_ch_names_info["Cycle"]), int(og_ch_names_info["Channel"])
     try:
         antb_row = antb_info.loc[(cycle, channel), :]
@@ -49,7 +50,7 @@ def generate_sa_ch_info(
     uniprot_key = Map.M(k="UniprotID", value=uniprot_id)
     rrid_key = Map.M(k="RRID", value=rrid)
     antb_id_key = Map.M(k="AntibodiesTsvID", value=antb_id)
-    ch_info = Map([ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key])
+    ch_info = Map(ms=[ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key])
     annotation = MapAnnotation(value=ch_info)
     return annotation
 
