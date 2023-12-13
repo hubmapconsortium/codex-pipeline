@@ -11,7 +11,7 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
 from antibodies_tsv_util import antibodies_tsv_util as antb_tools
-from ome_types.model import Map, MapAnnotation, StructuredAnnotationList
+from ome_types.model import AnnotationRef, Map, MapAnnotation, StructuredAnnotationList
 from tifffile import TiffFile
 
 from utils import print_directory_tree
@@ -25,36 +25,26 @@ SEGMENTATION_CHANNEL_NAMES = [
     "nucleus_boundaries",
 ]
 TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
-metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
 
 def generate_sa_ch_info(
-    ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id
-) -> MapAnnotation:
-    ch_key = Map.M(k="Channel ID", value=channel_id)
-    name_key = Map.M(k="Name", value=ch_name)
-    og_name_key = Map.M(k="Original Name", value="None")
-    uniprot_key = Map.M(k="UniprotID", value="None")
-    rrid_key = Map.M(k="RRID", value="None")
-    antb_id_key = Map.M(k="AntibodiesTsvID", value="None")
-    empty_ch_info = [ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key]
+    ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id, og_ch_names_df: pd.DataFrame):
     if antb_info is not None and ch_name in antb_info["target"].to_list():
-        ch_ind = antb_info[antb_info["target"] == ch_name].index[0]
+        ch_ind = antb_info.loc[(og_ch_names_df['Cycle'].values, og_ch_names_df['Channel'].values), :]
         uniprot_id = antb_info.at[ch_ind, "uniprot_accession_number"]
-        rr_id = antb_info.at[ch_ind, "rr_id"]
+        rrid = antb_info.at[ch_ind, "rr_id"]
         antb_id = antb_info.at[ch_ind, "channel_id"]
-        original_name = og_name
-        og_name_key = Map.M(k="Original Name", value=original_name)
+        ch_key = Map.M(k="Channel ID", value=channel_id)
+        name_key = Map.M(k="Name", value=ch_name)
+        og_name_key = Map.M(k="Original Name", value=og_name)
         uniprot_key = Map.M(k="UniprotID", value=uniprot_id)
-        rrid_key = Map.M(k="RRID", value=rr_id)
+        rrid_key = Map.M(k="RRID", value=rrid)
         antb_id_key = Map.M(k="AntibodiesTsvID", value=antb_id)
-        # Update the TextAnnotation with the new channel information
-        ch_info = [ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key]
+        ch_info = Map([ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key])
+        annotation = MapAnnotation(value=ch_info)
+        return annotation
     else:
-        ch_info = empty_ch_info
-    ch_info = Map(ms=ch_info)
-    annotation = MapAnnotation(value=ch_info)
-    return annotation
+        return None
 
 
 def map_cycles_and_channels(antibodies_df: pd.DataFrame) -> dict:
@@ -153,19 +143,27 @@ def convert_tiff_file(funcArgs):
         image_name=[imageName],
         physical_pixel_sizes=[image.physical_pixel_sizes],
     )
-    channel_ids = [f"Channel:0:{i}" for i in range(len(channelNames))]
     original_channel_names = get_original_names(og_ch_names_df, antb_info)
     annotations = StructuredAnnotationList()
-    for i in range(len(channelNames)):
-        omeXml.images[0].pixels.channels[i].name = channelNames[i]
-        channel_id = channel_ids[i]
-        omeXml.images[0].pixels.channels[i].id = channel_id
-        # Extract channel information for structured annotations
-        ch_name = channelNames[i]
-        original_name = original_channel_names[i]
-        ch_info = generate_sa_ch_info(ch_name, original_name, antb_info, channel_id)
+    for i, (channel_obj, channel_name, original_name) in enumerate(
+        zip(
+            omeXml.images[0].pixels.channels,
+            channelNames,
+            original_channel_names,
+        )
+    ):
+        channel_id = f"Channel:0:{i}"
+        channel_obj.name = channel_name
+        channel_obj.id = channel_id
+        ch_info = generate_sa_ch_info(channel_name, original_name, antb_info, channel_id, og_ch_names_df)
+        if ch_info == None:
+            continue
+        channel_obj.annotation_refs.append(AnnotationRef(id=ch_info.id))
         annotations.append(ch_info)
+        
     omeXml.structured_annotations = annotations
+    for i in omeXml.structured_annotations:
+        print(i)
     ome_writer.save(
         data=imageDataForOmeTiff,
         uri=str(ometiffFile),
@@ -213,13 +211,13 @@ def create_ome_tiffs(
             )
         )
     # Uncomment the next line to run as a series, comment the plural line
-    # for argtuple in args_for_conversion :
-    #    convert_tiff_file( argtuple )
+    for argtuple in args_for_conversion :
+       convert_tiff_file( argtuple )
 
-    with Pool(processes=subprocesses) as pool:
-        pool.imap_unordered(convert_tiff_file, args_for_conversion)
-        pool.close()
-        pool.join()
+    # with Pool(processes=subprocesses) as pool:
+    #     pool.imap_unordered(convert_tiff_file, args_for_conversion)
+    #     pool.close()
+    #     pool.join()
 
 
 def check_dir_is_empty(dir_path: Path):
@@ -303,8 +301,7 @@ if __name__ == "__main__":
     updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(
         original_ch_names_df, antb_info
     )
-    # original_channel_names = get_original_names(original_ch_names_df, antb_info)
-    # channel_ids = antb_tools.generate_channel_ids(updated_channel_names)
+
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
