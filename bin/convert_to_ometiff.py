@@ -31,20 +31,28 @@ metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 def generate_sa_ch_info(
     ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id
 ) -> MapAnnotation:
-    empty_ch_info = f'<Channel ID="{channel_id}" Name="{ch_name}" OriginalName="None" UniprotID="None" RRID="None" AntibodiesTsvID="None"/>'
+    ch_key = Map.M(k="Channel ID", value=channel_id)
+    name_key = Map.M(k="Name", value=ch_name)
+    og_name_key = Map.M(k="Original Name", value="None")
+    uniprot_key = Map.M(k="UniprotID", value="None")
+    rrid_key = Map.M(k="RRID", value="None")
+    antb_id_key = Map.M(k="AntibodiesTsvID", value="None")
+    empty_ch_info = [ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key]
     if antb_info is not None and ch_name in antb_info["target"].to_list():
         ch_ind = antb_info[antb_info["target"] == ch_name].index[0]
-        new_ch_name = antb_info.at[ch_ind, "target"]
         uniprot_id = antb_info.at[ch_ind, "uniprot_accession_number"]
         rr_id = antb_info.at[ch_ind, "rr_id"]
         antb_id = antb_info.at[ch_ind, "channel_id"]
         original_name = og_name
+        og_name_key = Map.M(k="Original Name", value=original_name)
+        uniprot_key = Map.M(k="UniprotID", value=uniprot_id)
+        rrid_key = Map.M(k="RRID", value=rr_id)
+        antb_id_key = Map.M(k="AntibodiesTsvID", value=antb_id)
         # Update the TextAnnotation with the new channel information
-        ch_info = f'<Channel ID="{channel_id}" Name="{new_ch_name}" OriginalName="{original_name}" UniprotID="{uniprot_id}" RRID="{rr_id}" AntibodiesTsvID="{antb_id}"/>'
+        ch_info = [ch_key, name_key, og_name_key, uniprot_key, rrid_key, antb_id_key]
     else:
         ch_info = empty_ch_info
-    ch_info = [Map.M(value=ch_info)]
-    ch_info = Map(m=ch_info)
+    ch_info = Map(ms=ch_info)
     annotation = MapAnnotation(value=ch_info)
     return annotation
 
