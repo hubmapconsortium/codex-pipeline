@@ -11,7 +11,7 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
 from antibodies_tsv_util import antibodies_tsv_util as antb_tools
-from ome_types.model import StructuredAnnotationList, TextAnnotation
+from ome_types.model import Map, MapAnnotation, StructuredAnnotationList
 from tifffile import TiffFile
 
 from utils import print_directory_tree
@@ -30,8 +30,8 @@ metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
 
 def generate_sa_ch_info(
     ch_name: str, og_name: str, antb_info: Optional[pd.DataFrame], channel_id
-) -> TextAnnotation:
-    empty_ch_info = f'Channel ID="{channel_id}" Name="{ch_name}" OriginalName="None" UniprotID="None" RRID="None" AntibodiesTsvID="None"'
+) -> MapAnnotation:
+    empty_ch_info = f'<Channel ID="{channel_id}" Name="{ch_name}" OriginalName="None" UniprotID="None" RRID="None" AntibodiesTsvID="None"/>'
     if antb_info is not None and ch_name in antb_info["target"].to_list():
         ch_ind = antb_info[antb_info["target"] == ch_name].index[0]
         new_ch_name = antb_info.at[ch_ind, "target"]
@@ -40,10 +40,12 @@ def generate_sa_ch_info(
         antb_id = antb_info.at[ch_ind, "channel_id"]
         original_name = og_name
         # Update the TextAnnotation with the new channel information
-        ch_info = f'Channel ID="{channel_id}" Name="{new_ch_name}" OriginalName="{original_name}" UniprotID="{uniprot_id}" RRID="{rr_id}" AntibodiesTsvID="{antb_id}"'
+        ch_info = f'<Channel ID="{channel_id}" Name="{new_ch_name}" OriginalName="{original_name}" UniprotID="{uniprot_id}" RRID="{rr_id}" AntibodiesTsvID="{antb_id}"/>'
     else:
         ch_info = empty_ch_info
-    annotation = TextAnnotation(description=ch_info)
+    ch_info = [Map.M(value=ch_info)]
+    ch_info = Map(m=ch_info)
+    annotation = MapAnnotation(value=ch_info)
     return annotation
 
 
