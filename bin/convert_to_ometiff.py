@@ -34,7 +34,7 @@ def generate_sa_ch_info(
 ) -> Optional[MapAnnotation]:
     if antb_info is None:
         return None
-    cycle, channel = og_ch_names_info["Cycle"], og_ch_names_info["Channel"]
+    cycle, channel = int(og_ch_names_info["Cycle"]), int(og_ch_names_info["Channel"])
     try:
         antb_row = antb_info.loc[(cycle, channel), :]
     except KeyError:
