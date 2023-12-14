@@ -152,10 +152,7 @@ def convert_tiff_file(funcArgs):
             continue
         channel_obj.annotation_refs.append(AnnotationRef(id=ch_info.id))
         annotations.append(ch_info)
-
     omeXml.structured_annotations = annotations
-    for i in omeXml.structured_annotations:
-        print(i)
     ome_writer.save(
         data=imageDataForOmeTiff,
         uri=str(ometiffFile),
