@@ -32,8 +32,6 @@ def generate_sa_ch_info(
     og_ch_names_info: pd.Series,
     antb_info: Optional[pd.DataFrame],
 ) -> Optional[MapAnnotation]:
-    if antb_info is None:
-        return None
     cycle, channel = og_ch_names_info["Cycle"], og_ch_names_info["Channel"]
     try:
         antb_row = antb_info.loc[(cycle, channel), :]
@@ -147,6 +145,8 @@ def convert_tiff_file(funcArgs):
         channel_id = f"Channel:0:{i}"
         channel_obj.name = channel_name
         channel_obj.id = channel_id
+        if antb_info is None:
+            continue
         ch_info = generate_sa_ch_info(channel_id, og_ch_names_row[1], antb_info)
         if ch_info is None:
             continue
