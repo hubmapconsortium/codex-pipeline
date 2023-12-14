@@ -7,6 +7,7 @@ RUN apt-get -qq update \
     ca-certificates \
     curl \
     unzip \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
