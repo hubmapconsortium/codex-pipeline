@@ -34,8 +34,7 @@ def generate_sa_ch_info(
 ) -> Optional[MapAnnotation]:
     if antb_info is None:
         return None
-    # TODO: make these columns of integers in antibodies_tsv_util.create_original_channel_names_df
-    cycle, channel = int(og_ch_names_info["Cycle"]), int(og_ch_names_info["Channel"])
+    cycle, channel = og_ch_names_info["Cycle"], og_ch_names_info["Channel"]
     try:
         antb_row = antb_info.loc[(cycle, channel), :]
     except KeyError:
