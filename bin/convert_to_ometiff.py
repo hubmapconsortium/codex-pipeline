@@ -30,7 +30,7 @@ TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
 def generate_sa_ch_info(
     channel_id: str,
     og_ch_names_info: pd.Series,
-    antb_info: Optional[pd.DataFrame],
+    antb_info: pd.DataFrame,
 ) -> Optional[MapAnnotation]:
     cycle, channel = og_ch_names_info["Cycle"], og_ch_names_info["Channel"]
     try:
