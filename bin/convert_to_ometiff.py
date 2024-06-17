@@ -10,7 +10,7 @@ import pandas as pd
 import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
-from antibodies_tsv_util import antibodies_tsv_util as antb_tools
+import antibodies_tsv_util as antb_tools
 from ome_types.model import AnnotationRef, Map, MapAnnotation, StructuredAnnotationList
 from tifffile import TiffFile
 
