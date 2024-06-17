@@ -13,7 +13,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Dict, List, Optional, Tuple
 
-from antibodies_tsv_util import antibodies_tsv_util as antb_tools
+import antibodies_tsv_util as antb_tools
 
 sys.path.append("/opt")
 from pipeline_utils.dataset_listing import get_tile_dtype, get_tile_shape
