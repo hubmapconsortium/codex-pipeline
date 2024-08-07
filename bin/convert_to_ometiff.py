@@ -95,7 +95,12 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
     ].str.extract(cyc_ch_pattern)
     og_ch_names_df["Cycle"] = pd.to_numeric(og_ch_names_df["Cycle"])
     og_ch_names_df["Channel"] = pd.to_numeric(og_ch_names_df["Channel"])
-    og_ch_names_df["channel_id"] = "cycle" + og_ch_names_df["Cycle"].astype(str) + "_ch" + og_ch_names_df["Channel"].astype(str)
+    og_ch_names_df["channel_id"] = (
+        "cycle"
+        + og_ch_names_df["Cycle"].astype(str)
+        + "_ch"
+        + og_ch_names_df["Channel"].astype(str)
+    )
 
     return og_ch_names_df
 
@@ -379,9 +384,7 @@ if __name__ == "__main__":
     antb_info = get_ch_info_from_antibodies_meta(df)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
-    updated_channel_names = replace_provider_ch_names_with_antb(
-        original_ch_names_df, antb_info
-    )
+    updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
