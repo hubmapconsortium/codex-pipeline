@@ -95,10 +95,7 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
     ].str.extract(cyc_ch_pattern)
     og_ch_names_df["Cycle"] = pd.to_numeric(og_ch_names_df["Cycle"])
     og_ch_names_df["Channel"] = pd.to_numeric(og_ch_names_df["Channel"])
-    og_ch_names_df["channel_id"] = f"cycle{og_ch_names_df["Cycle"]}_ch{og_ch_names_df["Channel"]}"
-    # og_ch_names_df["channel_id"] = (
-    #     "cycle" + og_ch_names_df["Cycle"] + "_ch" + og_ch_names_df["Channel"]
-    # )
+    og_ch_names_df["channel_id"] = "cycle" + og_ch_names_df["Cycle"].astype(str) + "_ch" + og_ch_names_df["Channel"].astype(str)
 
     return og_ch_names_df
 
