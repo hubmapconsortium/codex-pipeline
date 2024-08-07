@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.6
+    dockerPull: hubmap/codex-scripts:latest
     dockerOutputDirectory: "/output"
 
 baseCommand: ["python", "/opt/best_focus/run_best_focus_selection.py"]

@@ -10,7 +10,6 @@ import pandas as pd
 import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers.ome_tiff_writer import OmeTiffWriter
-from antibodies_tsv_util import antibodies_tsv_util as antb_tools
 from ome_types.model import AnnotationRef, Map, MapAnnotation, StructuredAnnotationList
 from tifffile import TiffFile
 
@@ -25,6 +24,104 @@ SEGMENTATION_CHANNEL_NAMES = [
     "nucleus_boundaries",
 ]
 TIFF_FILE_NAMING_PATTERN = re.compile(r"^R\d{3}_X(\d{3})_Y(\d{3})\.tif")
+metadata_filename_pattern = re.compile(r"^[0-9A-Fa-f]{32}antibodies\.tsv$")
+
+
+def find_antibodies_meta(input_dir: Path) -> Optional[Path]:
+    """
+    Finds and returns the first metadata file for a HuBMAP data set.
+    Does not check whether the dataset ID (32 hex characters) matches
+    the directory name, nor whether there might be multiple metadata files.
+    """
+    # possible_dirs = [input_dir, input_dir / "extras"]
+    metadata_filename_pattern = re.compile(r"^[0-9A-Za-z\-_]*antibodies\.tsv$")
+    found_files = []
+    for dirpath, dirnames, filenames in walk(input_dir):
+        for filename in filenames:
+            if metadata_filename_pattern.match(filename):
+                found_files.append(Path(dirpath) / filename)
+
+    if len(found_files) == 0:
+        logger.warning("No antibody.tsv file found")
+        antb_path = None
+    else:
+        antb_path = found_files[0]
+    return antb_path
+
+
+def sort_by_cycle(antb_path: Path):
+    """
+    Sorts antibodies.tsv by cycle and channel number. The original tsv is not sorted correctly.
+    """
+    df = pd.read_table(antb_path)
+    cycle_channel_pattern = re.compile(r"cycle(?P<cycle>\d+)_ch(?P<channel>\d+)", re.IGNORECASE)
+    searches = [cycle_channel_pattern.search(v) for v in df["channel_id"]]
+    cycles = [int(s.group("cycle")) for s in searches]
+    channels = [int(s.group("channel")) for s in searches]
+    df.index = [cycles, channels]
+    df = df.sort_index()
+    return df
+
+
+def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]:
+    """
+    Adds "target" column with the antibody name that we want to replace.
+    """
+    # df = df.set_index("channel_id", inplace=False)
+    antb_names = df["antibody_name"].to_list()
+    antb_targets = [get_analyte_name(antb) for antb in antb_names]
+    df["target"] = antb_targets
+    return df
+
+
+def get_analyte_name(antibody_name: str) -> str:
+    """
+    Strips unnecessary prefixes and suffixes off of antibody name from antibodies.tsv.
+    """
+    antb = re.sub(r"Anti-", "", antibody_name)
+    antb = re.sub(r"\s+antibody", "", antb)
+    return antb
+
+
+def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
+    """
+    Creates a dataframe with the original channel names, cycle numbers, and channel numbers.
+    """
+    # Separate channel and cycle info from channel names and remove "orig"
+    cyc_ch_pattern = re.compile(r"cyc(\d+)_ch(\d+)_orig(.*)")
+    og_ch_names_df = pd.DataFrame(channelList, columns=["Original_Channel_Name"])
+    og_ch_names_df[["Cycle", "Channel", "channel_name"]] = og_ch_names_df[
+        "Original_Channel_Name"
+    ].str.extract(cyc_ch_pattern)
+    og_ch_names_df["Cycle"] = pd.to_numeric(og_ch_names_df["Cycle"])
+    og_ch_names_df["Channel"] = pd.to_numeric(og_ch_names_df["Channel"])
+    og_ch_names_df["channel_id"] = (
+        "cycle"
+        + og_ch_names_df["Cycle"].astype(str)
+        + "_ch"
+        + og_ch_names_df["Channel"].astype(str)
+    )
+
+    return og_ch_names_df
+
+
+def replace_provider_ch_names_with_antb(
+    og_ch_names_df: pd.DataFrame, antibodies_df: pd.DataFrame
+) -> List[str]:
+    """
+    Uses cycle and channel mapping to replace the channel name with the one in antibodies.tsv.
+    """
+    updated_channel_names = []
+    mapping = map_cycles_and_channels(antibodies_df)
+    for i in og_ch_names_df.index:
+        channel_id = og_ch_names_df.at[i, "channel_id"].lower()
+        original_name = og_ch_names_df.at[i, "channel_name"]
+        target = mapping.get(channel_id, None)
+        if target is not None:
+            updated_channel_names.append(target)
+        else:
+            updated_channel_names.append(original_name)
+    return updated_channel_names
 
 
 def generate_sa_ch_info(
@@ -280,16 +377,14 @@ if __name__ == "__main__":
 
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)
     extractFileList = collect_tiff_file_list(extractDir, TIFF_FILE_NAMING_PATTERN)
-    antb_path = antb_tools.find_antibodies_meta(args.input_data_dir)
+    antb_path = find_antibodies_meta(args.input_data_dir)
 
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
-    df = antb_tools.sort_by_cycle(antb_path)
-    antb_info = antb_tools.get_ch_info_from_antibodies_meta(df)
+    df = sort_by_cycle(antb_path)
+    antb_info = get_ch_info_from_antibodies_meta(df)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
-    original_ch_names_df = antb_tools.create_original_channel_names_df(extractChannelNames)
-    updated_channel_names = antb_tools.replace_provider_ch_names_with_antb(
-        original_ch_names_df, antb_info
-    )
+    original_ch_names_df = create_original_channel_names_df(extractChannelNames)
+    updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
