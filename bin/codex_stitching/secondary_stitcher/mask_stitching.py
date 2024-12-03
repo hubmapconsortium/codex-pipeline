@@ -374,7 +374,14 @@ def modify_tiles_another_channel(
 
 
 def get_slices(
-    tile_shape: tuple, overlap: int, y_tile_id: int, x_tile_id: int, y_id_max: int, x_id_max: int
+    tile_shape: Tuple[int, int],
+    overlap: int,
+    y_tile_id: int,
+    x_tile_id: int,
+    y_id_max: int,
+    x_id_max: int,
+    image_y_max: int,
+    image_x_max: int,
 ) -> Tuple[Tuple[slice, slice], Tuple[slice, slice]]:
     if y_id_max - 1 == 0:
         tile_slice_y = slice(overlap, tile_shape[0] + overlap)
@@ -411,7 +418,10 @@ def get_slices(
         x_t = x_f + tile_shape[1] + overlap
 
     tile_slice = (tile_slice_y, tile_slice_x)
-    big_image_slice = (slice(y_f, y_t), slice(x_f, x_t))
+    big_image_slice = (
+        slice(y_f, min(y_t, image_y_max + 1)),
+        slice(x_f, min(x_t, image_x_max + 1)),
+    )
 
     return tile_slice, big_image_slice
 
@@ -440,14 +450,22 @@ def stitch_mask(
     big_image_shape = (big_image_y_size, big_image_x_size)
     big_image = np.zeros(big_image_shape, dtype=dtype)
 
+    new_big_image_shape = (big_image_shape[0] - y_pad, big_image_shape[1] - x_pad)
     print("n tiles x,y:", (x_ntiles, y_ntiles))
-    print("plane shape x,y:", big_image_x_size - x_pad, big_image_y_size - y_pad)
+    print("plane shape x,y:", new_big_image_shape[1], new_big_image_shape[0])
 
     n = 0
     for i in range(0, y_ntiles):
         for j in range(0, x_ntiles):
             tile_slice, big_image_slice = get_slices(
-                (tile_y_size, tile_x_size), overlap, i, j, y_ntiles, x_ntiles
+                tile_shape=(tile_y_size, tile_x_size),
+                overlap=overlap,
+                y_tile_id=i,
+                x_tile_id=j,
+                y_id_max=y_ntiles,
+                x_id_max=x_ntiles,
+                image_y_max=new_big_image_shape[0],
+                image_x_max=new_big_image_shape[1],
             )
 
             tile = tiles[n]
@@ -457,7 +475,6 @@ def stitch_mask(
             big_image[big_image_slice][mask_nonzeros] = tile[tile_slice][mask_nonzeros]
             n += 1
 
-    new_big_image_shape = (big_image_shape[0] - y_pad, big_image_shape[1] - x_pad)
     return big_image[: new_big_image_shape[0], : new_big_image_shape[1]]
 
 
