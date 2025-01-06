@@ -68,9 +68,9 @@ def main(pipeline_config_path: Path, ometiff_dir: Path):
     overlap = slicer_meta["overlap"]
     padding = slicer_meta["padding"]
 
-    mask_out_dir = Path("/output/pipeline_output/mask")
-    expr_out_dir = Path("/output/pipeline_output/expr")
-    final_pipeline_config_path = Path("/output/pipelineConfig.json")
+    mask_out_dir = Path("output/pipeline_output/mask")
+    expr_out_dir = Path("output/pipeline_output/expr")
+    final_pipeline_config_path = Path("output/pipelineConfig.json")
 
     make_dir_if_not_exists(mask_out_dir)
     make_dir_if_not_exists(expr_out_dir)
