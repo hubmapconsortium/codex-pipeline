@@ -12,11 +12,11 @@ inputs:
   cytokit_output:
     type: Directory
     inputBinding:
-      position: 1
+      position: 0
   bg_sub_tiles:
     type: Directory
     inputBinding:
-      position: 2
+      position: 1
   cytokit_config:
     type: File
     inputBinding:
