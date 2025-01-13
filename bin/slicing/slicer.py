@@ -105,7 +105,7 @@ def slice_img(
     for i, img in enumerate(this_plane_tiles):
         task.append(
             dask.delayed(tif.imwrite)(
-                osp.join(out_dir, this_plane_img_names[i]), img, photometric="minisblack"
+                osp.join(out_dir, this_plane_img_names[i]), img, photometric="minisblack", shaped=False
             )
         )
 

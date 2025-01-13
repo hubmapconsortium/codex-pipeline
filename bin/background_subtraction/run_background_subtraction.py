@@ -341,7 +341,7 @@ def read_stack_and_meta(img_path: Path) -> Tuple[ImgStack, Dict[str, Any]]:
 
 def save_stack(out_path: Path, img_stack: ImgStack, ij_meta: Dict[str, Any]):
     # output stack to will have more dimension to match TZCYX
-    with tif.TiffWriter(str(out_path.absolute()), imagej=True) as TW:
+    with tif.TiffWriter(str(out_path.absolute()), imagej=True, shaped=False) as TW:
         TW.write(
             np.expand_dims(img_stack, [0, 1]),
             contiguous=True,

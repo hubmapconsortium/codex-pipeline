@@ -275,7 +275,7 @@ def main(
     for r, path_list in enumerate(path_list_per_region):
         new_path = out_dir / img_name_template.format(r=r + 1)
         this_region_report = dict()
-        TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True)
+        TW = tif.TiffWriter(path_to_str(new_path), bigtiff=True, shaped=False)
         if is_mask:
             # mask channels 0 - cells, 1 - nuclei, 2 - cell boundaries, 3 - nucleus boundaries
             tiles = load_tiles(path_list, key=None)

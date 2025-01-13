@@ -12,7 +12,7 @@ dependencies:
     - dask>=2.6.0
     - imagecodecs==2023.9.18
     - pip:
-        - tifffile>=2021.8.30,<2023.3.15
+        - tifffile
         - PyYAML>=6.0.1
         - aicsimageio==4.14.0
         - lxml==4.9.3
