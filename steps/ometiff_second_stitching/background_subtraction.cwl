@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.6.1
+    dockerPull: hubmap/codex-scripts:latest
     dockerOutputDirectory: "/output"
 
 baseCommand: ["python", "/opt/background_subtraction/run_background_subtraction.py"]
