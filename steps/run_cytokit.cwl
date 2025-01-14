@@ -7,7 +7,7 @@ baseCommand: ["sh", "run_cytokit.sh"]
 requirements:
   DockerRequirement:
     dockerPull: hubmap/cytokit:latest
-  cwltool:CUDARequirement
+  cwltool:CUDARequirement:
     cudaVersionMin: "11.4"
     cudaComputeCapabilityMin: "3.0"
     deviceCountMin: 1
