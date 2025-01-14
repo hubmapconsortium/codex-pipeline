@@ -44,7 +44,7 @@ def get_stitched_image_shape(
             for channel, dir_path in stitched_dirs[cycle][region].items():
                 stitched_img_path = get_image_path_in_dir(dir_path)
                 break
-    with tif.TiffFile(stitched_img_path, shaped=False) as TF:
+    with tif.TiffFile(stitched_img_path) as TF:
         stitched_image_shape = TF.series[0].shape
     return stitched_image_shape
 
