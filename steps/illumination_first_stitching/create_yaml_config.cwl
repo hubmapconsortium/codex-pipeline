@@ -4,7 +4,7 @@ label: Create Cytokit experiment config
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.7
+    dockerPull: hubmap/codex-scripts:latest
 
 baseCommand: ["python", "/opt/create_cytokit_config.py"]
 

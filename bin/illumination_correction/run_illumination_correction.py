@@ -60,7 +60,7 @@ def read_imgs_to_stack(img_paths: List[Path]) -> ImgStack:
 
 
 def save_stack(out_path: Path, stack: ImgStack):
-    with tif.TiffWriter(out_path) as TW:
+    with tif.TiffWriter(out_path, shaped=False) as TW:
         TW.save(stack, contiguous=True, photometric="minisblack")
 
 
@@ -169,7 +169,7 @@ def apply_illum_cor(img: Image, flatfield: Image) -> Image:
 
 def correct_and_save(img_path: Path, flatfield: Image, out_path: Path):
     corrected_img = apply_illum_cor(tif.imread(str(img_path.absolute())), flatfield)
-    with tif.TiffWriter(str(out_path.absolute())) as TW:
+    with tif.TiffWriter(str(out_path.absolute()), shaped=False) as TW:
         TW.save(corrected_img, photometric="minisblack")
     del corrected_img
 
