@@ -10,7 +10,7 @@ requirements:
   DockerRequirement:
     dockerPull: hubmap/cytokit:latest
   cwltool:CUDARequirement:
-    cudaComputeCapabilityMin: '3.0'
+    cudaComputeCapability: '3.0'
     cudaDeviceCountMax: 8
     cudaDeviceCountMin: 1
     cudaVersionMin: '11.4'
