@@ -3,7 +3,7 @@ class: CommandLineTool
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.7.0
+    dockerPull: hubmap/codex-scripts:latest
     dockerOutputDirectory: "/output"
 
 baseCommand: ["python", "/opt/illumination_correction/run_illumination_correction.py"]
