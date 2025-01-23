@@ -56,7 +56,7 @@ steps:
 
   run_cytokit:
     in:
-      data_dir:
+      new_tiles:
         source: illumination_first_stitching/new_tiles
       yaml_config:
         source: illumination_first_stitching/cytokit_config

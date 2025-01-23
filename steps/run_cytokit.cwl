@@ -35,7 +35,7 @@ requirements:
 
 
 inputs:
-  data_dir:
+  new_tiles:
     type: Directory
 
   yaml_config:
