@@ -30,8 +30,8 @@ requirements:
 
           mkdir $HOME/cytokit
 
-          cytokit processor run_all --data-dir $(inputs.data_dir.path) --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit && \
-          cytokit operator run_all --data-dir $HOME/cytokit --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit
+          cytokit processor run_all --new_tiles $(inputs.new_tiles.path) --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit && \
+          cytokit operator run_all --new_tiles $HOME/cytokit --config-path $(inputs.yaml_config.path) --output_dir $HOME/cytokit
 
 
 inputs:
