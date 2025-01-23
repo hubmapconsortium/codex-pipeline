@@ -14,14 +14,14 @@ import yaml
 #  instead of calling this script as a separate executable
 SETUP_DATA_DIR_COMMAND = [
     "/opt/setup_data_directory.py",
-    "{data_dir}",
+    "{new_tiles",
 ]
 CYTOKIT_COMMAND = [
     "cytokit",
     "{command}",
     "run_all",
     "--config-path={yaml_config}",
-    "--data-dir={data_dir}",
+    "--new_tiles={new_tiles}",
     "--output-dir=output",
 ]
 
@@ -125,9 +125,9 @@ def main(cytokit_command: str, data_dir: Path, pipeline_config: Path, yaml_confi
 if __name__ == "__main__":
     p = ArgumentParser()
     p.add_argument("cytokit_command")
-    p.add_argument("data_dir", type=Path)
+    p.add_argument("new_tiles", type=Path)
     p.add_argument("pipeline_config", type=Path)
     p.add_argument("yaml_config", type=Path)
     args = p.parse_args()
 
-    main(args.cytokit_command, args.data_dir, args.pipeline_config, args.yaml_config)
+    main(args.cytokit_command, args.new_tiles, args.pipeline_config, args.yaml_config)
