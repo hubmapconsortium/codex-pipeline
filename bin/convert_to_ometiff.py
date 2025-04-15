@@ -402,7 +402,7 @@ if __name__ == "__main__":
     print(original_ch_names_df.head())
     
     antb_info = None
-    updated_channel_names = None
+    updated_channel_names = original_ch_names_df["channel_name"].tolist()
     if antb_path:
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
@@ -420,23 +420,11 @@ if __name__ == "__main__":
             antb_info,
 
         )
-
-    # Create the extract OME-TIFFs.
-    if extractFileList and updated_channel_names:
-        create_ome_tiffs(
-            extractFileList,
-            output_dir / extract_expressions_piece / "ome-tiff",
-            updated_channel_names,
-            lateral_resolution,
-            args.processes,
-            original_ch_names_df,
-            antb_info,
-        )
     else:
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",
-            extractChannelNames,
+            updated_channel_names,
             lateral_resolution,
             args.processes,
             original_ch_names_df,
