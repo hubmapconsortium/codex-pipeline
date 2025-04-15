@@ -400,6 +400,8 @@ if __name__ == "__main__":
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
     
+    antb_info = None
+    updated_channel_names = None
     if antb_path:
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
