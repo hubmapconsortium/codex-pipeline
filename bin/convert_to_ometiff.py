@@ -399,6 +399,7 @@ if __name__ == "__main__":
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
+    print(original_ch_names_df.head())
     
     antb_info = None
     updated_channel_names = None
