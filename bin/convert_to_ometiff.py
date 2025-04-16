@@ -420,7 +420,8 @@ if __name__ == "__main__":
             antb_info,
 
         )
-    else:
+    # Create the extract OME-TIFFs.
+    if extractFileList:
         create_ome_tiffs(
             extractFileList,
             output_dir / extract_expressions_piece / "ome-tiff",
@@ -429,5 +430,5 @@ if __name__ == "__main__":
             args.processes,
             original_ch_names_df,
             antb_info,
-        )        
-
+            
+        )
