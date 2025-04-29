@@ -94,16 +94,16 @@ def create_meta(file_pattern_str, num_tiles, tile_shape, tile_locations):
         view_registration_template, "ViewTransform", {"type": "affine"}
     )
     ET.SubElement(view_transform_translation, "Name").text = "Translation to Regular Grid"
-    ET.SubElement(
-        view_transform_translation, "affine"
-    ).text = "1.0 0.0 0.0 -2867.2 0.0 1.0 0.0 -1024.0 0.0 0.0 1.0 0.0"
+    ET.SubElement(view_transform_translation, "affine").text = (
+        "1.0 0.0 0.0 -2867.2 0.0 1.0 0.0 -1024.0 0.0 0.0 1.0 0.0"
+    )
     view_transform_calibration = ET.SubElement(
         view_registration_template, "ViewTransform", {"type": "affine"}
     )
     ET.SubElement(view_transform_calibration, "Name").text = "calibration"
-    ET.SubElement(
-        view_transform_calibration, "affine"
-    ).text = "1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0"
+    ET.SubElement(view_transform_calibration, "affine").text = (
+        "1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0"
+    )
 
     for i in range(0, num_tiles):
         vr = deepcopy(view_registration_template)

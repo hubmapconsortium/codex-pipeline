@@ -483,7 +483,7 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
                 # first row is data, so process it
                 ch_names_qc = [first_row[0]]
                 qc_vals = [first_row[1].strip()]
-            
+
             for row in csvreader:
                 if len(row) < 2:
                     continue
