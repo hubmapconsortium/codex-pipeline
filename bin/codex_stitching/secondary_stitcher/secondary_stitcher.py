@@ -38,9 +38,9 @@ def add_structured_annotations(omexml_str: str, nucleus_channel: str, cell_chann
     annotation = ET.SubElement(structured_annotation, "XMLAnnotation", {"ID": "Annotation:0"})
     annotation_value = ET.SubElement(annotation, "Value")
     original_metadata = ET.SubElement(annotation_value, "OriginalMetadata")
-    segmentation_channels_key = ET.SubElement(
-        original_metadata, "Key"
-    ).text = "SegmentationChannels"
+    segmentation_channels_key = ET.SubElement(original_metadata, "Key").text = (
+        "SegmentationChannels"
+    )
     segmentation_channels_value = ET.SubElement(original_metadata, "Value")
     ET.SubElement(segmentation_channels_value, "Nucleus").text = nucleus_channel
     ET.SubElement(segmentation_channels_value, "Cell").text = cell_channel
