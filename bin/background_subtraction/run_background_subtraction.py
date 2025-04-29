@@ -188,7 +188,7 @@ def calc_background_median(
 
 
 def filter_bg_fractions(
-    bg_fractions: Dict[int, Dict[int, float]]
+    bg_fractions: Dict[int, Dict[int, float]],
 ) -> Tuple[Dict[int, Dict[int, float]], Dict[int, float], Dict[int, float]]:
     # most of the operations in this function is just reordering of dictionaries
     fr_per_ch = dict()

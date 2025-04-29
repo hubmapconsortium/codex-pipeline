@@ -4,7 +4,7 @@ label: Create OME-TIFF versions of Cytokit segmentation and extract results
 
 requirements:
   DockerRequirement:
-    dockerPull: hubmap/codex-scripts:2.7.1
+    dockerPull: hubmap/codex-scripts:latest
 
 baseCommand: ["python", "/opt/convert_to_ometiff.py"]
 
