@@ -37,7 +37,7 @@ def get_image_path_in_dir(dir_path: Path) -> Path:
 
 
 def get_stitched_image_shape(
-    stitched_dirs: Dict[int, Dict[int, Dict[int, Path]]]
+    stitched_dirs: Dict[int, Dict[int, Dict[int, Path]]],
 ) -> Tuple[int, int]:
     for cycle in stitched_dirs:
         for region in stitched_dirs[cycle]:

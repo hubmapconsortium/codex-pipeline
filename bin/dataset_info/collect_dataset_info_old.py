@@ -468,18 +468,32 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
     datasetInfo["channel_names"] = channelNames
 
     channel_names_qc_pass: Dict[str, List[str]] = defaultdict(list)
+    channel_names_qc_pass: Dict[str, List[str]] = defaultdict(list)
+    ch_names_qc = []
+    qc_vals = []
     if channel_names_report_files:
         channel_names_report_file = channel_names_report_files[0]
         with open(channel_names_report_file, newline="") as csvfile:
             csvreader = csv.reader(csvfile, delimiter=",")
-            ch_names_qc = []
-            qc_vals = []
+            first_row = next(csvreader, None)
+
+            if first_row and [col.strip().lower() for col in first_row] == ["marker", "result"]:
+                pass  # skip header
+            else:
+                # first row is data, so process it
+                ch_names_qc = [first_row[0]]
+                qc_vals = [first_row[1].strip()]
+
             for row in csvreader:
+                if len(row) < 2:
+                    continue
                 ch_names_qc.append(row[0])
                 qc_vals.append(row[1].strip())
+
         unique_qc_ch_names = add_cycle_channel_numbers(ch_names_qc)
         for i, ch in enumerate(unique_qc_ch_names):
             channel_names_qc_pass[ch] = [qc_vals[i]]
+
     else:
         logger.warning(
             "No channelnames_report.csv file found. Including all channels in final output."
