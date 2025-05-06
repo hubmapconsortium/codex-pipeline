@@ -397,6 +397,7 @@ def subtract_bg_from_imgs(
     processed_imgs = []
     for cycle, channels in stack_ids_per_cycle.items():
         if channels != {}:
+            print(channels.items)
             for ch_id, stack_id in channels.items():
                 print(ch_id, stack_id)
                 if stack_id == nuc_ch_stack_id:
@@ -421,6 +422,7 @@ def subtract_bg_from_imgs(
                     else:
                         bg_imgs = []
                         for bg_cyc, frac in fraction_map.items():
+                            print(bg_cyc, frac)
                             bg = bg_images[bg_cyc][ch_id]
                             fbg = bg.astype(np.float32) * frac
                             bg_imgs.append(fbg)
