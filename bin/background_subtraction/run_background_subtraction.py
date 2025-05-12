@@ -589,6 +589,23 @@ def main(
         print("New channel name order", new_channel_names)
 
         print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
+        print("Verifying channel name order against stack shape...")
+        print("Expected channel count from new_channel_names:", len(new_channel_names))
+
+        # Optional: Load a test image stack if not already loaded
+        # You can use a sample file from img_listing if needed
+        # For example:
+        import tifffile as tiff
+        test_img_path = img_listing[0]
+        img_stack = tiff.imread(test_img_path)  # shape should be (channels, height, width)
+        print("Actual image stack shape from first image:", img_stack.shape)
+
+        # Compare expected vs actual
+        if img_stack.shape[0] != len(new_channel_names):
+            print("⚠️ Channel count mismatch!")
+            for i, channel in enumerate(new_channel_names):
+                if i >= img_stack.shape[0]:
+                    print(f"⚠️ Missing image data for expected channel '{channel}' at index {i}")
         subtract_bg_from_imgs_parallelized(
             img_listing,
             out_dir,
