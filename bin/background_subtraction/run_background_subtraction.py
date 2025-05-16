@@ -397,9 +397,7 @@ def subtract_bg_from_imgs(
     processed_imgs = []
     for cycle, channels in stack_ids_per_cycle.items():
         if channels != {}:
-            print(channels.items())
             for ch_id, stack_id in channels.items():
-                print(ch_id, stack_id)
                 if stack_id == nuc_ch_stack_id:
                     processed_imgs.append(img_stack[stack_id, :, :])
                 elif stack_id in bg_ch_stack_ids:
@@ -422,7 +420,6 @@ def subtract_bg_from_imgs(
                     else:
                         bg_imgs = []
                         for bg_cyc, frac in fraction_map.items():
-                            print(bg_cyc, frac)
                             bg = bg_images[bg_cyc][ch_id]
                             fbg = bg.astype(np.float32) * frac
                             bg_imgs.append(fbg)
@@ -589,23 +586,6 @@ def main(
         print("New channel name order", new_channel_names)
 
         print("Fractions of background per cycle\n", fractions_of_bg_per_cycle)
-        print("Verifying channel name order against stack shape...")
-        print("Expected channel count from new_channel_names:", len(new_channel_names))
-
-        # Optional: Load a test image stack if not already loaded
-        # You can use a sample file from img_listing if needed
-        # For example:
-        import tifffile as tiff
-        test_img_path = img_listing[0]
-        img_stack = tiff.imread(test_img_path)  # shape should be (channels, height, width)
-        print("Actual image stack shape from first image:", img_stack.shape)
-
-        # Compare expected vs actual
-        if img_stack.shape[0] != len(new_channel_names):
-            print("⚠️ Channel count mismatch!")
-            for i, channel in enumerate(new_channel_names):
-                if i >= img_stack.shape[0]:
-                    print(f"⚠️ Missing image data for expected channel '{channel}' at index {i}")
         subtract_bg_from_imgs_parallelized(
             img_listing,
             out_dir,

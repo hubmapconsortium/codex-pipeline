@@ -215,9 +215,7 @@ def convert_tiff_file(funcArgs):
     """
 
     sourceFile, ometiffFile, channelNames, lateral_resolution, og_ch_names_df, *optional_args = funcArgs
-    antb_info = None
-    if len(optional_args) == 1:
-        antb_info = optional_args
+    antb_info = optional_args[0] if optional_args else None
 
     logger.info(f"Converting file: {str(sourceFile)}")
 
@@ -291,7 +289,7 @@ def create_ome_tiffs(
     args_for_conversion = []
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
-        if antb_info:
+        if antb_info is not None:
             args_for_conversion.append(
                 (
                     source_file,
