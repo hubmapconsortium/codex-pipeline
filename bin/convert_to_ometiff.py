@@ -213,7 +213,11 @@ def convert_tiff_file(funcArgs):
     nanometres, convert the source TIFF file to OME-TIFF format, containing
     polygons for segmented cell shapes in the "ROI" OME-XML element.
     """
-    sourceFile, ometiffFile, channelNames, lateral_resolution, antb_info, og_ch_names_df = funcArgs
+
+    sourceFile, ometiffFile, channelNames, lateral_resolution, og_ch_names_df, *optional_args = (
+        funcArgs
+    )
+    antb_info = optional_args[0] if optional_args else None
 
     logger.info(f"Converting file: {str(sourceFile)}")
 
@@ -231,6 +235,7 @@ def convert_tiff_file(funcArgs):
         image_name=[imageName],
         physical_pixel_sizes=[image.physical_pixel_sizes],
     )
+
     annotations = StructuredAnnotationList()
     for i, (channel_obj, channel_name, og_ch_names_row) in enumerate(
         zip(
@@ -250,6 +255,7 @@ def convert_tiff_file(funcArgs):
         channel_obj.annotation_refs.append(AnnotationRef(id=ch_info.id))
         annotations.append(ch_info)
     omeXml.structured_annotations = annotations
+
     ome_writer.save(
         data=imageDataForOmeTiff,
         uri=str(ometiffFile),
@@ -267,8 +273,8 @@ def create_ome_tiffs(
     channel_names: List[str],
     lateral_resolution: float,
     subprocesses: int,
+    og_ch_names_df,
     antb_info: Optional[pd.DataFrame] = None,
-    og_ch_names_df: Optional[pd.DataFrame] = None,
 ):
     """
     Given:
@@ -285,17 +291,22 @@ def create_ome_tiffs(
     args_for_conversion = []
     for source_file in file_list:
         ome_tiff_file = (output_dir / source_file.name).with_suffix(".ome.tiff")
-
-        args_for_conversion.append(
-            (
-                source_file,
-                ome_tiff_file,
-                channel_names,
-                lateral_resolution,
-                antb_info,
-                og_ch_names_df,
+        if antb_info is not None:
+            args_for_conversion.append(
+                (
+                    source_file,
+                    ome_tiff_file,
+                    channel_names,
+                    lateral_resolution,
+                    og_ch_names_df,
+                    antb_info,
+                )
             )
-        )
+        else:
+            args_for_conversion.append(
+                (source_file, ome_tiff_file, channel_names, lateral_resolution, og_ch_names_df)
+            )
+
     # Uncomment the next line to run as a series, comment the plural line
     # for argtuple in args_for_conversion:
     #     convert_tiff_file(argtuple)
@@ -378,13 +389,20 @@ if __name__ == "__main__":
     segmentationFileList = collect_tiff_file_list(cytometryTileDir, TIFF_FILE_NAMING_PATTERN)
     extractFileList = collect_tiff_file_list(extractDir, TIFF_FILE_NAMING_PATTERN)
     antb_path = find_antibodies_meta(args.input_data_dir)
-
+    antibodies_df = None
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
-    df = sort_by_cycle(antb_path)
-    antb_info = get_ch_info_from_antibodies_meta(df)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
-    updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
+    print(original_ch_names_df.head())
+
+    antb_info = None
+    updated_channel_names = original_ch_names_df["channel_name"].tolist()
+    if antb_path:
+        df = sort_by_cycle(antb_path)
+        antb_info = get_ch_info_from_antibodies_meta(df)
+        updated_channel_names = replace_provider_ch_names_with_antb(
+            original_ch_names_df, antb_info
+        )
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
@@ -394,10 +412,9 @@ if __name__ == "__main__":
             SEGMENTATION_CHANNEL_NAMES,
             lateral_resolution,
             args.processes,
-            antb_info,
             original_ch_names_df,
+            antb_info,
         )
-
     # Create the extract OME-TIFFs.
     if extractFileList:
         create_ome_tiffs(
@@ -406,6 +423,6 @@ if __name__ == "__main__":
             updated_channel_names,
             lateral_resolution,
             args.processes,
-            antb_info,
             original_ch_names_df,
+            antb_info,
         )
