@@ -214,7 +214,9 @@ def convert_tiff_file(funcArgs):
     polygons for segmented cell shapes in the "ROI" OME-XML element.
     """
 
-    sourceFile, ometiffFile, channelNames, lateral_resolution, og_ch_names_df, *optional_args = funcArgs
+    sourceFile, ometiffFile, channelNames, lateral_resolution, og_ch_names_df, *optional_args = (
+        funcArgs
+    )
     antb_info = optional_args[0] if optional_args else None
 
     logger.info(f"Converting file: {str(sourceFile)}")
@@ -302,15 +304,9 @@ def create_ome_tiffs(
             )
         else:
             args_for_conversion.append(
-                (
-                    source_file,
-                    ome_tiff_file,
-                    channel_names,
-                    lateral_resolution,
-                    og_ch_names_df
-                )
+                (source_file, ome_tiff_file, channel_names, lateral_resolution, og_ch_names_df)
             )
-            
+
     # Uncomment the next line to run as a series, comment the plural line
     # for argtuple in args_for_conversion:
     #     convert_tiff_file(argtuple)
@@ -398,13 +394,15 @@ if __name__ == "__main__":
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
     print(original_ch_names_df.head())
-    
+
     antb_info = None
     updated_channel_names = original_ch_names_df["channel_name"].tolist()
     if antb_path:
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
-        updated_channel_names = replace_provider_ch_names_with_antb(original_ch_names_df, antb_info)
+        updated_channel_names = replace_provider_ch_names_with_antb(
+            original_ch_names_df, antb_info
+        )
 
     # Create segmentation mask OME-TIFFs
     if segmentationFileList:
@@ -416,7 +414,6 @@ if __name__ == "__main__":
             args.processes,
             original_ch_names_df,
             antb_info,
-
         )
     # Create the extract OME-TIFFs.
     if extractFileList:
@@ -428,5 +425,4 @@ if __name__ == "__main__":
             args.processes,
             original_ch_names_df,
             antb_info,
-            
         )
