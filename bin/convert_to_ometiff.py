@@ -68,7 +68,12 @@ def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]
     Adds "target" column with the antibody name that we want to replace.
     """
     # df = df.set_index("channel_id", inplace=False)
-    antb_names = df["antibody_name"].to_list()
+    if "antibody_name" in df.columns:
+        antb_names = df["antibody_name"].to_list()
+    elif "hgnc_symbol" in df.columns:
+        antb_names = df["hgnc_symbol"].to_list()
+    else:
+        logger.error("Column names in antibodies.tsv invalid.")
     antb_targets = [get_analyte_name(antb) for antb in antb_names]
     df["target"] = antb_targets
     return df
