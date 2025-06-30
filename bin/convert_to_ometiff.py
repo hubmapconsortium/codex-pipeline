@@ -67,10 +67,14 @@ def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]
     """
     Adds "target" column with the antibody name that we want to replace.
     """
-    antb_names = df["antibody_name"].to_list()
+    if "antibody_name" in df.columns:
+        antb_names = df["antibody_name"].to_list()
+    elif "hgnc_symbol" in df.columns:
+        antb_names = df["hgnc_symbol"].to_list()
+    else:
+        logger.error("Column names in antibodies.tsv invalid.")
     antb_targets = [get_analyte_name(antb) for antb in antb_names]
     df["target"] = antb_targets
-    print(df)
     return df
 
 
@@ -88,14 +92,11 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
     Creates a dataframe with the original channel names, cycle numbers, and channel numbers.
     """
     # Separate channel and cycle info from channel names and remove "orig"
-    print(channelList)
     cyc_ch_pattern = re.compile(r"cyc(\d+)_ch(\d+)_orig(.*)", re.IGNORECASE)
     og_ch_names_df = pd.DataFrame(channelList, columns=["Original_Channel_Name"])
-    print(og_ch_names_df)
     og_ch_names_df[["Cycle", "Channel", "channel_name"]] = og_ch_names_df[
         "Original_Channel_Name"
     ].str.extract(cyc_ch_pattern)
-    print(og_ch_names_df)
     og_ch_names_df["Cycle"] = pd.to_numeric(og_ch_names_df["Cycle"])
     og_ch_names_df["Channel"] = pd.to_numeric(og_ch_names_df["Channel"])
     og_ch_names_df["channel_id"] = (
@@ -104,7 +105,6 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
         + "_ch"
         + og_ch_names_df["Channel"].astype(str)
     )
-    print(og_ch_names_df)
     return og_ch_names_df
 
 
@@ -157,7 +157,6 @@ def map_cycles_and_channels(antibodies_df: pd.DataFrame) -> dict:
         channel_id.lower(): target
         for channel_id, target in zip(antibodies_df["channel_id"], antibodies_df["target"])
     }
-    print(channel_mapping)
     return channel_mapping
 
 
@@ -397,39 +396,35 @@ if __name__ == "__main__":
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
-    print(extractChannelNames)
 
     antb_info = None
     updated_channel_names = original_ch_names_df["channel_name"].tolist()
-    print(updated_channel_names)
     if antb_path:
         df = sort_by_cycle(antb_path)
         antb_info = get_ch_info_from_antibodies_meta(df)
         updated_channel_names = replace_provider_ch_names_with_antb(
             original_ch_names_df, antb_info
         )
-        print(original_ch_names_df)
-        print(antb_info[["channel_id", "antibody_name"]])
 
-    # # Create segmentation mask OME-TIFFs
-    # if segmentationFileList:
-    #     create_ome_tiffs(
-    #         segmentationFileList,
-    #         output_dir / cytometry_tile_dir_piece / "ome-tiff",
-    #         SEGMENTATION_CHANNEL_NAMES,
-    #         lateral_resolution,
-    #         args.processes,
-    #         original_ch_names_df,
-    #         antb_info,
-    #     )
-    # # Create the extract OME-TIFFs.
-    # if extractFileList:
-    #     create_ome_tiffs(
-    #         extractFileList,
-    #         output_dir / extract_expressions_piece / "ome-tiff",
-    #         updated_channel_names,
-    #         lateral_resolution,
-    #         args.processes,
-    #         original_ch_names_df,
-    #         antb_info,
-    #     )
+    # Create segmentation mask OME-TIFFs
+    if segmentationFileList:
+        create_ome_tiffs(
+            segmentationFileList,
+            output_dir / cytometry_tile_dir_piece / "ome-tiff",
+            SEGMENTATION_CHANNEL_NAMES,
+            lateral_resolution,
+            args.processes,
+            original_ch_names_df,
+            antb_info,
+        )
+    # Create the extract OME-TIFFs.
+    if extractFileList:
+        create_ome_tiffs(
+            extractFileList,
+            output_dir / extract_expressions_piece / "ome-tiff",
+            updated_channel_names,
+            lateral_resolution,
+            args.processes,
+            original_ch_names_df,
+            antb_info,
+        )
