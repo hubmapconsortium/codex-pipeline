@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3
+FROM continuumio/miniconda3:25.3.1-1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
