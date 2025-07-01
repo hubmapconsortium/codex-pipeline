@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import json
 import logging
@@ -33,7 +34,7 @@ class ConfigCreator:
         for ch in meta["ChannelDetails"]["ChannelDetailsArray"]:
             ch_names.append(ch["Name"])
 
-        new_ch_names = self._make_ch_names_unique(ch_names)
+        new_ch_names = self._add_cycle_channel_numbers(ch_names)
 
         new_channel_details_array = []
         for i, ch in enumerate(processed_meta["ChannelDetails"]["ChannelDetailsArray"]):
@@ -125,6 +126,25 @@ class ConfigCreator:
                 qc_result_str = "FALSE"
             channel_qc_info[ch_name] = [qc_result_str]
         return channel_qc_info
+
+    def _add_cycle_channel_numbers(self, channel_names: List[str]) -> List[str]:
+        """
+        Adds cycle and channel info during the collect dataset info step. Replaces a similar function that adds a number on the end of duplicate channel names.
+        """
+        new_names = []
+        cycle_count = 1
+        channel_count = 1
+
+        for original_name in channel_names:
+            new_name = f"cyc{cycle_count}_ch{channel_count}_orig{original_name}"
+            new_names.append(new_name)
+
+            channel_count += 1
+            if channel_count > 4:
+                channel_count = 1
+                cycle_count += 1
+
+        return new_names
 
     def _make_ch_names_unique(self, channel_names: List[str]) -> List[str]:
         unique_names = Counter(channel_names)

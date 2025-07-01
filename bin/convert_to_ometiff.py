@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import logging
 import re
@@ -67,8 +68,12 @@ def get_ch_info_from_antibodies_meta(df: pd.DataFrame) -> Optional[pd.DataFrame]
     """
     Adds "target" column with the antibody name that we want to replace.
     """
-    # df = df.set_index("channel_id", inplace=False)
-    antb_names = df["antibody_name"].to_list()
+    if "antibody_name" in df.columns:
+        antb_names = df["antibody_name"].to_list()
+    elif "hgnc_symbol" in df.columns:
+        antb_names = df["hgnc_symbol"].to_list()
+    else:
+        logger.error("Column names in antibodies.tsv invalid.")
     antb_targets = [get_analyte_name(antb) for antb in antb_names]
     df["target"] = antb_targets
     return df
@@ -88,7 +93,7 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
     Creates a dataframe with the original channel names, cycle numbers, and channel numbers.
     """
     # Separate channel and cycle info from channel names and remove "orig"
-    cyc_ch_pattern = re.compile(r"cyc(\d+)_ch(\d+)_orig(.*)")
+    cyc_ch_pattern = re.compile(r"cyc(\d+)_ch(\d+)_orig(.*)", re.IGNORECASE)
     og_ch_names_df = pd.DataFrame(channelList, columns=["Original_Channel_Name"])
     og_ch_names_df[["Cycle", "Channel", "channel_name"]] = og_ch_names_df[
         "Original_Channel_Name"
@@ -101,7 +106,6 @@ def create_original_channel_names_df(channelList: List[str]) -> pd.DataFrame:
         + "_ch"
         + og_ch_names_df["Channel"].astype(str)
     )
-
     return og_ch_names_df
 
 
@@ -393,7 +397,6 @@ if __name__ == "__main__":
     lateral_resolution = get_lateral_resolution(args.cytokit_config)
     extractChannelNames = collect_expressions_extract_channels(extractFileList[0])
     original_ch_names_df = create_original_channel_names_df(extractChannelNames)
-    print(original_ch_names_df.head())
 
     antb_info = None
     updated_channel_names = original_ch_names_df["channel_name"].tolist()
