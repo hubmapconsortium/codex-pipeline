@@ -145,7 +145,7 @@ class ConfigCreator:
                 cycle_count += 1
 
         return new_names
-    
+
     def _make_ch_names_unique(self, channel_names: List[str]) -> List[str]:
         unique_names = Counter(channel_names)
         new_names = channel_names.copy()
