@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 from copy import deepcopy

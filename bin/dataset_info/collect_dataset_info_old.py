@@ -40,7 +40,7 @@ def add_cycle_channel_numbers(channel_names: List[str]) -> List[str]:
         new_names.append(new_name)
 
         channel_count += 1
-        if channel_count > 4:  # Assuming 4 channels per cycle, modify accordingly
+        if channel_count > 4:
             channel_count = 1
             cycle_count += 1
 
@@ -491,6 +491,7 @@ def standardize_metadata(directory: Path, num_concurrent_tasks: int):
                 qc_vals.append(row[1].strip())
 
         unique_qc_ch_names = add_cycle_channel_numbers(ch_names_qc)
+        print(unique_qc_ch_names)
         for i, ch in enumerate(unique_qc_ch_names):
             channel_names_qc_pass[ch] = [qc_vals[i]]
 
