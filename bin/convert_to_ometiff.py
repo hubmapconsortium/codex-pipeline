@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import logging
 import re
@@ -259,15 +260,15 @@ def convert_tiff_file(funcArgs):
         annotations.append(ch_info)
     omeXml.structured_annotations = annotations
 
-    # ome_writer.save(
-    #     data=imageDataForOmeTiff,
-    #     uri=str(ometiffFile),
-    #     ome_xml=omeXml,
-    #     dimension_order="TCZYX",
-    #     channel_names=channelNames,
-    # )
+    ome_writer.save(
+        data=imageDataForOmeTiff,
+        uri=str(ometiffFile),
+        ome_xml=omeXml,
+        dimension_order="TCZYX",
+        channel_names=channelNames,
+    )
 
-    # logger.info(f"OME-TIFF file created: {ometiffFile}")
+    logger.info(f"OME-TIFF file created: {ometiffFile}")
 
 
 def create_ome_tiffs(

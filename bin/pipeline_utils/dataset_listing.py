@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import re
 from os import walk
 from pathlib import Path
